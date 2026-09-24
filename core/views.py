@@ -5,6 +5,7 @@ from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
+from datetime import timezone as dt_timezone
 from urllib.parse import urlencode
 
 import requests
@@ -14,7 +15,8 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
-from .models import InstagramConnection
+from .graficos import DIAS_SEMANA, intervalos_do_grafico, montar_grafico
+from .models import InstagramConnection, SeguidoresDia
 
 INSTAGRAM_AUTH_URL = 'https://api.instagram.com/oauth/authorize'
 INSTAGRAM_TOKEN_URL = 'https://api.instagram.com/oauth/access_token'
@@ -22,8 +24,6 @@ INSTAGRAM_LONG_LIVED_TOKEN_URL = 'https://graph.instagram.com/access_token'
 INSTAGRAM_REFRESH_TOKEN_URL = 'https://graph.instagram.com/refresh_access_token'
 INSTAGRAM_GRAPH_URL = 'https://graph.instagram.com'
 INSTAGRAM_SCOPES = 'instagram_business_basic,instagram_business_manage_insights'
-
-DIAS_SEMANA = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 
 logger = logging.getLogger(__name__)
 
@@ -48,52 +48,65 @@ def dashboard(request):
     )
 
     instagram = InstagramConnection.objects.filter(user=request.user).first()
-    midias_recentes = []
-    foto_perfil = ''
-    curtidas_total = comentarios_total = 0
-    seguidores_ganhos = None
-    comparacao_seguidores = comparacao_curtidas = comparacao_comentarios = None
-    aviso_visualizacoes = None
-
-    if instagram:
-        _renovar_token_se_necessario(instagram)
-        foto_perfil = _buscar_foto_perfil(instagram)
-        midias = _buscar_midias_desde(instagram, periodo.anterior_desde)
-        midias_recentes = midias[:12]
-        _adicionar_visualizacoes(instagram, midias_recentes)
-        motivos = Counter(m['visualizacoes_motivo'] for m in midias_recentes if m.get('visualizacoes_motivo'))
-        if motivos:
-            aviso_visualizacoes = motivos.most_common(1)[0][0]
-
-        curtidas_total, comentarios_total = _somar_engajamento(midias, periodo.desde, periodo.ate)
-        curtidas_anterior, comentarios_anterior = _somar_engajamento(
-            midias, periodo.anterior_desde, periodo.anterior_ate,
-        )
-        seguidores_ganhos = _buscar_seguidores_periodo(instagram, periodo.desde, periodo.ate)
-        seguidores_anterior = _buscar_seguidores_periodo(instagram, periodo.anterior_desde, periodo.anterior_ate)
-
-        comparacao_seguidores = _comparar(seguidores_ganhos, seguidores_anterior)
-        comparacao_curtidas = _comparar(curtidas_total, curtidas_anterior)
-        comparacao_comentarios = _comparar(comentarios_total, comentarios_anterior)
-
-    return render(request, 'core/dashboard.html', {
+    contexto = {
         'active_menu': 'dashboard',
         'instagram': instagram,
-        'foto_perfil': foto_perfil,
-        'midias': midias_recentes,
-        'aviso_visualizacoes': aviso_visualizacoes,
-        'curtidas_total': curtidas_total,
-        'comentarios_total': comentarios_total,
-        'seguidores_ganhos': seguidores_ganhos,
-        'comparacao_seguidores': comparacao_seguidores,
-        'comparacao_curtidas': comparacao_curtidas,
-        'comparacao_comentarios': comparacao_comentarios,
         'periodo_atual': periodo.chave,
         'periodo_label': periodo.label,
         'label_comparacao': periodo.label_comparacao,
         'inicio_custom': request.GET.get('inicio', ''),
         'fim_custom': request.GET.get('fim', ''),
+    }
+    if not instagram:
+        return render(request, 'core/dashboard.html', contexto)
+
+    _renovar_token_se_necessario(instagram)
+    foto_perfil, seguidores_total = _buscar_perfil_atual(instagram)
+    _sincronizar_seguidores(instagram)
+
+    hoje = timezone.localdate()
+    subtitulo, intervalos = intervalos_do_grafico(
+        periodo.chave, _data_local(periodo.desde), _data_local(periodo.ate), hoje,
+    )
+    inicio_busca = periodo.anterior_desde
+    if intervalos:
+        inicio_busca = min(inicio_busca, _inicio_do_dia(intervalos[0].inicio))
+
+    midias, midias_cobertas_desde = _buscar_midias_desde(instagram, inicio_busca)
+    midias_recentes = midias[:12]
+    _adicionar_visualizacoes(instagram, midias_recentes)
+    motivos = Counter(m['visualizacoes_motivo'] for m in midias_recentes if m.get('visualizacoes_motivo'))
+
+    curtidas_total, comentarios_total = _somar_engajamento(midias, periodo.desde, periodo.ate)
+    curtidas_anterior, comentarios_anterior = _somar_engajamento(midias, periodo.anterior_desde, periodo.anterior_ate)
+
+    seguidores_por_dia = _seguidores_por_dia(instagram, _data_local(inicio_busca), hoje)
+    seguidores_ganhos, _ = _somar_seguidores(
+        seguidores_por_dia, _data_local(periodo.desde), _data_local(periodo.ate), hoje,
+    )
+    seguidores_anterior, anterior_completo = _somar_seguidores(
+        seguidores_por_dia, _data_local(periodo.anterior_desde), _data_local(periodo.anterior_ate), hoje,
+    )
+
+    contexto.update({
+        'foto_perfil': foto_perfil,
+        'seguidores_total': seguidores_total,
+        'midias': midias_recentes,
+        'aviso_visualizacoes': motivos.most_common(1)[0][0] if motivos else None,
+        'curtidas_total': curtidas_total,
+        'comentarios_total': comentarios_total,
+        'seguidores_ganhos': seguidores_ganhos,
+        'comparacao_seguidores': _comparar(seguidores_ganhos, seguidores_anterior if anterior_completo else None),
+        'comparacao_curtidas': _comparar(curtidas_total, curtidas_anterior),
+        'comparacao_comentarios': _comparar(comentarios_total, comentarios_anterior),
+        'grafico_seguidores': montar_grafico(
+            subtitulo, intervalos, *_serie_seguidores(seguidores_por_dia, intervalos, hoje),
+        ),
+        'grafico_curtidas': montar_grafico(
+            subtitulo, intervalos, *_serie_curtidas(midias, intervalos, midias_cobertas_desde),
+        ),
     })
+    return render(request, 'core/dashboard.html', contexto)
 
 
 @login_required
@@ -305,10 +318,12 @@ def _publicado_entre(midia, desde, ate):
     return publicado_em is not None and desde <= publicado_em <= ate
 
 
-def _buscar_midias_desde(instagram, desde, max_paginas=5):
+def _buscar_midias_desde(instagram, desde, max_paginas=8):
+    """Devolve (mídias, cobertas_desde). cobertas_desde é None quando a busca alcançou `desde`;
+    senão é a data do post mais antigo obtido, e antes dela os números ficam incompletos."""
     # A API devolve as mídias da mais nova para a mais antiga; paginamos até cobrir o início do período.
     if not instagram.instagram_user_id:
-        return []
+        return [], None
 
     midias = []
     url = f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/media'
@@ -318,6 +333,7 @@ def _buscar_midias_desde(instagram, desde, max_paginas=5):
         'limit': 25,
     }
 
+    completo = False
     try:
         for _ in range(max_paginas):
             resp = requests.get(url, params=params, timeout=10)
@@ -325,22 +341,20 @@ def _buscar_midias_desde(instagram, desde, max_paginas=5):
             corpo = resp.json()
 
             pagina = corpo.get('data', [])
-            if not pagina:
-                break
             midias.extend(pagina)
-
-            mais_antiga = _parse_timestamp_instagram(pagina[-1].get('timestamp'))
-            if mais_antiga is not None and mais_antiga < desde:
-                break
-
             proxima_url = corpo.get('paging', {}).get('next')
-            if not proxima_url:
+            mais_antiga = _parse_timestamp_instagram(pagina[-1].get('timestamp')) if pagina else None
+
+            if not pagina or not proxima_url or (mais_antiga is not None and mais_antiga < desde):
+                completo = True
                 break
             url, params = proxima_url, None
     except (requests.RequestException, ValueError):
-        pass
+        logger.warning('Falha ao buscar as publicações do Instagram')
 
-    return midias
+    if completo or not midias:
+        return midias, None
+    return midias, _parse_timestamp_instagram(midias[-1].get('timestamp'))
 
 
 def _adicionar_visualizacoes(instagram, midias):
@@ -395,34 +409,106 @@ def _motivo_erro_insights(resp):
     return f'O Instagram não informou as visualizações: {erro.get("message") or f"HTTP {resp.status_code}"}'
 
 
-def _buscar_foto_perfil(instagram):
+def _buscar_perfil_atual(instagram):
+    """Devolve (url da foto de perfil, total de seguidores)."""
     try:
         resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/me', params={
-            'fields': 'profile_picture_url',
+            'fields': 'profile_picture_url,followers_count',
             'access_token': instagram.access_token,
         }, timeout=10)
         resp.raise_for_status()
-        return resp.json().get('profile_picture_url', '')
+        dados = resp.json()
     except (requests.RequestException, ValueError):
-        return ''
+        return '', None
+    return dados.get('profile_picture_url', ''), dados.get('followers_count')
 
 
-def _buscar_seguidores_periodo(instagram, desde, ate):
+def _sincronizar_seguidores(instagram):
+    # O Instagram só informa novos seguidores dos últimos 30 dias; guardamos cada dia
+    # no banco para o histórico dos gráficos crescer além disso.
     if not instagram.instagram_user_id:
-        return None
+        return
+    agora = timezone.now()
     try:
         resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/insights', params={
             'metric': 'follower_count',
             'period': 'day',
-            'since': int(desde.timestamp()),
-            'until': int(ate.timestamp()),
+            'since': int((agora - timedelta(days=29)).timestamp()),
+            'until': int(agora.timestamp()),
             'access_token': instagram.access_token,
         }, timeout=10)
-        resp.raise_for_status()
+    except requests.RequestException:
+        logger.warning('Falha de rede ao buscar novos seguidores')
+        return
+    if not resp.ok:
+        logger.warning('Instagram recusou novos seguidores (HTTP %s): %s', resp.status_code, resp.text[:300])
+        return
+    try:
         valores = resp.json()['data'][0]['values']
-        return sum(v.get('value', 0) for v in valores)
-    except (requests.RequestException, KeyError, IndexError, ValueError):
-        return None
+    except (KeyError, IndexError, ValueError):
+        logger.warning('Resposta inesperada de novos seguidores: %s', resp.text[:300])
+        return
+
+    for item in valores:
+        fim_do_dia = _parse_timestamp_instagram(item.get('end_time'))
+        if fim_do_dia is None or item.get('value') is None:
+            continue
+        # end_time marca o fim do dia medido (meia-noite do dia seguinte).
+        dia = fim_do_dia.astimezone(dt_timezone.utc).date() - timedelta(days=1)
+        SeguidoresDia.objects.update_or_create(
+            instagram_user_id=instagram.instagram_user_id,
+            data=dia,
+            defaults={'novos_seguidores': item['value']},
+        )
+
+
+def _seguidores_por_dia(instagram, inicio, fim):
+    linhas = SeguidoresDia.objects.filter(
+        instagram_user_id=instagram.instagram_user_id, data__gte=inicio, data__lte=fim,
+    ).values_list('data', 'novos_seguidores')
+    return dict(linhas)
+
+
+def _somar_seguidores(por_dia, inicio, fim, hoje):
+    """Devolve (total, completo). completo indica que todos os dias já encerrados têm dado."""
+    dias = [inicio + timedelta(days=i) for i in range((fim - inicio).days + 1)]
+    presentes = [por_dia[d] for d in dias if d in por_dia]
+    if not presentes:
+        return None, False
+    completo = all(d in por_dia for d in dias if d < hoje)
+    return sum(presentes), completo
+
+
+def _serie_seguidores(por_dia, intervalos, hoje):
+    valores, parciais = [], []
+    for intervalo in intervalos:
+        total, completo = _somar_seguidores(por_dia, intervalo.inicio, intervalo.fim, hoje)
+        valores.append(total)
+        parciais.append(total is not None and not completo)
+    return valores, parciais
+
+
+def _serie_curtidas(midias, intervalos, cobertas_desde):
+    corte = _data_local(cobertas_desde) if cobertas_desde else None
+    datas = [(_data_publicacao(m), m.get('like_count') or 0) for m in midias]
+    valores, parciais = [], []
+    for intervalo in intervalos:
+        if corte and intervalo.fim < corte:
+            valores.append(None)
+            parciais.append(False)
+            continue
+        valores.append(sum(curtidas for dia, curtidas in datas if dia and intervalo.inicio <= dia <= intervalo.fim))
+        parciais.append(bool(corte and intervalo.inicio < corte))
+    return valores, parciais
+
+
+def _data_local(momento):
+    return timezone.localtime(momento).date()
+
+
+def _data_publicacao(midia):
+    publicado_em = _parse_timestamp_instagram(midia.get('timestamp'))
+    return _data_local(publicado_em) if publicado_em else None
 
 
 def _renovar_token_se_necessario(instagram):

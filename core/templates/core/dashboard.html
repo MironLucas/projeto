@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load humanize %}
 
 {% block page_title %}Dashboard{% endblock %}
 {% block page_heading %}Dashboard{% endblock %}
@@ -55,18 +56,34 @@
       </div>
 
       <div class="stat-grid">
-        <div class="stat-card stat-card--followers">
+        <div class="stat-card stat-card--total">
           <div class="stat-top">
             <span class="stat-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
             </span>
             <span class="stat-label">Seguidores</span>
           </div>
-          {% if seguidores_ganhos is None %}
+          {% if seguidores_total is None %}
             <div class="stat-value stat-value--muted">&mdash;</div>
             <div class="stat-period">Indisponível no momento</div>
           {% else %}
-            <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos }}</div>
+            <div class="stat-value">{{ seguidores_total|intcomma }}</div>
+            <div class="stat-period">Total atual</div>
+          {% endif %}
+        </div>
+
+        <div class="stat-card stat-card--followers">
+          <div class="stat-top">
+            <span class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg>
+            </span>
+            <span class="stat-label">Novos seguidores</span>
+          </div>
+          {% if seguidores_ganhos is None %}
+            <div class="stat-value stat-value--muted">&mdash;</div>
+            <div class="stat-period">Sem dados do Instagram para este período</div>
+          {% else %}
+            <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos|intcomma }}</div>
             {% include 'core/_comparacao.html' with comparacao=comparacao_seguidores %}
           {% endif %}
         </div>
@@ -78,7 +95,7 @@
             </span>
             <span class="stat-label">Curtidas</span>
           </div>
-          <div class="stat-value">{{ curtidas_total }}</div>
+          <div class="stat-value">{{ curtidas_total|intcomma }}</div>
           {% include 'core/_comparacao.html' with comparacao=comparacao_curtidas %}
         </div>
 
@@ -89,9 +106,14 @@
             </span>
             <span class="stat-label">Comentários</span>
           </div>
-          <div class="stat-value">{{ comentarios_total }}</div>
+          <div class="stat-value">{{ comentarios_total|intcomma }}</div>
           {% include 'core/_comparacao.html' with comparacao=comparacao_comentarios %}
         </div>
+      </div>
+
+      <div class="chart-grid">
+        {% include 'core/_grafico.html' with grafico=grafico_seguidores tipo='seguidores' titulo='Novos seguidores' unidade='novos seguidores' mensagem_vazio='Ainda não há dados de novos seguidores para esse período. O Instagram só informa os últimos 30 dias; o Nexora guarda o histórico a partir de agora.' %}
+        {% include 'core/_grafico.html' with grafico=grafico_curtidas tipo='curtidas' titulo='Curtidas' unidade='curtidas' mensagem_vazio='Não foi possível carregar as curtidas desse período.' %}
       </div>
 
       <div class="dash-head">

@@ -751,9 +751,9 @@ button {
 
 .stat-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
 }
 
 .stat-card {
@@ -788,8 +788,13 @@ button {
 }
 
 .stat-card--likes {
-  --accent: #ff4d7d;
-  --accent-soft: rgba(255, 77, 125, 0.14);
+  --accent: #f5426f;
+  --accent-soft: rgba(245, 66, 111, 0.14);
+}
+
+.stat-card--total .stat-icon {
+  background: var(--gradient);
+  color: #fff;
 }
 
 .stat-card--comments {
@@ -832,7 +837,6 @@ button {
   font-weight: 700;
   letter-spacing: -0.5px;
   line-height: 1.1;
-  font-variant-numeric: tabular-nums;
   color: var(--text);
 }
 
@@ -856,8 +860,9 @@ button {
 
 .stat-compare {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 4px 8px;
   margin-top: 8px;
   font-size: 12px;
 }
@@ -894,6 +899,7 @@ button {
 
 .stat-compare-label {
   color: var(--text-faint);
+  white-space: nowrap;
 }
 
 .section-title {
@@ -902,8 +908,196 @@ button {
   margin: 0 0 16px;
 }
 
-@media (max-width: 860px) {
+/* ---------- Gráficos de barras ---------- */
+.chart-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 40px;
+}
+
+.chart-card {
+  --bar: var(--violet);
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px 14px;
+  min-width: 0;
+}
+
+.chart-card--curtidas {
+  --bar: #f5426f;
+}
+
+.chart-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.chart-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.chart-sub {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.chart-empty {
+  margin: 0;
+  min-height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 24px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.chart-plot {
+  position: relative;
+  height: 180px;
+  margin-left: 40px;
+}
+
+.chart-gridline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.chart-gridline.is-zero {
+  border-top-color: rgba(255, 255, 255, 0.16);
+}
+
+.chart-tick {
+  position: absolute;
+  right: calc(100% + 8px);
+  top: -7px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.chart-slot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border-radius: 6px;
+  outline: none;
+}
+
+.chart-slot:hover,
+.chart-slot:focus-visible {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.chart-bar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(24px, 62%);
+  background: var(--bar);
+  border-radius: 4px 4px 0 0;
+}
+
+.chart-bar.is-neg {
+  border-radius: 0 0 4px 4px;
+}
+
+.chart-tip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 120px;
+  padding: 8px 10px;
+  background: #1b2036;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.chart-tip strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.chart-tip-title {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.chart-tip-note {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.chart-slot:first-child .chart-tip {
+  left: 0;
+  transform: none;
+}
+
+.chart-slot:last-child .chart-tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.chart-slot:hover .chart-tip,
+.chart-slot:focus-visible .chart-tip {
+  display: flex;
+}
+
+.chart-xaxis {
+  display: flex;
+  margin: 8px 0 0 40px;
+}
+
+.chart-xaxis span {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
   .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .stat-grid,
+  .chart-grid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,10 +1,14 @@
 from datetime import datetime
 from unittest import mock
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
-from .views import _motivo_erro_insights, _resolver_periodo
+from datetime import date
+
+from .graficos import escala, intervalos_do_grafico, montar_grafico
+from .models import InstagramConnection, SeguidoresDia
+from .views import _motivo_erro_insights, _resolver_periodo, _sincronizar_seguidores, _somar_seguidores
 
 
 def _local(*args):
@@ -107,3 +111,83 @@ class MotivoErroInsightsTests(SimpleTestCase):
         resp = mock.Mock(status_code=502)
         resp.json.side_effect = ValueError
         self.assertIn('HTTP 502', _motivo_erro_insights(resp))
+
+
+class IntervalosDoGraficoTests(SimpleTestCase):
+    hoje = date(2026, 9, 24)
+
+    def test_hoje_mostra_os_ultimos_7_dias(self):
+        subtitulo, intervalos = intervalos_do_grafico('hoje', self.hoje, self.hoje, self.hoje)
+        self.assertEqual(subtitulo, 'Últimos 7 dias')
+        self.assertEqual([i.rotulo for i in intervalos], ['sex 18', 'sáb 19', 'dom 20', 'seg 21', 'ter 22', 'qua 23', 'qui 24'])
+
+    def test_semana_mostra_8_semanas_comecando_na_segunda(self):
+        _, intervalos = intervalos_do_grafico('semana', self.hoje, self.hoje, self.hoje)
+        self.assertEqual(len(intervalos), 8)
+        self.assertEqual((intervalos[0].inicio, intervalos[0].fim), (date(2026, 8, 3), date(2026, 8, 9)))
+        self.assertEqual((intervalos[-1].inicio, intervalos[-1].fim), (date(2026, 9, 21), self.hoje))
+
+    def test_mes_mostra_os_meses_do_ano_ate_hoje(self):
+        subtitulo, intervalos = intervalos_do_grafico('mes', self.hoje, self.hoje, self.hoje)
+        self.assertEqual(subtitulo, 'Meses de 2026')
+        self.assertEqual([i.rotulo for i in intervalos], ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set'])
+        self.assertEqual(intervalos[1].fim, date(2026, 2, 28))
+        self.assertEqual(intervalos[-1].fim, self.hoje)
+
+    def test_periodo_curto_e_por_dia_e_longo_e_por_mes(self):
+        subtitulo, intervalos = intervalos_do_grafico('periodo', date(2026, 9, 1), date(2026, 9, 10), self.hoje)
+        self.assertEqual((subtitulo, len(intervalos)), ('Por dia', 10))
+        subtitulo, intervalos = intervalos_do_grafico('periodo', date(2026, 7, 1), date(2026, 8, 31), self.hoje)
+        self.assertEqual((subtitulo, len(intervalos)), ('Por semana', 9))
+        subtitulo, intervalos = intervalos_do_grafico('periodo', date(2025, 11, 15), date(2026, 9, 30), self.hoje)
+        self.assertEqual(subtitulo, 'Por mês')
+        self.assertEqual(intervalos[0].rotulo, 'nov/25')
+        self.assertEqual(intervalos[0].inicio, date(2025, 11, 15))
+        self.assertEqual(intervalos[-1].fim, self.hoje)
+
+
+class EscalaEGraficoTests(SimpleTestCase):
+    def test_escala_usa_numeros_redondos(self):
+        self.assertEqual(escala(0, 37), [0, 10, 20, 30, 40])
+        self.assertEqual(escala(0, 2), [0, 1, 2])
+        self.assertEqual(escala(-3, 12), [-5, 0, 5, 10, 15])
+        self.assertEqual(escala(0, 0), [0, 1])
+
+    def test_barras_negativas_crescem_para_baixo_a_partir_do_zero(self):
+        _, intervalos = intervalos_do_grafico('hoje', date(2026, 9, 24), date(2026, 9, 24), date(2026, 9, 24))
+        grafico = montar_grafico('x', intervalos, [10, -5, None, 0, 15, 3, 1])
+        self.assertEqual(grafico['base'], 25.0)
+        positiva, negativa, vazia = grafico['barras'][:3]
+        self.assertEqual((positiva['inferior'], positiva['altura']), (25.0, 50.0))
+        self.assertEqual((negativa['inferior'], negativa['altura']), (0.0, 25.0))
+        self.assertTrue(negativa['negativo'])
+        self.assertNotIn('altura', vazia)
+
+    def test_sem_nenhum_dado_fica_vazio(self):
+        _, intervalos = intervalos_do_grafico('hoje', date(2026, 9, 24), date(2026, 9, 24), date(2026, 9, 24))
+        self.assertTrue(montar_grafico('x', intervalos, [None] * 7)['vazio'])
+
+
+class SeguidoresTests(TestCase):
+    def test_soma_marca_incompleto_quando_falta_dia_encerrado(self):
+        por_dia = {date(2026, 9, 21): 3, date(2026, 9, 23): 2}
+        self.assertEqual(_somar_seguidores(por_dia, date(2026, 9, 21), date(2026, 9, 24), date(2026, 9, 24)), (5, False))
+        por_dia[date(2026, 9, 22)] = 1
+        self.assertEqual(_somar_seguidores(por_dia, date(2026, 9, 21), date(2026, 9, 24), date(2026, 9, 24)), (6, True))
+        self.assertEqual(_somar_seguidores({}, date(2026, 9, 21), date(2026, 9, 24), date(2026, 9, 24)), (None, False))
+
+    def test_sincronizar_grava_cada_dia_pelo_end_time(self):
+        from django.contrib.auth.models import User
+        usuario = User.objects.create(username='teste')
+        conexao = InstagramConnection.objects.create(user=usuario, instagram_user_id='123', access_token='t')
+        resposta = mock.Mock(ok=True)
+        resposta.json.return_value = {'data': [{'values': [
+            {'value': 4, 'end_time': '2026-09-22T07:00:00+0000'},
+            {'value': -1, 'end_time': '2026-09-23T07:00:00+0000'},
+        ]}]}
+        with mock.patch('core.views.requests.get', return_value=resposta):
+            _sincronizar_seguidores(conexao)
+            resposta.json.return_value['data'][0]['values'][1]['value'] = 2
+            _sincronizar_seguidores(conexao)
+        dias = dict(SeguidoresDia.objects.values_list('data', 'novos_seguidores'))
+        self.assertEqual(dias, {date(2026, 9, 21): 4, date(2026, 9, 22): 2})

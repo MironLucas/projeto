@@ -17,3 +17,18 @@ class InstagramConnection(models.Model):
 
     def __str__(self):
         return f'@{self.instagram_username}' if self.instagram_username else f'Conexão de {self.user}'
+
+
+class SeguidoresDia(models.Model):
+    # Ligado ao id da conta do Instagram (e não à conexão) para o histórico sobreviver a reconexões.
+    instagram_user_id = models.CharField(max_length=64)
+    data = models.DateField()
+    novos_seguidores = models.IntegerField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['instagram_user_id', 'data'], name='seguidores_dia_unico'),
+        ]
+
+    def __str__(self):
+        return f'{self.instagram_user_id} {self.data}: {self.novos_seguidores}'

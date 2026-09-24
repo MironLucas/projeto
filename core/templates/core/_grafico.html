@@ -1,0 +1,42 @@
+{% load humanize l10n %}
+<section class="chart-card chart-card--{{ tipo }}">
+  <header class="chart-head">
+    <h3 class="chart-title">{{ titulo }}</h3>
+    <span class="chart-sub">{{ grafico.subtitulo }}</span>
+  </header>
+
+  {% if grafico.vazio %}
+    <p class="chart-empty">{{ mensagem_vazio }}</p>
+  {% else %}
+    <div class="chart" role="img" aria-label="{{ titulo }} — {{ grafico.subtitulo }}">
+      <div class="chart-plot">
+        {% for marca in grafico.marcas %}
+          <div class="chart-gridline{% if marca.valor == 0 %} is-zero{% endif %}" style="bottom: {{ marca.posicao|unlocalize }}%">
+            <span class="chart-tick">{{ marca.valor|intcomma }}</span>
+          </div>
+        {% endfor %}
+        <div class="chart-bars">
+          {% for barra in grafico.barras %}
+            <div class="chart-slot" tabindex="0" aria-label="{{ barra.descricao }}: {% if barra.valor is None %}sem dados{% else %}{{ barra.valor }} {{ unidade }}{% endif %}">
+              {% if barra.valor is not None %}
+                <div class="chart-bar{% if barra.negativo %} is-neg{% endif %}" style="bottom: {{ barra.inferior|unlocalize }}%; height: {{ barra.altura|unlocalize }}%"></div>
+              {% endif %}
+              <div class="chart-tip">
+                <span class="chart-tip-title">{{ barra.descricao }}</span>
+                {% if barra.valor is None %}
+                  <span>Sem dados</span>
+                {% else %}
+                  <span><strong>{{ barra.valor|intcomma }}</strong> {{ unidade }}</span>
+                  {% if barra.parcial %}<span class="chart-tip-note">Dados parciais</span>{% endif %}
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="chart-xaxis" aria-hidden="true">
+        {% for barra in grafico.barras %}<span>{% if barra.mostrar_rotulo %}{{ barra.rotulo }}{% endif %}</span>{% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</section>
