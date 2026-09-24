@@ -209,29 +209,22 @@ def _buscar_perfil(access_token):
 
 
 def _resolver_periodo(chave, inicio_str, fim_str):
-    # Períodos em andamento são comparados com o mesmo trecho do período anterior
-    # (ex.: hoje até 11:25 vs. ontem até 11:25), para a comparação ser justa.
+    # Semana e mês em andamento são comparados com os mesmos dias do período anterior
+    # (ex.: 01 a 24/09 vs. 01 a 24/08), para a comparação ser justa.
     agora = timezone.localtime(timezone.now())
     hoje = agora.date()
-    hora = agora.strftime('%H:%M')
 
     if chave == 'semana':
-        desde, ate = _inicio_do_dia(hoje - timedelta(days=hoje.weekday())), agora
-        anterior_desde, anterior_ate = desde - timedelta(days=7), ate - timedelta(days=7)
+        inicio = hoje - timedelta(days=hoje.weekday())
+        anterior_inicio, anterior_fim = inicio - timedelta(days=7), hoje - timedelta(days=7)
+        fim = hoje
         label = 'Esta semana'
-        label_comparacao = f'vs. semana passada até {DIAS_SEMANA[hoje.weekday()]} {hora}'
+        label_comparacao = f'vs. semana passada até {DIAS_SEMANA[hoje.weekday()]}'
     elif chave == 'mes':
-        desde, ate = _inicio_do_dia(hoje.replace(day=1)), agora
-        anterior_desde, anterior_ate = _mesmo_momento_mes_anterior(desde), _mesmo_momento_mes_anterior(ate)
+        inicio, fim = hoje.replace(day=1), hoje
+        anterior_inicio, anterior_fim = _mesmo_dia_mes_anterior(inicio), _mesmo_dia_mes_anterior(hoje)
         label = 'Este mês'
-        label_comparacao = f'vs. mês passado até {anterior_ate:%d/%m} {hora}'
-    elif chave == 'mes_passado':
-        ultimo_dia = hoje.replace(day=1) - timedelta(days=1)
-        desde, ate = _inicio_do_dia(ultimo_dia.replace(day=1)), _fim_do_dia(ultimo_dia)
-        ultimo_dia_anterior = ultimo_dia.replace(day=1) - timedelta(days=1)
-        anterior_desde = _inicio_do_dia(ultimo_dia_anterior.replace(day=1))
-        anterior_ate = _fim_do_dia(ultimo_dia_anterior)
-        label, label_comparacao = 'Mês passado', 'vs. mês anterior'
+        label_comparacao = f'vs. mês passado até {anterior_fim:%d/%m}'
     elif chave == 'periodo' and inicio_str and fim_str:
         try:
             inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
@@ -242,33 +235,32 @@ def _resolver_periodo(chave, inicio_str, fim_str):
             if inicio > fim:
                 inicio, fim = fim, inicio
             dias = (fim - inicio).days + 1
-            desde, ate = _inicio_do_dia(inicio), min(_fim_do_dia(fim), agora)
-            anterior_desde, anterior_ate = desde - timedelta(days=dias), ate - timedelta(days=dias)
+            anterior_inicio, anterior_fim = inicio - timedelta(days=dias), fim - timedelta(days=dias)
             label = f'{inicio:%d/%m/%Y} – {fim:%d/%m/%Y}'
             label_comparacao = 'vs. dia anterior' if dias == 1 else f'vs. {dias} dias anteriores'
     else:
         chave = 'hoje'
 
     if chave == 'hoje':
-        desde, ate = _inicio_do_dia(hoje), agora
-        anterior_desde, anterior_ate = desde - timedelta(days=1), ate - timedelta(days=1)
-        label, label_comparacao = 'Hoje', f'vs. ontem até {hora}'
+        inicio = fim = hoje
+        anterior_inicio = anterior_fim = hoje - timedelta(days=1)
+        label, label_comparacao = 'Hoje', 'vs. ontem'
 
     return Periodo(
         chave=chave,
         label=label,
         label_comparacao=label_comparacao,
-        desde=desde,
-        ate=ate,
-        anterior_desde=anterior_desde,
-        anterior_ate=anterior_ate,
+        desde=_inicio_do_dia(inicio),
+        ate=min(_fim_do_dia(fim), agora),
+        anterior_desde=_inicio_do_dia(anterior_inicio),
+        anterior_ate=_fim_do_dia(anterior_fim),
     )
 
 
-def _mesmo_momento_mes_anterior(momento):
-    ano, mes = (momento.year, momento.month - 1) if momento.month > 1 else (momento.year - 1, 12)
+def _mesmo_dia_mes_anterior(dia):
+    ano, mes = (dia.year, dia.month - 1) if dia.month > 1 else (dia.year - 1, 12)
     ultimo_dia = calendar.monthrange(ano, mes)[1]
-    return momento.replace(year=ano, month=mes, day=min(momento.day, ultimo_dia))
+    return dia.replace(year=ano, month=mes, day=min(dia.day, ultimo_dia))
 
 
 def _inicio_do_dia(dia):

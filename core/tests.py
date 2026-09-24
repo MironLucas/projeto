@@ -20,56 +20,53 @@ def _fmt(momento):
 
 
 class ResolverPeriodoTests(SimpleTestCase):
-    def test_hoje_compara_com_ontem_ate_a_mesma_hora(self):
+    def test_hoje_compara_com_ontem_inteiro(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('hoje', None, None)
         self.assertEqual(_fmt(p.desde), '24/09/2026 00:00')
         self.assertEqual(_fmt(p.ate), '24/09/2026 11:25')
         self.assertEqual(_fmt(p.anterior_desde), '23/09/2026 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '23/09/2026 11:25')
-        self.assertEqual(p.label_comparacao, 'vs. ontem até 11:25')
+        self.assertEqual(_fmt(p.anterior_ate), '23/09/2026 23:59')
+        self.assertEqual(p.label_comparacao, 'vs. ontem')
 
-    def test_semana_compara_ate_o_mesmo_dia_e_hora_da_semana_passada(self):
+    def test_semana_compara_ate_o_mesmo_dia_da_semana_passada(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('semana', None, None)
         self.assertEqual(_fmt(p.desde), '21/09/2026 00:00')
         self.assertEqual(_fmt(p.anterior_desde), '14/09/2026 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '17/09/2026 11:25')
-        self.assertEqual(p.label_comparacao, 'vs. semana passada até qui 11:25')
+        self.assertEqual(_fmt(p.anterior_ate), '17/09/2026 23:59')
+        self.assertEqual(p.label_comparacao, 'vs. semana passada até qui')
 
-    def test_mes_compara_ate_o_mesmo_dia_e_hora_do_mes_passado(self):
+    def test_mes_compara_ate_o_mesmo_dia_do_mes_passado(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('mes', None, None)
         self.assertEqual(_fmt(p.desde), '01/09/2026 00:00')
         self.assertEqual(_fmt(p.anterior_desde), '01/08/2026 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '24/08/2026 11:25')
-        self.assertEqual(p.label_comparacao, 'vs. mês passado até 24/08 11:25')
+        self.assertEqual(_fmt(p.anterior_ate), '24/08/2026 23:59')
+        self.assertEqual(p.label_comparacao, 'vs. mês passado até 24/08')
 
     def test_mes_no_dia_31_usa_o_ultimo_dia_do_mes_anterior(self):
         with _congelar_em(2026, 3, 31, 9, 0):
             p = _resolver_periodo('mes', None, None)
-        self.assertEqual(_fmt(p.anterior_ate), '28/02/2026 09:00')
+        self.assertEqual(_fmt(p.anterior_ate), '28/02/2026 23:59')
 
     def test_mes_em_janeiro_compara_com_dezembro_do_ano_anterior(self):
         with _congelar_em(2026, 1, 10, 8, 0):
             p = _resolver_periodo('mes', None, None)
         self.assertEqual(_fmt(p.anterior_desde), '01/12/2025 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '10/12/2025 08:00')
+        self.assertEqual(_fmt(p.anterior_ate), '10/12/2025 23:59')
 
-    def test_mes_passado_compara_meses_completos(self):
+    def test_mes_passado_nao_existe_mais_e_volta_para_hoje(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('mes_passado', None, None)
-        self.assertEqual(_fmt(p.desde), '01/08/2026 00:00')
-        self.assertEqual(_fmt(p.ate), '31/08/2026 23:59')
-        self.assertEqual(_fmt(p.anterior_desde), '01/07/2026 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '31/07/2026 23:59')
+        self.assertEqual(p.chave, 'hoje')
 
-    def test_periodo_que_termina_hoje_compara_ate_a_mesma_hora(self):
+    def test_periodo_compara_com_os_mesmos_dias_anteriores(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('periodo', '2026-09-20', '2026-09-24')
         self.assertEqual(_fmt(p.ate), '24/09/2026 11:25')
         self.assertEqual(_fmt(p.anterior_desde), '15/09/2026 00:00')
-        self.assertEqual(_fmt(p.anterior_ate), '19/09/2026 11:25')
+        self.assertEqual(_fmt(p.anterior_ate), '19/09/2026 23:59')
         self.assertEqual(p.label_comparacao, 'vs. 5 dias anteriores')
 
     def test_periodo_com_datas_invertidas_e_corrigido(self):
