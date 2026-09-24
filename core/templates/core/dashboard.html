@@ -36,7 +36,12 @@
 {% endblock %}
 
 {% block content %}
-  {% if instagram %}
+  {% if instagram and erro_instagram %}
+    <div class="empty-state">
+      <h2>Não foi possível carregar os dados do Instagram</h2>
+      <p>O Instagram devolveu uma resposta que o Nexora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
+    </div>
+  {% elif instagram %}
     <div class="dash">
       <div class="dash-head">
         <h2 class="section-title">Resumo</h2>
@@ -131,7 +136,7 @@
         <div class="media-grid">
           {% for midia in midias %}
             <a class="media-card" href="{{ midia.permalink }}" target="_blank" rel="noopener">
-              <div class="media-thumb" style="background-image: url('{{ midia.thumbnail_url|default:midia.media_url }}');">
+              <div class="media-thumb"{% if midia.capa %} style="background-image: url('{{ midia.capa }}');"{% endif %}>
                 {% if midia.media_type == 'VIDEO' %}
                   <span class="media-type" title="Vídeo">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"></path></svg>
@@ -200,20 +205,6 @@
 
         inicio.addEventListener('change', enviarSePeriodoCompleto);
         fim.addEventListener('change', enviarSePeriodoCompleto);
-
-        var chip = document.querySelector('.account-chip');
-        if (chip) {
-          document.addEventListener('click', function (evento) {
-            if (chip.open && !chip.contains(evento.target)) {
-              chip.open = false;
-            }
-          });
-          document.addEventListener('keydown', function (evento) {
-            if (evento.key === 'Escape') {
-              chip.open = false;
-            }
-          });
-        }
       })();
     </script>
   {% else %}

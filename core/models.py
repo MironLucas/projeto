@@ -11,7 +11,7 @@ class InstagramConnection(models.Model):
     instagram_user_id = models.CharField(max_length=64, blank=True)
     instagram_username = models.CharField(max_length=150, blank=True)
     account_type = models.CharField(max_length=32, blank=True)
-    access_token = models.CharField(max_length=255, blank=True)
+    access_token = models.TextField(blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
     connected_at = models.DateTimeField(auto_now_add=True)
 

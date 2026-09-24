@@ -60,6 +60,16 @@ def dashboard(request):
     if not instagram:
         return render(request, 'core/dashboard.html', contexto)
 
+    try:
+        contexto.update(_dados_do_dashboard(instagram, periodo))
+    except Exception:
+        # Proteção na fronteira com a API: uma resposta inesperada do Instagram não pode derrubar a página.
+        logger.exception('Falha ao montar o dashboard com os dados do Instagram')
+        contexto['erro_instagram'] = True
+    return render(request, 'core/dashboard.html', contexto)
+
+
+def _dados_do_dashboard(instagram, periodo):
     _renovar_token_se_necessario(instagram)
     foto_perfil, seguidores_total = _buscar_perfil_atual(instagram)
     _sincronizar_seguidores(instagram)
@@ -74,6 +84,8 @@ def dashboard(request):
 
     midias, midias_cobertas_desde = _buscar_midias_desde(instagram, inicio_busca)
     midias_recentes = midias[:12]
+    for midia in midias_recentes:
+        midia['capa'] = midia.get('thumbnail_url') or midia.get('media_url') or ''
     _adicionar_visualizacoes(instagram, midias_recentes)
     motivos = Counter(m['visualizacoes_motivo'] for m in midias_recentes if m.get('visualizacoes_motivo'))
 
@@ -88,7 +100,7 @@ def dashboard(request):
         seguidores_por_dia, _data_local(periodo.anterior_desde), _data_local(periodo.anterior_ate), hoje,
     )
 
-    contexto.update({
+    return {
         'foto_perfil': foto_perfil,
         'seguidores_total': seguidores_total,
         'midias': midias_recentes,
@@ -105,8 +117,7 @@ def dashboard(request):
         'grafico_curtidas': montar_grafico(
             subtitulo, intervalos, *_serie_curtidas(midias, intervalos, midias_cobertas_desde),
         ),
-    })
-    return render(request, 'core/dashboard.html', contexto)
+    }
 
 
 @login_required
@@ -379,10 +390,11 @@ def _adicionar_visualizacoes(instagram, midias):
             return None, _motivo_erro_insights(resp)
         try:
             metrica = resp.json()['data'][0]
-            if 'total_value' in metrica:
-                return metrica['total_value']['value'], None
-            return metrica['values'][0]['value'], None
-        except (KeyError, IndexError, ValueError):
+            valor = (metrica.get('total_value') or {}).get('value')
+            if valor is None:
+                valor = metrica['values'][0]['value']
+            return valor, None
+        except (KeyError, IndexError, TypeError, AttributeError, ValueError):
             logger.warning('Resposta inesperada de visualizações da mídia %s: %s', midia['id'], resp.text[:300])
             return None, 'O Instagram devolveu uma resposta em formato inesperado.'
 
@@ -394,19 +406,22 @@ def _adicionar_visualizacoes(instagram, midias):
 
 def _motivo_erro_insights(resp):
     try:
-        erro = resp.json().get('error', {})
-    except ValueError:
+        erro = resp.json().get('error') or {}
+    except (ValueError, AttributeError):
+        erro = {}
+    if not isinstance(erro, dict):
         erro = {}
     codigo, subcodigo = erro.get('code'), erro.get('error_subcode')
+    mensagem = erro.get('message') or ''
 
     if subcodigo == 2108006:
         return 'O Instagram não fornece estatísticas de posts publicados antes da conta virar profissional.'
-    if codigo in (10, 200) or 'permission' in erro.get('message', '').lower():
+    if codigo in (10, 200) or 'permission' in mensagem.lower():
         return ('A permissão de estatísticas não foi concedida. '
                 'Desconecte e conecte o Instagram de novo aceitando todas as permissões.')
     if codigo == 190:
         return 'A conexão com o Instagram expirou. Desconecte e conecte de novo.'
-    return f'O Instagram não informou as visualizações: {erro.get("message") or f"HTTP {resp.status_code}"}'
+    return f'O Instagram não informou as visualizações: {mensagem or f"HTTP {resp.status_code}"}'
 
 
 def _buscar_perfil_atual(instagram):

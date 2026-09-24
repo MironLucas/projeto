@@ -191,3 +191,62 @@ class SeguidoresTests(TestCase):
             _sincronizar_seguidores(conexao)
         dias = dict(SeguidoresDia.objects.values_list('data', 'novos_seguidores'))
         self.assertEqual(dias, {date(2026, 9, 21): 4, date(2026, 9, 22): 2})
+
+
+class DashboardRespostasInesperadasTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.create(username='dono')
+        InstagramConnection.objects.create(user=self.usuario, instagram_user_id='999', access_token='t')
+        self.client.force_login(self.usuario)
+
+    def _get(self, respostas):
+        def fake_get(url, params=None, timeout=None):
+            for sufixo, corpo, ok in respostas:
+                if url.endswith(sufixo):
+                    resp = mock.Mock(ok=ok, status_code=200 if ok else 400, text='')
+                    resp.json.return_value = corpo
+                    return resp
+            resp = mock.Mock(ok=True, status_code=200, text='')
+            resp.json.return_value = {}
+            return resp
+
+        with mock.patch('core.views.requests.get', side_effect=fake_get):
+            return self.client.get('/dashboard/')
+
+    def _video(self):
+        agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
+        return {'id': '1', 'timestamp': agora, 'media_type': 'VIDEO', 'permalink': 'x'}
+
+    def test_post_sem_media_url_nao_derruba_a_pagina(self):
+        resp = self._get([('/media', {'data': [self._video()]}, True)])
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'class="media-card"')
+
+    def test_visualizacoes_com_total_value_nulo(self):
+        resp = self._get([
+            ('/media', {'data': [self._video()]}, True),
+            ('/1/insights', {'data': [{'name': 'views', 'total_value': None}]}, True),
+        ])
+        self.assertEqual(resp.status_code, 200)
+
+    def test_erro_de_visualizacoes_com_mensagem_nula(self):
+        resp = self._get([
+            ('/media', {'data': [self._video()]}, True),
+            ('/1/insights', {'error': {'code': 100, 'message': None}}, False),
+        ])
+        self.assertEqual(resp.status_code, 200)
+
+    def test_erro_inesperado_mostra_aviso_em_vez_de_500(self):
+        with mock.patch('core.views._somar_engajamento', side_effect=RuntimeError('boom')), \
+                self.assertLogs('core.views', level='ERROR'):
+            resp = self._get([])
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Não foi possível carregar os dados do Instagram')
+
+    def test_token_longo_e_aceito(self):
+        conexao = InstagramConnection.objects.get(user=self.usuario)
+        conexao.access_token = 'I' * 400
+        conexao.save()
+        conexao.refresh_from_db()
+        self.assertEqual(len(conexao.access_token), 400)
