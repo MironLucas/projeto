@@ -1,6 +1,7 @@
 import calendar
 import logging
 import secrets
+from collections import Counter
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
@@ -52,6 +53,7 @@ def dashboard(request):
     curtidas_total = comentarios_total = 0
     seguidores_ganhos = None
     comparacao_seguidores = comparacao_curtidas = comparacao_comentarios = None
+    aviso_visualizacoes = None
 
     if instagram:
         _renovar_token_se_necessario(instagram)
@@ -59,6 +61,9 @@ def dashboard(request):
         midias = _buscar_midias_desde(instagram, periodo.anterior_desde)
         midias_recentes = midias[:12]
         _adicionar_visualizacoes(instagram, midias_recentes)
+        motivos = Counter(m['visualizacoes_motivo'] for m in midias_recentes if m.get('visualizacoes_motivo'))
+        if motivos:
+            aviso_visualizacoes = motivos.most_common(1)[0][0]
 
         curtidas_total, comentarios_total = _somar_engajamento(midias, periodo.desde, periodo.ate)
         curtidas_anterior, comentarios_anterior = _somar_engajamento(
@@ -76,6 +81,7 @@ def dashboard(request):
         'instagram': instagram,
         'foto_perfil': foto_perfil,
         'midias': midias_recentes,
+        'aviso_visualizacoes': aviso_visualizacoes,
         'curtidas_total': curtidas_total,
         'comentarios_total': comentarios_total,
         'seguidores_ganhos': seguidores_ganhos,
@@ -358,25 +364,43 @@ def _adicionar_visualizacoes(instagram, midias):
             }, timeout=8)
         except requests.RequestException:
             logger.warning('Falha de rede ao buscar visualizações da mídia %s', midia['id'])
-            return None
+            return None, 'O Instagram não respondeu a tempo. Recarregue a página para tentar de novo.'
         if not resp.ok:
             logger.warning(
                 'Instagram recusou visualizações da mídia %s (HTTP %s): %s',
                 midia['id'], resp.status_code, resp.text[:300],
             )
-            return None
+            return None, _motivo_erro_insights(resp)
         try:
             metrica = resp.json()['data'][0]
             if 'total_value' in metrica:
-                return metrica['total_value']['value']
-            return metrica['values'][0]['value']
+                return metrica['total_value']['value'], None
+            return metrica['values'][0]['value'], None
         except (KeyError, IndexError, ValueError):
             logger.warning('Resposta inesperada de visualizações da mídia %s: %s', midia['id'], resp.text[:300])
-            return None
+            return None, 'O Instagram devolveu uma resposta em formato inesperado.'
 
     with ThreadPoolExecutor(max_workers=6) as executor:
-        for midia, visualizacoes in zip(videos, executor.map(buscar, videos)):
+        for midia, (visualizacoes, motivo) in zip(videos, executor.map(buscar, videos)):
             midia['visualizacoes'] = visualizacoes
+            midia['visualizacoes_motivo'] = motivo
+
+
+def _motivo_erro_insights(resp):
+    try:
+        erro = resp.json().get('error', {})
+    except ValueError:
+        erro = {}
+    codigo, subcodigo = erro.get('code'), erro.get('error_subcode')
+
+    if subcodigo == 2108006:
+        return 'O Instagram não fornece estatísticas de posts publicados antes da conta virar profissional.'
+    if codigo in (10, 200) or 'permission' in erro.get('message', '').lower():
+        return ('A permissão de estatísticas não foi concedida. '
+                'Desconecte e conecte o Instagram de novo aceitando todas as permissões.')
+    if codigo == 190:
+        return 'A conexão com o Instagram expirou. Desconecte e conecte de novo.'
+    return f'O Instagram não informou as visualizações: {erro.get("message") or f"HTTP {resp.status_code}"}'
 
 
 def _buscar_foto_perfil(instagram):

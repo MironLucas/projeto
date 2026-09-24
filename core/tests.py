@@ -4,7 +4,7 @@ from unittest import mock
 from django.test import SimpleTestCase
 from django.utils import timezone
 
-from .views import _resolver_periodo
+from .views import _motivo_erro_insights, _resolver_periodo
 
 
 def _local(*args):
@@ -81,3 +81,32 @@ class ResolverPeriodoTests(SimpleTestCase):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('periodo', 'xx', 'yy')
         self.assertEqual(p.chave, 'hoje')
+
+
+def _resposta_erro(status, corpo):
+    resp = mock.Mock(status_code=status)
+    resp.json.return_value = corpo
+    return resp
+
+
+class MotivoErroInsightsTests(SimpleTestCase):
+    def test_post_anterior_a_conta_profissional(self):
+        resp = _resposta_erro(400, {'error': {'code': 100, 'error_subcode': 2108006, 'message': 'Media Posted Before Business Account Conversion'}})
+        self.assertIn('antes da conta virar profissional', _motivo_erro_insights(resp))
+
+    def test_permissao_nao_concedida(self):
+        resp = _resposta_erro(403, {'error': {'code': 10, 'message': 'Application does not have permission for this action'}})
+        self.assertIn('permissão de estatísticas', _motivo_erro_insights(resp))
+
+    def test_token_expirado(self):
+        resp = _resposta_erro(401, {'error': {'code': 190, 'message': 'Error validating access token'}})
+        self.assertIn('expirou', _motivo_erro_insights(resp))
+
+    def test_erro_desconhecido_mostra_mensagem_do_instagram(self):
+        resp = _resposta_erro(400, {'error': {'code': 100, 'message': '(#100) The metric views is not supported'}})
+        self.assertIn('The metric views is not supported', _motivo_erro_insights(resp))
+
+    def test_resposta_sem_json(self):
+        resp = mock.Mock(status_code=502)
+        resp.json.side_effect = ValueError
+        self.assertIn('HTTP 502', _motivo_erro_insights(resp))
