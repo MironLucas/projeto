@@ -1,3 +1,5 @@
+import calendar
+import logging
 import secrets
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -19,6 +21,10 @@ INSTAGRAM_LONG_LIVED_TOKEN_URL = 'https://graph.instagram.com/access_token'
 INSTAGRAM_REFRESH_TOKEN_URL = 'https://graph.instagram.com/refresh_access_token'
 INSTAGRAM_GRAPH_URL = 'https://graph.instagram.com'
 INSTAGRAM_SCOPES = 'instagram_business_basic,instagram_business_manage_insights'
+
+DIAS_SEMANA = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -197,23 +203,28 @@ def _buscar_perfil(access_token):
 
 
 def _resolver_periodo(chave, inicio_str, fim_str):
+    # Períodos em andamento são comparados com o mesmo trecho do período anterior
+    # (ex.: hoje até 11:25 vs. ontem até 11:25), para a comparação ser justa.
     agora = timezone.localtime(timezone.now())
     hoje = agora.date()
+    hora = agora.strftime('%H:%M')
 
     if chave == 'semana':
-        inicio, fim = hoje - timedelta(days=hoje.weekday()), hoje
-        anterior_inicio, anterior_fim = inicio - timedelta(days=7), inicio - timedelta(days=1)
-        label, label_comparacao = 'Esta semana', 'vs. semana passada'
+        desde, ate = _inicio_do_dia(hoje - timedelta(days=hoje.weekday())), agora
+        anterior_desde, anterior_ate = desde - timedelta(days=7), ate - timedelta(days=7)
+        label = 'Esta semana'
+        label_comparacao = f'vs. semana passada até {DIAS_SEMANA[hoje.weekday()]} {hora}'
     elif chave == 'mes':
-        inicio, fim = hoje.replace(day=1), hoje
-        anterior_fim = inicio - timedelta(days=1)
-        anterior_inicio = anterior_fim.replace(day=1)
-        label, label_comparacao = 'Este mês', 'vs. mês passado'
+        desde, ate = _inicio_do_dia(hoje.replace(day=1)), agora
+        anterior_desde, anterior_ate = _mesmo_momento_mes_anterior(desde), _mesmo_momento_mes_anterior(ate)
+        label = 'Este mês'
+        label_comparacao = f'vs. mês passado até {anterior_ate:%d/%m} {hora}'
     elif chave == 'mes_passado':
-        fim = hoje.replace(day=1) - timedelta(days=1)
-        inicio = fim.replace(day=1)
-        anterior_fim = inicio - timedelta(days=1)
-        anterior_inicio = anterior_fim.replace(day=1)
+        ultimo_dia = hoje.replace(day=1) - timedelta(days=1)
+        desde, ate = _inicio_do_dia(ultimo_dia.replace(day=1)), _fim_do_dia(ultimo_dia)
+        ultimo_dia_anterior = ultimo_dia.replace(day=1) - timedelta(days=1)
+        anterior_desde = _inicio_do_dia(ultimo_dia_anterior.replace(day=1))
+        anterior_ate = _fim_do_dia(ultimo_dia_anterior)
         label, label_comparacao = 'Mês passado', 'vs. mês anterior'
     elif chave == 'periodo' and inicio_str and fim_str:
         try:
@@ -225,26 +236,33 @@ def _resolver_periodo(chave, inicio_str, fim_str):
             if inicio > fim:
                 inicio, fim = fim, inicio
             dias = (fim - inicio).days + 1
-            anterior_inicio, anterior_fim = inicio - timedelta(days=dias), inicio - timedelta(days=1)
-            label = f'{inicio.strftime("%d/%m/%Y")} – {fim.strftime("%d/%m/%Y")}'
+            desde, ate = _inicio_do_dia(inicio), min(_fim_do_dia(fim), agora)
+            anterior_desde, anterior_ate = desde - timedelta(days=dias), ate - timedelta(days=dias)
+            label = f'{inicio:%d/%m/%Y} – {fim:%d/%m/%Y}'
             label_comparacao = 'vs. dia anterior' if dias == 1 else f'vs. {dias} dias anteriores'
     else:
         chave = 'hoje'
 
     if chave == 'hoje':
-        inicio = fim = hoje
-        anterior_inicio = anterior_fim = hoje - timedelta(days=1)
-        label, label_comparacao = 'Hoje', 'vs. ontem'
+        desde, ate = _inicio_do_dia(hoje), agora
+        anterior_desde, anterior_ate = desde - timedelta(days=1), ate - timedelta(days=1)
+        label, label_comparacao = 'Hoje', f'vs. ontem até {hora}'
 
     return Periodo(
         chave=chave,
         label=label,
         label_comparacao=label_comparacao,
-        desde=_inicio_do_dia(inicio),
-        ate=min(_fim_do_dia(fim), agora),
-        anterior_desde=_inicio_do_dia(anterior_inicio),
-        anterior_ate=min(_fim_do_dia(anterior_fim), agora),
+        desde=desde,
+        ate=ate,
+        anterior_desde=anterior_desde,
+        anterior_ate=anterior_ate,
     )
+
+
+def _mesmo_momento_mes_anterior(momento):
+    ano, mes = (momento.year, momento.month - 1) if momento.month > 1 else (momento.year - 1, 12)
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    return momento.replace(year=ano, month=mes, day=min(momento.day, ultimo_dia))
 
 
 def _inicio_do_dia(dia):
@@ -338,12 +356,22 @@ def _adicionar_visualizacoes(instagram, midias):
                 'metric': 'views',
                 'access_token': instagram.access_token,
             }, timeout=8)
-            resp.raise_for_status()
+        except requests.RequestException:
+            logger.warning('Falha de rede ao buscar visualizações da mídia %s', midia['id'])
+            return None
+        if not resp.ok:
+            logger.warning(
+                'Instagram recusou visualizações da mídia %s (HTTP %s): %s',
+                midia['id'], resp.status_code, resp.text[:300],
+            )
+            return None
+        try:
             metrica = resp.json()['data'][0]
             if 'total_value' in metrica:
                 return metrica['total_value']['value']
             return metrica['values'][0]['value']
-        except (requests.RequestException, KeyError, IndexError, ValueError):
+        except (KeyError, IndexError, ValueError):
+            logger.warning('Resposta inesperada de visualizações da mídia %s: %s', midia['id'], resp.text[:300])
             return None
 
     with ThreadPoolExecutor(max_workers=6) as executor:
