@@ -1,5 +1,5 @@
 import secrets
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
 import requests
@@ -21,15 +21,36 @@ INSTAGRAM_SCOPES = 'instagram_business_basic,instagram_business_manage_insights'
 
 @login_required
 def dashboard(request):
+    periodo_chave, desde, ate, periodo_label = _resolver_periodo(
+        request.GET.get('periodo', 'hoje'),
+        request.GET.get('inicio'),
+        request.GET.get('fim'),
+    )
+
     instagram = InstagramConnection.objects.filter(user=request.user).first()
     midias = []
+    curtidas_total = 0
+    comentarios_total = 0
+    seguidores_ganhos = None
+
     if instagram:
         _renovar_token_se_necessario(instagram)
-        midias = _buscar_midias_recentes(instagram)
+        midias = _buscar_midias_periodo(instagram, desde, ate)
+        curtidas_total = sum(m.get('like_count') or 0 for m in midias)
+        comentarios_total = sum(m.get('comments_count') or 0 for m in midias)
+        seguidores_ganhos = _buscar_seguidores_periodo(instagram, desde, ate)
+
     return render(request, 'core/dashboard.html', {
         'active_menu': 'dashboard',
         'instagram': instagram,
         'midias': midias,
+        'curtidas_total': curtidas_total,
+        'comentarios_total': comentarios_total,
+        'seguidores_ganhos': seguidores_ganhos,
+        'periodo_atual': periodo_chave,
+        'periodo_label': periodo_label,
+        'inicio_custom': request.GET.get('inicio', ''),
+        'fim_custom': request.GET.get('fim', ''),
     })
 
 
@@ -145,19 +166,113 @@ def _buscar_perfil(access_token):
     return resp.json()
 
 
-def _buscar_midias_recentes(instagram):
+def _resolver_periodo(chave, inicio_str, fim_str):
+    agora = timezone.localtime(timezone.now())
+    hoje = agora.date()
+
+    if chave == 'semana':
+        inicio = hoje - timedelta(days=hoje.weekday())
+        fim = hoje
+        label = 'Esta semana'
+    elif chave == 'mes':
+        inicio = hoje.replace(day=1)
+        fim = hoje
+        label = 'Este mês'
+    elif chave == 'mes_passado':
+        primeiro_dia_atual = hoje.replace(day=1)
+        fim = primeiro_dia_atual - timedelta(days=1)
+        inicio = fim.replace(day=1)
+        label = 'Mês passado'
+    elif chave == 'periodo' and inicio_str and fim_str:
+        try:
+            inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
+            fim = datetime.strptime(fim_str, '%Y-%m-%d').date()
+        except ValueError:
+            chave, inicio, fim = 'hoje', hoje, hoje
+        else:
+            label = f'{inicio.strftime("%d/%m/%Y")} – {fim.strftime("%d/%m/%Y")}'
+    else:
+        chave, inicio, fim = 'hoje', hoje, hoje
+
+    if chave == 'hoje':
+        label = 'Hoje'
+
+    tz = timezone.get_current_timezone()
+    desde = timezone.make_aware(datetime.combine(inicio, time.min), tz)
+    ate = timezone.make_aware(datetime.combine(fim, time.max), tz)
+    if fim >= hoje:
+        ate = agora
+
+    return chave, desde, ate, label
+
+
+def _parse_timestamp_instagram(valor):
+    if not valor:
+        return None
+    try:
+        return datetime.strptime(valor, '%Y-%m-%dT%H:%M:%S%z')
+    except ValueError:
+        return None
+
+
+def _buscar_midias_periodo(instagram, desde, ate, max_paginas=5):
     if not instagram.instagram_user_id:
         return []
+
+    midias = []
+    url = f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/media'
+    params = {
+        'fields': 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+        'access_token': instagram.access_token,
+        'limit': 25,
+    }
+
     try:
-        resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/media', params={
-            'fields': 'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count',
+        for _ in range(max_paginas):
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            corpo = resp.json()
+
+            chegou_antes_do_periodo = False
+            for item in corpo.get('data', []):
+                publicado_em = _parse_timestamp_instagram(item.get('timestamp'))
+                if publicado_em is None:
+                    continue
+                if publicado_em < desde:
+                    chegou_antes_do_periodo = True
+                    break
+                if publicado_em <= ate:
+                    midias.append(item)
+
+            if chegou_antes_do_periodo:
+                break
+
+            proxima_url = corpo.get('paging', {}).get('next')
+            if not proxima_url:
+                break
+            url, params = proxima_url, None
+    except requests.RequestException:
+        pass
+
+    return midias
+
+
+def _buscar_seguidores_periodo(instagram, desde, ate):
+    if not instagram.instagram_user_id:
+        return None
+    try:
+        resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/insights', params={
+            'metric': 'follower_count',
+            'period': 'day',
+            'since': int(desde.timestamp()),
+            'until': int(ate.timestamp()),
             'access_token': instagram.access_token,
-            'limit': 12,
         }, timeout=10)
         resp.raise_for_status()
-        return resp.json().get('data', [])
-    except requests.RequestException:
-        return []
+        valores = resp.json()['data'][0]['values']
+        return sum(v.get('value', 0) for v in valores)
+    except (requests.RequestException, KeyError, IndexError, ValueError):
+        return None
 
 
 def _renovar_token_se_necessario(instagram):
