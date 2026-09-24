@@ -1,5 +1,5 @@
 {% extends 'core/base.html' %}
-{% load humanize %}
+{% load humanize nexora %}
 
 {% block page_title %}Dashboard{% endblock %}
 {% block page_heading %}Dashboard{% endblock %}
@@ -160,18 +160,18 @@
                 {% endif %}
               </div>
               <div class="media-stats">
-                <span title="Curtidas">
+                <span title="{{ midia.like_count|default:0|intcomma }} curtidas">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
-                  {{ midia.like_count|default:0 }}
+                  {{ midia.like_count|default:0|compacto }}
                 </span>
-                <span title="Comentários">
+                <span title="{{ midia.comments_count|default:0|intcomma }} comentários">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.8 8.8 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"></path></svg>
-                  {{ midia.comments_count|default:0 }}
+                  {{ midia.comments_count|default:0|compacto }}
                 </span>
                 {% if midia.media_type == 'VIDEO' %}
-                  <span title="{% if midia.visualizacoes_motivo %}{{ midia.visualizacoes_motivo }}{% else %}Visualizações{% endif %}">
+                  <span title="{% if midia.visualizacoes_motivo %}{{ midia.visualizacoes_motivo }}{% else %}{{ midia.visualizacoes|intcomma }} visualizações{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                    {% if midia.visualizacoes is None %}&mdash;{% else %}{{ midia.visualizacoes }}{% endif %}
+                    {% if midia.visualizacoes is None %}&mdash;{% else %}{{ midia.visualizacoes|compacto }}{% endif %}
                   </span>
                 {% endif %}
               </div>

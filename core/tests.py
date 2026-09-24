@@ -278,3 +278,12 @@ class VisualizacoesContaTests(SimpleTestCase):
         recusa = mock.Mock(ok=False, status_code=400, text='{"error": {}}')
         with mock.patch('core.views.requests.get', return_value=recusa):
             self.assertIsNone(_buscar_visualizacoes_conta(self.conexao, _local(2026, 9, 1), _local(2026, 9, 24)))
+
+
+class NumeroCompactoTests(SimpleTestCase):
+    def test_formato_estilo_instagram(self):
+        from .templatetags.nexora import compacto
+        casos = {0: '0', 999: '999', 1000: '1 mil', 1523: '1,5 mil', 12345: '12 mil',
+                 999950: '1 mi', 1250000: '1,2 mi', -2300: '-2,3 mil', None: None}
+        for valor, esperado in casos.items():
+            self.assertEqual(compacto(valor), esperado, valor)
