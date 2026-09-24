@@ -28,22 +28,27 @@ def dashboard(request):
     )
 
     instagram = InstagramConnection.objects.filter(user=request.user).first()
-    midias = []
+    midias_recentes = []
+    foto_perfil = ''
     curtidas_total = 0
     comentarios_total = 0
     seguidores_ganhos = None
 
     if instagram:
         _renovar_token_se_necessario(instagram)
-        midias = _buscar_midias_periodo(instagram, desde, ate)
-        curtidas_total = sum(m.get('like_count') or 0 for m in midias)
-        comentarios_total = sum(m.get('comments_count') or 0 for m in midias)
+        foto_perfil = _buscar_foto_perfil(instagram)
+        midias = _buscar_midias_desde(instagram, desde)
+        midias_recentes = midias[:12]
+        midias_periodo = [m for m in midias if _publicado_entre(m, desde, ate)]
+        curtidas_total = sum(m.get('like_count') or 0 for m in midias_periodo)
+        comentarios_total = sum(m.get('comments_count') or 0 for m in midias_periodo)
         seguidores_ganhos = _buscar_seguidores_periodo(instagram, desde, ate)
 
     return render(request, 'core/dashboard.html', {
         'active_menu': 'dashboard',
         'instagram': instagram,
-        'midias': midias,
+        'foto_perfil': foto_perfil,
+        'midias': midias_recentes,
         'curtidas_total': curtidas_total,
         'comentarios_total': comentarios_total,
         'seguidores_ganhos': seguidores_ganhos,
@@ -190,6 +195,8 @@ def _resolver_periodo(chave, inicio_str, fim_str):
         except ValueError:
             chave, inicio, fim = 'hoje', hoje, hoje
         else:
+            if inicio > fim:
+                inicio, fim = fim, inicio
             label = f'{inicio.strftime("%d/%m/%Y")} – {fim.strftime("%d/%m/%Y")}'
     else:
         chave, inicio, fim = 'hoje', hoje, hoje
@@ -215,7 +222,13 @@ def _parse_timestamp_instagram(valor):
         return None
 
 
-def _buscar_midias_periodo(instagram, desde, ate, max_paginas=5):
+def _publicado_entre(midia, desde, ate):
+    publicado_em = _parse_timestamp_instagram(midia.get('timestamp'))
+    return publicado_em is not None and desde <= publicado_em <= ate
+
+
+def _buscar_midias_desde(instagram, desde, max_paginas=5):
+    # A API devolve as mídias da mais nova para a mais antiga; paginamos até cobrir o início do período.
     if not instagram.instagram_user_id:
         return []
 
@@ -233,28 +246,35 @@ def _buscar_midias_periodo(instagram, desde, ate, max_paginas=5):
             resp.raise_for_status()
             corpo = resp.json()
 
-            chegou_antes_do_periodo = False
-            for item in corpo.get('data', []):
-                publicado_em = _parse_timestamp_instagram(item.get('timestamp'))
-                if publicado_em is None:
-                    continue
-                if publicado_em < desde:
-                    chegou_antes_do_periodo = True
-                    break
-                if publicado_em <= ate:
-                    midias.append(item)
+            pagina = corpo.get('data', [])
+            if not pagina:
+                break
+            midias.extend(pagina)
 
-            if chegou_antes_do_periodo:
+            mais_antiga = _parse_timestamp_instagram(pagina[-1].get('timestamp'))
+            if mais_antiga is not None and mais_antiga < desde:
                 break
 
             proxima_url = corpo.get('paging', {}).get('next')
             if not proxima_url:
                 break
             url, params = proxima_url, None
-    except requests.RequestException:
+    except (requests.RequestException, ValueError):
         pass
 
     return midias
+
+
+def _buscar_foto_perfil(instagram):
+    try:
+        resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/me', params={
+            'fields': 'profile_picture_url',
+            'access_token': instagram.access_token,
+        }, timeout=10)
+        resp.raise_for_status()
+        return resp.json().get('profile_picture_url', '')
+    except (requests.RequestException, ValueError):
+        return ''
 
 
 def _buscar_seguidores_periodo(instagram, desde, ate):

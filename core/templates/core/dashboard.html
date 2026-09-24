@@ -4,116 +4,148 @@
 {% block page_heading %}Dashboard{% endblock %}
 {% block page_subheading %}Visão geral dos seus relatórios{% endblock %}
 
+{% block topbar_right %}
+  {% if instagram %}
+    <details class="account-chip">
+      <summary>
+        {% if foto_perfil %}
+          <span class="account-avatar"><img src="{{ foto_perfil }}" alt="" referrerpolicy="no-referrer"></span>
+        {% else %}
+          <span class="account-avatar account-avatar--fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
+              <circle cx="12" cy="12" r="4.2"></circle>
+            </svg>
+          </span>
+        {% endif %}
+        <span class="account-meta">
+          <span class="account-handle">@{{ instagram.instagram_username }}</span>
+          <span class="account-status"><span class="status-dot"></span>Conectado</span>
+        </span>
+        <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </summary>
+      <div class="account-menu">
+        <form method="post" action="{% url 'instagram_desconectar' %}">
+          {% csrf_token %}
+          <button type="submit">Desconectar conta</button>
+        </form>
+      </div>
+    </details>
+  {% endif %}
+{% endblock %}
+
 {% block content %}
   {% if instagram %}
-    <div class="connected-card">
-      <div class="connected-avatar">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
-          <circle cx="12" cy="12" r="4.2"></circle>
-          <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"></circle>
-        </svg>
-      </div>
-      <div>
-        <div class="handle">@{{ instagram.instagram_username }}</div>
-        <div class="status"><span class="status-dot"></span> Conectado{% if instagram.account_type %} &middot; {{ instagram.account_type|title }}{% endif %}</div>
-      </div>
-      <form method="post" action="{% url 'instagram_desconectar' %}" style="margin-left:auto;">
-        {% csrf_token %}
-        <button type="submit" class="btn-ghost">Desconectar</button>
-      </form>
-    </div>
-
-    <form method="get" class="filter-bar" id="filterForm">
-      <div class="filter-field">
-        <label for="periodoSelect">Período</label>
-        <select name="periodo" id="periodoSelect">
-          <option value="hoje" {% if periodo_atual == 'hoje' %}selected{% endif %}>Hoje</option>
-          <option value="semana" {% if periodo_atual == 'semana' %}selected{% endif %}>Esta semana</option>
-          <option value="mes" {% if periodo_atual == 'mes' %}selected{% endif %}>Este mês</option>
-          <option value="mes_passado" {% if periodo_atual == 'mes_passado' %}selected{% endif %}>Mês passado</option>
-          <option value="periodo" {% if periodo_atual == 'periodo' %}selected{% endif %}>Selecionar período</option>
-        </select>
+    <div class="dash">
+      <div class="dash-head">
+        <h2 class="section-title">Resumo</h2>
+        <form method="get" class="period-filter" id="filterForm">
+          <select name="periodo" id="periodoSelect" aria-label="Período">
+            <option value="hoje" {% if periodo_atual == 'hoje' %}selected{% endif %}>Hoje</option>
+            <option value="semana" {% if periodo_atual == 'semana' %}selected{% endif %}>Esta semana</option>
+            <option value="mes" {% if periodo_atual == 'mes' %}selected{% endif %}>Este mês</option>
+            <option value="mes_passado" {% if periodo_atual == 'mes_passado' %}selected{% endif %}>Mês passado</option>
+            <option value="periodo" {% if periodo_atual == 'periodo' %}selected{% endif %}>Selecionar período</option>
+          </select>
+          <span class="period-range" id="periodRange" {% if periodo_atual != 'periodo' %}hidden{% endif %}>
+            <input type="date" name="inicio" id="inicioInput" value="{{ inicio_custom }}" aria-label="Data inicial" {% if periodo_atual != 'periodo' %}disabled{% endif %}>
+            <span class="period-sep">até</span>
+            <input type="date" name="fim" id="fimInput" value="{{ fim_custom }}" aria-label="Data final" {% if periodo_atual != 'periodo' %}disabled{% endif %}>
+          </span>
+        </form>
       </div>
 
-      <div class="filter-field filter-date" id="campoInicio" {% if periodo_atual != 'periodo' %}hidden{% endif %}>
-        <label for="inicioInput">De</label>
-        <input type="date" name="inicio" id="inicioInput" value="{{ inicio_custom }}">
-      </div>
-      <div class="filter-field filter-date" id="campoFim" {% if periodo_atual != 'periodo' %}hidden{% endif %}>
-        <label for="fimInput">Até</label>
-        <input type="date" name="fim" id="fimInput" value="{{ fim_custom }}">
-      </div>
-
-      <button type="submit" class="btn-apply">Aplicar</button>
-    </form>
-
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-label">Seguidores</div>
-        <div class="stat-value">
+      <div class="stat-grid">
+        <div class="stat-card stat-card--followers">
+          <div class="stat-top">
+            <span class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            </span>
+            <span class="stat-label">Seguidores</span>
+          </div>
           {% if seguidores_ganhos is None %}
-            &mdash;
+            <div class="stat-value stat-value--muted">&mdash;</div>
+            <div class="stat-period">Indisponível no momento</div>
           {% else %}
-            {% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos }}
+            <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos }}</div>
+            <div class="stat-period">{{ periodo_label }}</div>
           {% endif %}
         </div>
-        <div class="stat-period">{{ periodo_label }}{% if seguidores_ganhos is None %} &middot; indisponível{% endif %}</div>
+
+        <div class="stat-card stat-card--likes">
+          <div class="stat-top">
+            <span class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
+            </span>
+            <span class="stat-label">Curtidas</span>
+          </div>
+          <div class="stat-value">{{ curtidas_total }}</div>
+          <div class="stat-period">{{ periodo_label }}</div>
+        </div>
+
+        <div class="stat-card stat-card--comments">
+          <div class="stat-top">
+            <span class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.8 8.8 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"></path></svg>
+            </span>
+            <span class="stat-label">Comentários</span>
+          </div>
+          <div class="stat-value">{{ comentarios_total }}</div>
+          <div class="stat-period">{{ periodo_label }}</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Curtidas</div>
-        <div class="stat-value">{{ curtidas_total }}</div>
-        <div class="stat-period">{{ periodo_label }}</div>
+
+      <div class="dash-head">
+        <h2 class="section-title">Publicações recentes</h2>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Comentários</div>
-        <div class="stat-value">{{ comentarios_total }}</div>
-        <div class="stat-period">{{ periodo_label }}</div>
-      </div>
+
+      {% if midias %}
+        <div class="media-grid">
+          {% for midia in midias %}
+            <a class="media-card" href="{{ midia.permalink }}" target="_blank" rel="noopener">
+              <div class="media-thumb" style="background-image: url('{{ midia.thumbnail_url|default:midia.media_url }}');"></div>
+              <div class="media-stats">
+                <span>❤ {{ midia.like_count|default:0 }}</span>
+                <span>💬 {{ midia.comments_count|default:0 }}</span>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="card">
+          <p style="margin:0; color: var(--text-dim); font-size: 13.5px;">Nenhuma publicação encontrada.</p>
+        </div>
+      {% endif %}
     </div>
-
-    <h2 class="section-title">Publicações no período</h2>
-
-    {% if midias %}
-      <div class="media-grid">
-        {% for midia in midias %}
-          <a class="media-card" href="{{ midia.permalink }}" target="_blank" rel="noopener">
-            <div class="media-thumb" style="background-image: url('{{ midia.thumbnail_url|default:midia.media_url }}');"></div>
-            <div class="media-stats">
-              <span>❤ {{ midia.like_count|default:0 }}</span>
-              <span>💬 {{ midia.comments_count|default:0 }}</span>
-            </div>
-          </a>
-        {% endfor %}
-      </div>
-    {% else %}
-      <div class="card">
-        <p style="margin:0; color: var(--text-dim); font-size: 13.5px;">
-          Nenhuma publicação encontrada nesse período.
-        </p>
-      </div>
-    {% endif %}
 
     <script>
       (function () {
+        var form = document.getElementById('filterForm');
         var select = document.getElementById('periodoSelect');
-        var campoInicio = document.getElementById('campoInicio');
-        var campoFim = document.getElementById('campoFim');
+        var range = document.getElementById('periodRange');
+        var inicio = document.getElementById('inicioInput');
+        var fim = document.getElementById('fimInput');
 
-        function atualizarCamposData() {
-          var mostrar = select.value === 'periodo';
-          campoInicio.hidden = !mostrar;
-          campoFim.hidden = !mostrar;
+        function enviarSePeriodoCompleto() {
+          if (inicio.value && fim.value) {
+            form.submit();
+          }
         }
 
         select.addEventListener('change', function () {
-          atualizarCamposData();
-          if (select.value !== 'periodo') {
-            document.getElementById('filterForm').submit();
+          var customizado = select.value === 'periodo';
+          range.hidden = !customizado;
+          inicio.disabled = !customizado;
+          fim.disabled = !customizado;
+          if (customizado) {
+            enviarSePeriodoCompleto();
+          } else {
+            form.submit();
           }
         });
 
-        atualizarCamposData();
+        inicio.addEventListener('change', enviarSePeriodoCompleto);
+        fim.addEventListener('change', enviarSePeriodoCompleto);
       })();
     </script>
   {% else %}
