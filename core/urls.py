@@ -10,4 +10,6 @@ urlpatterns = [
     path('programacao/', views.programacao, name='programacao'),
     path('tarefas/', views.tarefas, name='tarefas'),
     path('instagram/conectar/', views.instagram_conectar, name='instagram_conectar'),
+    path('instagram/callback/', views.instagram_callback, name='instagram_callback'),
+    path('instagram/desconectar/', views.instagram_desconectar, name='instagram_desconectar'),
 ]

@@ -6,11 +6,45 @@
 
 {% block content %}
   {% if instagram %}
-    <div class="card">
-      <p style="margin:0; color: var(--text-dim); font-size: 13.5px;">
-        Conectado como <strong style="color: var(--text);">@{{ instagram.instagram_username }}</strong>
-      </p>
+    <div class="connected-card">
+      <div class="connected-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
+          <circle cx="12" cy="12" r="4.2"></circle>
+          <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"></circle>
+        </svg>
+      </div>
+      <div>
+        <div class="handle">@{{ instagram.instagram_username }}</div>
+        <div class="status"><span class="status-dot"></span> Conectado{% if instagram.account_type %} &middot; {{ instagram.account_type|title }}{% endif %}</div>
+      </div>
+      <form method="post" action="{% url 'instagram_desconectar' %}" style="margin-left:auto;">
+        {% csrf_token %}
+        <button type="submit" class="btn-ghost">Desconectar</button>
+      </form>
     </div>
+
+    <h2 class="section-title">Publicações recentes</h2>
+
+    {% if midias %}
+      <div class="media-grid">
+        {% for midia in midias %}
+          <a class="media-card" href="{{ midia.permalink }}" target="_blank" rel="noopener">
+            <div class="media-thumb" style="background-image: url('{{ midia.thumbnail_url|default:midia.media_url }}');"></div>
+            <div class="media-stats">
+              <span>❤ {{ midia.like_count|default:0 }}</span>
+              <span>💬 {{ midia.comments_count|default:0 }}</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="card">
+        <p style="margin:0; color: var(--text-dim); font-size: 13.5px;">
+          Nenhuma publicação encontrada ainda ou não foi possível carregar os dados agora.
+        </p>
+      </div>
+    {% endif %}
   {% else %}
     <div class="empty-state">
       <div class="empty-icon">

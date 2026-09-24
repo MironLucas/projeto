@@ -16,3 +16,9 @@ services:
         value: ".onrender.com"
       - key: WEB_CONCURRENCY
         value: "2"
+      - key: INSTAGRAM_CLIENT_ID
+        sync: false
+      - key: INSTAGRAM_CLIENT_SECRET
+        sync: false
+      - key: INSTAGRAM_REDIRECT_URI
+        sync: false
