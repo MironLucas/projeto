@@ -42,7 +42,7 @@ class Periodo:
 @login_required
 def dashboard(request):
     periodo = _resolver_periodo(
-        request.GET.get('periodo', 'hoje'),
+        request.GET.get('periodo', 'mes'),
         request.GET.get('inicio'),
         request.GET.get('fim'),
     )
@@ -232,23 +232,22 @@ def _resolver_periodo(chave, inicio_str, fim_str):
     agora = timezone.localtime(timezone.now())
     hoje = agora.date()
 
-    if chave == 'semana':
+    if chave == 'hoje':
+        inicio = fim = hoje
+        anterior_inicio = anterior_fim = hoje - timedelta(days=1)
+        label, label_comparacao = 'Hoje', 'vs. ontem'
+    elif chave == 'semana':
         inicio = hoje - timedelta(days=hoje.weekday())
         anterior_inicio, anterior_fim = inicio - timedelta(days=7), hoje - timedelta(days=7)
         fim = hoje
         label = 'Esta semana'
         label_comparacao = f'vs. semana passada até {DIAS_SEMANA[hoje.weekday()]}'
-    elif chave == 'mes':
-        inicio, fim = hoje.replace(day=1), hoje
-        anterior_inicio, anterior_fim = _mesmo_dia_mes_anterior(inicio), _mesmo_dia_mes_anterior(hoje)
-        label = 'Este mês'
-        label_comparacao = f'vs. mês passado até {anterior_fim:%d/%m}'
     elif chave == 'periodo' and inicio_str and fim_str:
         try:
             inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
             fim = datetime.strptime(fim_str, '%Y-%m-%d').date()
         except ValueError:
-            chave = 'hoje'
+            chave = 'mes'
         else:
             if inicio > fim:
                 inicio, fim = fim, inicio
@@ -257,12 +256,14 @@ def _resolver_periodo(chave, inicio_str, fim_str):
             label = f'{inicio:%d/%m/%Y} – {fim:%d/%m/%Y}'
             label_comparacao = 'vs. dia anterior' if dias == 1 else f'vs. {dias} dias anteriores'
     else:
-        chave = 'hoje'
+        chave = 'mes'
 
-    if chave == 'hoje':
-        inicio = fim = hoje
-        anterior_inicio = anterior_fim = hoje - timedelta(days=1)
-        label, label_comparacao = 'Hoje', 'vs. ontem'
+    # "Este mês" é o padrão, inclusive para períodos desconhecidos ou datas inválidas.
+    if chave == 'mes':
+        inicio, fim = hoje.replace(day=1), hoje
+        anterior_inicio, anterior_fim = _mesmo_dia_mes_anterior(inicio), _mesmo_dia_mes_anterior(hoje)
+        label = 'Este mês'
+        label_comparacao = f'vs. mês passado até {anterior_fim:%d/%m}'
 
     return Periodo(
         chave=chave,

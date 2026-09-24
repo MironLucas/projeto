@@ -63,10 +63,10 @@ class ResolverPeriodoTests(SimpleTestCase):
         self.assertEqual(_fmt(p.anterior_desde), '01/12/2025 00:00')
         self.assertEqual(_fmt(p.anterior_ate), '10/12/2025 23:59')
 
-    def test_mes_passado_nao_existe_mais_e_volta_para_hoje(self):
+    def test_periodo_desconhecido_usa_este_mes(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('mes_passado', None, None)
-        self.assertEqual(p.chave, 'hoje')
+        self.assertEqual(p.chave, 'mes')
 
     def test_periodo_compara_com_os_mesmos_dias_anteriores(self):
         with _congelar_em(2026, 9, 24, 11, 25):
@@ -81,10 +81,10 @@ class ResolverPeriodoTests(SimpleTestCase):
             p = _resolver_periodo('periodo', '2026-08-15', '2026-08-01')
         self.assertEqual(p.label, '01/08/2026 – 15/08/2026')
 
-    def test_periodo_invalido_volta_para_hoje(self):
+    def test_periodo_invalido_usa_este_mes(self):
         with _congelar_em(2026, 9, 24, 11, 25):
             p = _resolver_periodo('periodo', 'xx', 'yy')
-        self.assertEqual(p.chave, 'hoje')
+        self.assertEqual(p.chave, 'mes')
 
 
 def _resposta_erro(status, corpo):
@@ -221,6 +221,11 @@ class DashboardRespostasInesperadasTests(TestCase):
     def _video(self):
         agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
         return {'id': '1', 'timestamp': agora, 'media_type': 'VIDEO', 'permalink': 'x'}
+
+    def test_dashboard_abre_em_este_mes(self):
+        resp = self._get([])
+        self.assertEqual(resp.context['periodo_atual'], 'mes')
+        self.assertContains(resp, '<option value="mes" selected>')
 
     def test_post_sem_media_url_nao_derruba_a_pagina(self):
         resp = self._get([('/media', {'data': [self._video()]}, True)])
