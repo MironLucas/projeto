@@ -1,4 +1,6 @@
 import secrets
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 from urllib.parse import urlencode
 
@@ -19,9 +21,20 @@ INSTAGRAM_GRAPH_URL = 'https://graph.instagram.com'
 INSTAGRAM_SCOPES = 'instagram_business_basic,instagram_business_manage_insights'
 
 
+@dataclass
+class Periodo:
+    chave: str
+    label: str
+    label_comparacao: str
+    desde: datetime
+    ate: datetime
+    anterior_desde: datetime
+    anterior_ate: datetime
+
+
 @login_required
 def dashboard(request):
-    periodo_chave, desde, ate, periodo_label = _resolver_periodo(
+    periodo = _resolver_periodo(
         request.GET.get('periodo', 'hoje'),
         request.GET.get('inicio'),
         request.GET.get('fim'),
@@ -30,19 +43,27 @@ def dashboard(request):
     instagram = InstagramConnection.objects.filter(user=request.user).first()
     midias_recentes = []
     foto_perfil = ''
-    curtidas_total = 0
-    comentarios_total = 0
+    curtidas_total = comentarios_total = 0
     seguidores_ganhos = None
+    comparacao_seguidores = comparacao_curtidas = comparacao_comentarios = None
 
     if instagram:
         _renovar_token_se_necessario(instagram)
         foto_perfil = _buscar_foto_perfil(instagram)
-        midias = _buscar_midias_desde(instagram, desde)
+        midias = _buscar_midias_desde(instagram, periodo.anterior_desde)
         midias_recentes = midias[:12]
-        midias_periodo = [m for m in midias if _publicado_entre(m, desde, ate)]
-        curtidas_total = sum(m.get('like_count') or 0 for m in midias_periodo)
-        comentarios_total = sum(m.get('comments_count') or 0 for m in midias_periodo)
-        seguidores_ganhos = _buscar_seguidores_periodo(instagram, desde, ate)
+        _adicionar_visualizacoes(instagram, midias_recentes)
+
+        curtidas_total, comentarios_total = _somar_engajamento(midias, periodo.desde, periodo.ate)
+        curtidas_anterior, comentarios_anterior = _somar_engajamento(
+            midias, periodo.anterior_desde, periodo.anterior_ate,
+        )
+        seguidores_ganhos = _buscar_seguidores_periodo(instagram, periodo.desde, periodo.ate)
+        seguidores_anterior = _buscar_seguidores_periodo(instagram, periodo.anterior_desde, periodo.anterior_ate)
+
+        comparacao_seguidores = _comparar(seguidores_ganhos, seguidores_anterior)
+        comparacao_curtidas = _comparar(curtidas_total, curtidas_anterior)
+        comparacao_comentarios = _comparar(comentarios_total, comentarios_anterior)
 
     return render(request, 'core/dashboard.html', {
         'active_menu': 'dashboard',
@@ -52,8 +73,12 @@ def dashboard(request):
         'curtidas_total': curtidas_total,
         'comentarios_total': comentarios_total,
         'seguidores_ganhos': seguidores_ganhos,
-        'periodo_atual': periodo_chave,
-        'periodo_label': periodo_label,
+        'comparacao_seguidores': comparacao_seguidores,
+        'comparacao_curtidas': comparacao_curtidas,
+        'comparacao_comentarios': comparacao_comentarios,
+        'periodo_atual': periodo.chave,
+        'periodo_label': periodo.label,
+        'label_comparacao': periodo.label_comparacao,
         'inicio_custom': request.GET.get('inicio', ''),
         'fim_custom': request.GET.get('fim', ''),
     })
@@ -176,41 +201,78 @@ def _resolver_periodo(chave, inicio_str, fim_str):
     hoje = agora.date()
 
     if chave == 'semana':
-        inicio = hoje - timedelta(days=hoje.weekday())
-        fim = hoje
-        label = 'Esta semana'
+        inicio, fim = hoje - timedelta(days=hoje.weekday()), hoje
+        anterior_inicio, anterior_fim = inicio - timedelta(days=7), inicio - timedelta(days=1)
+        label, label_comparacao = 'Esta semana', 'vs. semana passada'
     elif chave == 'mes':
-        inicio = hoje.replace(day=1)
-        fim = hoje
-        label = 'Este mês'
+        inicio, fim = hoje.replace(day=1), hoje
+        anterior_fim = inicio - timedelta(days=1)
+        anterior_inicio = anterior_fim.replace(day=1)
+        label, label_comparacao = 'Este mês', 'vs. mês passado'
     elif chave == 'mes_passado':
-        primeiro_dia_atual = hoje.replace(day=1)
-        fim = primeiro_dia_atual - timedelta(days=1)
+        fim = hoje.replace(day=1) - timedelta(days=1)
         inicio = fim.replace(day=1)
-        label = 'Mês passado'
+        anterior_fim = inicio - timedelta(days=1)
+        anterior_inicio = anterior_fim.replace(day=1)
+        label, label_comparacao = 'Mês passado', 'vs. mês anterior'
     elif chave == 'periodo' and inicio_str and fim_str:
         try:
             inicio = datetime.strptime(inicio_str, '%Y-%m-%d').date()
             fim = datetime.strptime(fim_str, '%Y-%m-%d').date()
         except ValueError:
-            chave, inicio, fim = 'hoje', hoje, hoje
+            chave = 'hoje'
         else:
             if inicio > fim:
                 inicio, fim = fim, inicio
+            dias = (fim - inicio).days + 1
+            anterior_inicio, anterior_fim = inicio - timedelta(days=dias), inicio - timedelta(days=1)
             label = f'{inicio.strftime("%d/%m/%Y")} – {fim.strftime("%d/%m/%Y")}'
+            label_comparacao = 'vs. dia anterior' if dias == 1 else f'vs. {dias} dias anteriores'
     else:
-        chave, inicio, fim = 'hoje', hoje, hoje
+        chave = 'hoje'
 
     if chave == 'hoje':
-        label = 'Hoje'
+        inicio = fim = hoje
+        anterior_inicio = anterior_fim = hoje - timedelta(days=1)
+        label, label_comparacao = 'Hoje', 'vs. ontem'
 
-    tz = timezone.get_current_timezone()
-    desde = timezone.make_aware(datetime.combine(inicio, time.min), tz)
-    ate = timezone.make_aware(datetime.combine(fim, time.max), tz)
-    if fim >= hoje:
-        ate = agora
+    return Periodo(
+        chave=chave,
+        label=label,
+        label_comparacao=label_comparacao,
+        desde=_inicio_do_dia(inicio),
+        ate=min(_fim_do_dia(fim), agora),
+        anterior_desde=_inicio_do_dia(anterior_inicio),
+        anterior_ate=min(_fim_do_dia(anterior_fim), agora),
+    )
 
-    return chave, desde, ate, label
+
+def _inicio_do_dia(dia):
+    return timezone.make_aware(datetime.combine(dia, time.min))
+
+
+def _fim_do_dia(dia):
+    return timezone.make_aware(datetime.combine(dia, time.max))
+
+
+def _comparar(atual, anterior):
+    if atual is None or anterior is None:
+        return None
+    diferenca = atual - anterior
+    if diferenca > 0:
+        direcao = 'up'
+    elif diferenca < 0:
+        direcao = 'down'
+    else:
+        direcao = 'equal'
+    return {'direcao': direcao, 'valor': abs(diferenca)}
+
+
+def _somar_engajamento(midias, desde, ate):
+    no_periodo = [m for m in midias if _publicado_entre(m, desde, ate)]
+    curtidas = sum(m.get('like_count') or 0 for m in no_periodo)
+    comentarios = sum(m.get('comments_count') or 0 for m in no_periodo)
+    return curtidas, comentarios
 
 
 def _parse_timestamp_instagram(valor):
@@ -263,6 +325,30 @@ def _buscar_midias_desde(instagram, desde, max_paginas=5):
         pass
 
     return midias
+
+
+def _adicionar_visualizacoes(instagram, midias):
+    videos = [m for m in midias if m.get('media_type') == 'VIDEO']
+    if not videos:
+        return
+
+    def buscar(midia):
+        try:
+            resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/{midia["id"]}/insights', params={
+                'metric': 'views',
+                'access_token': instagram.access_token,
+            }, timeout=8)
+            resp.raise_for_status()
+            metrica = resp.json()['data'][0]
+            if 'total_value' in metrica:
+                return metrica['total_value']['value']
+            return metrica['values'][0]['value']
+        except (requests.RequestException, KeyError, IndexError, ValueError):
+            return None
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        for midia, visualizacoes in zip(videos, executor.map(buscar, videos)):
+            midia['visualizacoes'] = visualizacoes
 
 
 def _buscar_foto_perfil(instagram):
