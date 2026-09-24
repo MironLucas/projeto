@@ -99,6 +99,8 @@ def _dados_do_dashboard(instagram, periodo):
     seguidores_anterior, anterior_completo = _somar_seguidores(
         seguidores_por_dia, _data_local(periodo.anterior_desde), _data_local(periodo.anterior_ate), hoje,
     )
+    visualizacoes_total = _buscar_visualizacoes_conta(instagram, periodo.desde, periodo.ate)
+    visualizacoes_anterior = _buscar_visualizacoes_conta(instagram, periodo.anterior_desde, periodo.anterior_ate)
 
     return {
         'foto_perfil': foto_perfil,
@@ -111,6 +113,8 @@ def _dados_do_dashboard(instagram, periodo):
         'comparacao_seguidores': _comparar(seguidores_ganhos, seguidores_anterior if anterior_completo else None),
         'comparacao_curtidas': _comparar(curtidas_total, curtidas_anterior),
         'comparacao_comentarios': _comparar(comentarios_total, comentarios_anterior),
+        'visualizacoes_total': visualizacoes_total,
+        'comparacao_visualizacoes': _comparar(visualizacoes_total, visualizacoes_anterior),
         'grafico_seguidores': montar_grafico(
             subtitulo, intervalos, *_serie_seguidores(seguidores_por_dia, intervalos, hoje),
         ),
@@ -422,6 +426,37 @@ def _motivo_erro_insights(resp):
     if codigo == 190:
         return 'A conexão com o Instagram expirou. Desconecte e conecte de novo.'
     return f'O Instagram não informou as visualizações: {mensagem or f"HTTP {resp.status_code}"}'
+
+
+def _buscar_visualizacoes_conta(instagram, desde, ate):
+    """Quantas vezes o conteúdo da conta foi exibido entre desde e ate (posts, reels e stories)."""
+    # O Instagram aceita no máximo 30 dias por consulta; períodos maiores são somados em partes.
+    total = 0
+    inicio = desde
+    while inicio < ate:
+        fim = min(inicio + timedelta(days=30), ate)
+        try:
+            resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/{instagram.instagram_user_id}/insights', params={
+                'metric': 'views',
+                'period': 'day',
+                'metric_type': 'total_value',
+                'since': int(inicio.timestamp()),
+                'until': int(fim.timestamp()),
+                'access_token': instagram.access_token,
+            }, timeout=10)
+        except requests.RequestException:
+            logger.warning('Falha de rede ao buscar visualizações da conta')
+            return None
+        if not resp.ok:
+            logger.warning('Instagram recusou visualizações da conta (HTTP %s): %s', resp.status_code, resp.text[:300])
+            return None
+        try:
+            total += resp.json()['data'][0]['total_value']['value']
+        except (KeyError, IndexError, TypeError, ValueError):
+            logger.warning('Resposta inesperada de visualizações da conta: %s', resp.text[:300])
+            return None
+        inicio = fim
+    return total
 
 
 def _buscar_perfil_atual(instagram):

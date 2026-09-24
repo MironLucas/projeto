@@ -1,3 +1,4 @@
+{% load humanize %}
 {% if comparacao %}
   <div class="stat-compare stat-compare--{{ comparacao.direcao }}">
     <span class="stat-compare-pill">
@@ -8,7 +9,7 @@
       {% else %}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 12h12"></path></svg>
       {% endif %}
-      {{ comparacao.valor }}
+      {{ comparacao.valor|intcomma }}
     </span>
     <span class="stat-compare-label">{{ label_comparacao }}</span>
   </div>

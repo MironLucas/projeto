@@ -44,7 +44,15 @@
   {% elif instagram %}
     <div class="dash">
       <div class="dash-head">
-        <h2 class="section-title">Resumo</h2>
+        <div class="dash-head-title">
+          <h2 class="section-title">Resumo</h2>
+          {% if seguidores_total is not None %}
+            <span class="followers-total">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+              <strong>{{ seguidores_total|intcomma }}</strong> seguidores
+            </span>
+          {% endif %}
+        </div>
         <form method="get" class="period-filter" id="filterForm">
           <select name="periodo" id="periodoSelect" aria-label="Período">
             <option value="hoje" {% if periodo_atual == 'hoje' %}selected{% endif %}>Hoje</option>
@@ -61,22 +69,6 @@
       </div>
 
       <div class="stat-grid">
-        <div class="stat-card stat-card--total">
-          <div class="stat-top">
-            <span class="stat-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-            </span>
-            <span class="stat-label">Seguidores</span>
-          </div>
-          {% if seguidores_total is None %}
-            <div class="stat-value stat-value--muted">&mdash;</div>
-            <div class="stat-period">Indisponível no momento</div>
-          {% else %}
-            <div class="stat-value">{{ seguidores_total|intcomma }}</div>
-            <div class="stat-period">Total atual</div>
-          {% endif %}
-        </div>
-
         <div class="stat-card stat-card--followers">
           <div class="stat-top">
             <span class="stat-icon">
@@ -90,6 +82,22 @@
           {% else %}
             <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos|intcomma }}</div>
             {% include 'core/_comparacao.html' with comparacao=comparacao_seguidores %}
+          {% endif %}
+        </div>
+
+        <div class="stat-card stat-card--views">
+          <div class="stat-top">
+            <span class="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+            <span class="stat-label">Visualizações</span>
+          </div>
+          {% if visualizacoes_total is None %}
+            <div class="stat-value stat-value--muted">&mdash;</div>
+            <div class="stat-period">Sem dados do Instagram para este período</div>
+          {% else %}
+            <div class="stat-value">{{ visualizacoes_total|intcomma }}</div>
+            {% include 'core/_comparacao.html' with comparacao=comparacao_visualizacoes %}
           {% endif %}
         </div>
 

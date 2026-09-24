@@ -691,6 +691,31 @@ button {
   margin: 0;
 }
 
+.dash-head-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.followers-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.followers-total strong {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+.followers-total svg {
+  width: 14px;
+  height: 14px;
+}
+
 .period-filter {
   display: flex;
   align-items: center;
@@ -792,9 +817,9 @@ button {
   --accent-soft: rgba(245, 66, 111, 0.14);
 }
 
-.stat-card--total .stat-icon {
-  background: var(--gradient);
-  color: #fff;
+.stat-card--views {
+  --accent: #f5a524;
+  --accent-soft: rgba(245, 165, 36, 0.14);
 }
 
 .stat-card--comments {

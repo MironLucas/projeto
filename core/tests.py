@@ -1,14 +1,17 @@
 from datetime import datetime
 from unittest import mock
 
-from django.test import SimpleTestCase, TestCase
+from django.test import SimpleTestCase, TestCase, override_settings
 from django.utils import timezone
 
 from datetime import date
 
 from .graficos import escala, intervalos_do_grafico, montar_grafico
 from .models import InstagramConnection, SeguidoresDia
-from .views import _motivo_erro_insights, _resolver_periodo, _sincronizar_seguidores, _somar_seguidores
+from .views import (
+    _buscar_visualizacoes_conta, _motivo_erro_insights, _resolver_periodo, _sincronizar_seguidores,
+    _somar_seguidores,
+)
 
 
 def _local(*args):
@@ -193,6 +196,7 @@ class SeguidoresTests(TestCase):
         self.assertEqual(dias, {date(2026, 9, 21): 4, date(2026, 9, 22): 2})
 
 
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class DashboardRespostasInesperadasTests(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User
@@ -250,3 +254,27 @@ class DashboardRespostasInesperadasTests(TestCase):
         conexao.save()
         conexao.refresh_from_db()
         self.assertEqual(len(conexao.access_token), 400)
+
+
+class VisualizacoesContaTests(SimpleTestCase):
+    conexao = InstagramConnection(instagram_user_id='123', access_token='t')
+
+    def _resposta(self, valor):
+        resp = mock.Mock(ok=True)
+        resp.json.return_value = {'data': [{'name': 'views', 'total_value': {'value': valor}}]}
+        return resp
+
+    def test_periodo_longo_e_somado_em_partes_de_30_dias(self):
+        with mock.patch('core.views.requests.get', side_effect=[self._resposta(100), self._resposta(40)]) as get:
+            total = _buscar_visualizacoes_conta(self.conexao, _local(2026, 7, 1), _local(2026, 8, 15))
+        self.assertEqual(total, 140)
+        self.assertEqual(get.call_count, 2)
+        self.assertEqual(get.call_args_list[0].kwargs['params']['metric_type'], 'total_value')
+        primeira, segunda = (c.kwargs['params'] for c in get.call_args_list)
+        self.assertEqual(primeira['until'], segunda['since'])
+        self.assertLessEqual(primeira['until'] - primeira['since'], 30 * 86400)
+
+    def test_recusa_do_instagram_vira_sem_dados(self):
+        recusa = mock.Mock(ok=False, status_code=400, text='{"error": {}}')
+        with mock.patch('core.views.requests.get', return_value=recusa):
+            self.assertIsNone(_buscar_visualizacoes_conta(self.conexao, _local(2026, 9, 1), _local(2026, 9, 24)))
