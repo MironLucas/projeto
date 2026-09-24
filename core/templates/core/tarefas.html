@@ -2,17 +2,188 @@
 
 {% block page_title %}Tarefas{% endblock %}
 {% block page_heading %}Tarefas{% endblock %}
-{% block page_subheading %}Acompanhe pendências e checklists{% endblock %}
+{% block page_subheading %}Arraste os cartões entre as colunas para acompanhar o andamento{% endblock %}
 
 {% block content %}
-  <div class="placeholder-state">
-    <div class="empty-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9 11l3 3L22 4"></path>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-      </svg>
-    </div>
-    <h2>Nenhuma tarefa criada</h2>
-    <p>Suas tarefas e checklists aparecerão aqui.</p>
+  <div class="board" id="board">
+    {% for lista in listas %}
+      <section class="board-list" id="lista-{{ lista.id }}">
+        <header class="board-list-head">
+          <form method="post" action="{% url 'quadro_renomear_lista' lista.id %}" class="board-list-name">
+            {% csrf_token %}
+            <input type="text" name="titulo" class="board-list-title js-renomear" value="{{ lista.titulo }}" maxlength="80" required aria-label="Nome da coluna">
+          </form>
+          <span class="board-count">{{ lista.cartoes.all|length }}</span>
+          <form method="post" action="{% url 'quadro_excluir_lista' lista.id %}" class="js-confirmar"
+                data-mensagem="Excluir a coluna “{{ lista.titulo }}” e todos os cartões dela?">
+            {% csrf_token %}
+            <button type="submit" class="icon-btn" aria-label="Excluir coluna {{ lista.titulo }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+            </button>
+          </form>
+        </header>
+
+        <div class="board-cards" data-lista="{{ lista.id }}">
+          {% for cartao in lista.cartoes.all %}
+            <article class="board-card" draggable="true" data-mover="{% url 'quadro_mover_cartao' cartao.id %}">
+              <span class="board-card-title">{{ cartao.titulo }}</span>
+              <details class="popover card-menu">
+                <summary aria-label="Opções do cartão">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+                </summary>
+                <div class="card-menu-body">
+                  {% if listas|length > 1 %}
+                    <span class="card-menu-label">Mover para</span>
+                    {% for destino in listas %}
+                      {% if destino.id != lista.id %}
+                        <form method="post" action="{% url 'quadro_mover_cartao' cartao.id %}">
+                          {% csrf_token %}
+                          <input type="hidden" name="lista" value="{{ destino.id }}">
+                          <button type="submit">{{ destino.titulo }}</button>
+                        </form>
+                      {% endif %}
+                    {% endfor %}
+                  {% endif %}
+                  <form method="post" action="{% url 'quadro_excluir_cartao' cartao.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="is-danger">Excluir cartão</button>
+                  </form>
+                </div>
+              </details>
+            </article>
+          {% endfor %}
+        </div>
+
+        <form method="post" action="{% url 'quadro_criar_cartao' lista.id %}" class="board-add">
+          {% csrf_token %}
+          <input type="text" name="titulo" class="field" placeholder="+ Adicionar cartão" maxlength="300" required aria-label="Novo cartão em {{ lista.titulo }}">
+        </form>
+      </section>
+    {% endfor %}
+
+    <section class="board-list board-list--new">
+      <form method="post" action="{% url 'quadro_criar_lista' %}">
+        {% csrf_token %}
+        <input type="text" name="titulo" class="field" placeholder="+ Nova coluna" maxlength="80" required aria-label="Nome da nova coluna">
+      </form>
+    </section>
   </div>
+
+  <script>
+    (function () {
+      var board = document.getElementById('board');
+      var csrf = board.querySelector('input[name=csrfmiddlewaretoken]').value;
+
+      document.querySelectorAll('.js-renomear').forEach(function (campo) {
+        campo.addEventListener('change', function () { campo.form.submit(); });
+      });
+
+      document.querySelectorAll('.js-confirmar').forEach(function (form) {
+        form.addEventListener('submit', function (evento) {
+          if (!window.confirm(form.dataset.mensagem)) {
+            evento.preventDefault();
+          }
+        });
+      });
+
+      if (location.hash.indexOf('#lista-') === 0) {
+        var coluna = document.getElementById(location.hash.slice(1));
+        if (coluna) {
+          coluna.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+          coluna.querySelector('.board-add .field').focus({ preventScroll: true });
+        }
+      }
+
+      function atualizarContagens() {
+        board.querySelectorAll('.board-list').forEach(function (coluna) {
+          var contador = coluna.querySelector('.board-count');
+          if (contador) {
+            contador.textContent = coluna.querySelectorAll('.board-card').length;
+          }
+        });
+      }
+
+      function cartaoAbaixoDoPonteiro(container, y) {
+        var cartoes = container.querySelectorAll('.board-card:not(.is-dragging)');
+        for (var i = 0; i < cartoes.length; i++) {
+          var caixa = cartoes[i].getBoundingClientRect();
+          if (y < caixa.top + caixa.height / 2) {
+            return cartoes[i];
+          }
+        }
+        return null;
+      }
+
+      var arrastando = null;
+      var origem = null;
+      var soltou = false;
+
+      board.addEventListener('dragstart', function (evento) {
+        var cartao = evento.target.closest('.board-card');
+        if (!cartao) {
+          return;
+        }
+        arrastando = cartao;
+        origem = { pai: cartao.parentElement, proximo: cartao.nextElementSibling };
+        soltou = false;
+        evento.dataTransfer.effectAllowed = 'move';
+        evento.dataTransfer.setData('text/plain', '');
+        requestAnimationFrame(function () { cartao.classList.add('is-dragging'); });
+      });
+
+      board.addEventListener('dragover', function (evento) {
+        if (!arrastando) {
+          return;
+        }
+        var coluna = evento.target.closest('.board-list');
+        if (!coluna || coluna.classList.contains('board-list--new')) {
+          return;
+        }
+        evento.preventDefault();
+        var container = coluna.querySelector('.board-cards');
+        var depois = cartaoAbaixoDoPonteiro(container, evento.clientY);
+        if (depois) {
+          container.insertBefore(arrastando, depois);
+        } else {
+          container.appendChild(arrastando);
+        }
+      });
+
+      board.addEventListener('drop', function (evento) {
+        if (!arrastando) {
+          return;
+        }
+        evento.preventDefault();
+        soltou = true;
+        var container = arrastando.parentElement;
+        var dados = new FormData();
+        dados.append('lista', container.dataset.lista);
+        dados.append('posicao', Array.prototype.indexOf.call(container.children, arrastando));
+        fetch(arrastando.dataset.mover, {
+          method: 'POST',
+          body: dados,
+          headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'fetch' },
+        }).then(function (resposta) {
+          if (!resposta.ok) {
+            throw new Error('falha ao mover');
+          }
+        }).catch(function () {
+          location.reload();
+        });
+        atualizarContagens();
+      });
+
+      board.addEventListener('dragend', function () {
+        if (!arrastando) {
+          return;
+        }
+        arrastando.classList.remove('is-dragging');
+        if (!soltou) {
+          origem.pai.insertBefore(arrastando, origem.proximo);
+        }
+        arrastando = null;
+        atualizarContagens();
+      });
+    })();
+  </script>
 {% endblock %}

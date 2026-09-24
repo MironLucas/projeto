@@ -125,16 +125,6 @@ def _dados_do_dashboard(instagram, periodo):
 
 
 @login_required
-def programacao(request):
-    return render(request, 'core/programacao.html', {'active_menu': 'programacao'})
-
-
-@login_required
-def tarefas(request):
-    return render(request, 'core/tarefas.html', {'active_menu': 'tarefas'})
-
-
-@login_required
 def instagram_conectar(request):
     if not settings.INSTAGRAM_CLIENT_ID or not settings.INSTAGRAM_CLIENT_SECRET or not settings.INSTAGRAM_REDIRECT_URI:
         messages.error(

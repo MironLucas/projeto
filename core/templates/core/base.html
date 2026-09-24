@@ -88,18 +88,17 @@
 
   <script>
     (function () {
-      var chip = document.querySelector('.account-chip');
-      if (!chip) {
-        return;
+      function fecharMenus(exceto) {
+        document.querySelectorAll('details.popover[open]').forEach(function (menu) {
+          if (!menu.contains(exceto)) {
+            menu.open = false;
+          }
+        });
       }
-      document.addEventListener('click', function (evento) {
-        if (chip.open && !chip.contains(evento.target)) {
-          chip.open = false;
-        }
-      });
+      document.addEventListener('click', function (evento) { fecharMenus(evento.target); });
       document.addEventListener('keydown', function (evento) {
         if (evento.key === 'Escape') {
-          chip.open = false;
+          fecharMenus(null);
         }
       });
     })();

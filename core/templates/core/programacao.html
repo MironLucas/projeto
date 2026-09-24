@@ -2,17 +2,98 @@
 
 {% block page_title %}Programação{% endblock %}
 {% block page_heading %}Programação{% endblock %}
-{% block page_subheading %}Agende publicações e relatórios{% endblock %}
+{% block page_subheading %}Organize o que fazer em cada dia{% endblock %}
 
 {% block content %}
-  <div class="placeholder-state">
-    <div class="empty-icon">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="17" rx="2"></rect>
-        <path d="M16 2v4M8 2v4M3 10h18"></path>
-      </svg>
-    </div>
-    <h2>Nada programado ainda</h2>
-    <p>Conecte uma conta para começar a agendar publicações e relatórios recorrentes.</p>
+  <div class="agenda">
+    <section class="cal" aria-label="Calendário">
+      <header class="cal-head">
+        <h2 class="cal-title">{{ titulo_mes }}</h2>
+        <nav class="cal-nav" aria-label="Navegar entre meses">
+          <a class="cal-btn" href="?mes={{ mes_anterior }}" aria-label="Mês anterior">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+          </a>
+          <a class="cal-btn" href="?mes={{ mes_de_hoje }}">Hoje</a>
+          <a class="cal-btn" href="?mes={{ mes_seguinte }}" aria-label="Próximo mês">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+          </a>
+        </nav>
+      </header>
+
+      <div class="cal-grid">
+        {% for nome in cabecalho_semana %}
+          <div class="cal-weekday">{{ nome }}</div>
+        {% endfor %}
+        {% for semana in semanas %}
+          {% for dia in semana %}
+            <a href="{{ dia.link }}"
+               class="cal-day{% if dia.fora_do_mes %} is-outside{% endif %}{% if dia.hoje %} is-today{% endif %}{% if dia.selecionado %} is-selected{% endif %}"
+               aria-label="{{ dia.data|date:'d/m/Y' }}{% if dia.total %}: {{ dia.total }} item{{ dia.total|pluralize:'s' }}{% endif %}"
+               {% if dia.selecionado %}aria-current="date"{% endif %}>
+              <span class="cal-num">{{ dia.numero }}</span>
+              {% for item in dia.itens %}
+                <span class="cal-chip{% if item.concluido %} is-done{% endif %}">{% if item.horario %}{{ item.horario|time:'H:i' }} {% endif %}{{ item.titulo }}</span>
+              {% endfor %}
+              {% if dia.restantes %}<span class="cal-more">+{{ dia.restantes }} mais</span>{% endif %}
+              {% if dia.total %}<span class="cal-dot"></span>{% endif %}
+            </a>
+          {% endfor %}
+        {% endfor %}
+      </div>
+    </section>
+
+    <aside class="day-panel" id="painel-dia" aria-label="Itens do dia">
+      <h3 class="day-title">{{ titulo_selecionado }}</h3>
+
+      {% if itens_selecionado %}
+        <ul class="day-list">
+          {% for item in itens_selecionado %}
+            <li class="day-item{% if item.concluido %} is-done{% endif %}">
+              <form method="post" action="{% url 'agenda_alternar' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="check" aria-label="{% if item.concluido %}Marcar como não feito{% else %}Marcar como feito{% endif %}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                </button>
+              </form>
+              <div class="day-item-text">
+                <span class="day-item-title">{{ item.titulo }}</span>
+                {% if item.horario %}<span class="day-item-time">{{ item.horario|time:'H:i' }}</span>{% endif %}
+              </div>
+              <form method="post" action="{% url 'agenda_excluir' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn" aria-label="Excluir {{ item.titulo }}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+                </button>
+              </form>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="day-empty">Nada marcado para este dia.</p>
+      {% endif %}
+
+      <form method="post" action="{% url 'agenda_adicionar' %}" class="day-form">
+        {% csrf_token %}
+        <input type="hidden" name="data" value="{{ selecionado|date:'Y-m-d' }}">
+        <input type="text" name="titulo" id="novoItemTitulo" class="field" placeholder="O que fazer neste dia?" maxlength="200" required>
+        <div class="day-form-row">
+          <input type="time" name="horario" id="novoItemHorario" class="field" aria-label="Horário (opcional)">
+          <button type="submit" class="btn-primary btn-sm">Adicionar</button>
+        </div>
+      </form>
+    </aside>
   </div>
+
+  <script>
+    (function () {
+      if (!new URLSearchParams(location.search).has('dia')) {
+        return;
+      }
+      var telaEstreita = window.matchMedia('(max-width: 1000px)').matches;
+      if (telaEstreita) {
+        document.getElementById('painel-dia').scrollIntoView({ block: 'start' });
+      }
+      document.getElementById('novoItemTitulo').focus({ preventScroll: true });
+    })();
+  </script>
 {% endblock %}

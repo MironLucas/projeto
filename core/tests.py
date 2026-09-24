@@ -287,3 +287,131 @@ class NumeroCompactoTests(SimpleTestCase):
                  999950: '1 mi', 1250000: '1,2 mi', -2300: '-2,3 mil', None: None}
         for valor, esperado in casos.items():
             self.assertEqual(compacto(valor), esperado, valor)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class AgendaTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.create(username='agenda')
+        self.outro = User.objects.create(username='outro')
+        self.client.force_login(self.usuario)
+
+    def test_calendario_de_setembro_de_2026_comeca_no_domingo_30_de_agosto(self):
+        resp = self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'})
+        self.assertEqual(resp.status_code, 200)
+        semanas = resp.context['semanas']
+        self.assertEqual(semanas[0][0]['data'], date(2026, 8, 30))
+        self.assertTrue(semanas[0][0]['fora_do_mes'])
+        self.assertEqual(semanas[0][2]['data'], date(2026, 9, 1))
+        self.assertEqual(resp.context['titulo_mes'], 'Setembro 2026')
+        self.assertEqual(resp.context['titulo_selecionado'], 'Quinta, 24 de setembro')
+        self.assertEqual((resp.context['mes_anterior'], resp.context['mes_seguinte']), ('2026-08', '2026-10'))
+
+    def test_virada_de_ano_na_navegacao(self):
+        resp = self.client.get('/programacao/', {'mes': '2026-12'})
+        self.assertEqual(resp.context['mes_seguinte'], '2027-01')
+        resp = self.client.get('/programacao/', {'mes': '2026-01'})
+        self.assertEqual(resp.context['mes_anterior'], '2025-12')
+
+    def test_adicionar_concluir_e_excluir_item(self):
+        from .models import ItemAgenda
+        resp = self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Gravar reels', 'horario': '14:30'})
+        self.assertRedirects(resp, '/programacao/?mes=2026-09&dia=2026-09-24', fetch_redirect_response=False)
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+        self.assertEqual(str(item.horario), '14:30:00')
+
+        pagina = self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'})
+        self.assertContains(pagina, 'Gravar reels')
+
+        self.client.post(f'/programacao/itens/{item.id}/concluir/')
+        item.refresh_from_db()
+        self.assertTrue(item.concluido)
+
+        self.client.post(f'/programacao/itens/{item.id}/excluir/')
+        self.assertFalse(ItemAgenda.objects.exists())
+
+    def test_item_sem_titulo_ou_data_invalida_nao_e_criado(self):
+        from .models import ItemAgenda
+        self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': '   '})
+        self.client.post('/programacao/itens/', {'data': 'ontem', 'titulo': 'x'})
+        self.assertFalse(ItemAgenda.objects.exists())
+
+    def test_nao_mexe_em_item_de_outro_usuario(self):
+        from .models import ItemAgenda
+        item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
+        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)
+        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)
+        self.assertNotContains(self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'}), 'Privado')
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class QuadroTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.create(username='quadro')
+        self.outro = User.objects.create(username='outro')
+        self.client.force_login(self.usuario)
+
+    def _listas(self):
+        from .models import ListaTarefas
+        return list(ListaTarefas.objects.filter(usuario=self.usuario))
+
+    def _titulos(self, lista):
+        return list(lista.cartoes.values_list('titulo', flat=True))
+
+    def test_primeiro_acesso_cria_colunas_padrao(self):
+        resp = self.client.get('/tarefas/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual([l.titulo for l in self._listas()], ['A fazer', 'Fazendo', 'Feito'])
+        self.client.get('/tarefas/')
+        self.assertEqual(len(self._listas()), 3)
+
+    def test_criar_e_mover_cartoes_mantendo_a_ordem(self):
+        self.client.get('/tarefas/')
+        a_fazer, fazendo, _ = self._listas()
+        for titulo in ['Um', 'Dois', 'Tres']:
+            resp = self.client.post(f'/tarefas/listas/{a_fazer.id}/cartoes/', {'titulo': titulo})
+        self.assertRedirects(resp, f'/tarefas/#lista-{a_fazer.id}', fetch_redirect_response=False)
+        self.assertEqual(self._titulos(a_fazer), ['Um', 'Dois', 'Tres'])
+
+        tres = a_fazer.cartoes.get(titulo='Tres')
+        resp = self.client.post(f'/tarefas/cartoes/{tres.id}/mover/', {'lista': a_fazer.id, 'posicao': 0},
+                                HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'ok': True})
+        self.assertEqual(self._titulos(a_fazer), ['Tres', 'Um', 'Dois'])
+
+        um = a_fazer.cartoes.get(titulo='Um')
+        self.client.post(f'/tarefas/cartoes/{um.id}/mover/', {'lista': fazendo.id})
+        self.assertEqual(self._titulos(a_fazer), ['Tres', 'Dois'])
+        self.assertEqual(self._titulos(fazendo), ['Um'])
+
+    def test_criar_renomear_e_excluir_coluna(self):
+        from .models import Cartao
+        self.client.get('/tarefas/')
+        self.client.post('/tarefas/listas/', {'titulo': 'Ideias'})
+        ideias = self._listas()[-1]
+        self.assertEqual(ideias.titulo, 'Ideias')
+        self.client.post(f'/tarefas/listas/{ideias.id}/renomear/', {'titulo': 'Ideias de post'})
+        ideias.refresh_from_db()
+        self.assertEqual(ideias.titulo, 'Ideias de post')
+        self.client.post(f'/tarefas/listas/{ideias.id}/cartoes/', {'titulo': 'Carrossel'})
+        self.client.post(f'/tarefas/listas/{ideias.id}/excluir/')
+        self.assertEqual(len(self._listas()), 3)
+        self.assertFalse(Cartao.objects.filter(titulo='Carrossel').exists())
+
+    def test_nao_mexe_no_quadro_de_outro_usuario(self):
+        from .models import Cartao, ListaTarefas
+        self.client.get('/tarefas/')
+        minha = self._listas()[0]
+        alheia = ListaTarefas.objects.create(usuario=self.outro, titulo='Deles')
+        cartao_alheio = Cartao.objects.create(lista=alheia, titulo='Segredo')
+        meu_cartao = Cartao.objects.create(lista=minha, titulo='Meu')
+
+        self.assertEqual(self.client.post(f'/tarefas/listas/{alheia.id}/cartoes/', {'titulo': 'x'}).status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/listas/{alheia.id}/excluir/').status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/cartoes/{cartao_alheio.id}/excluir/').status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/cartoes/{cartao_alheio.id}/mover/', {'lista': minha.id}).status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/cartoes/{meu_cartao.id}/mover/', {'lista': alheia.id}).status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/cartoes/{meu_cartao.id}/mover/', {'lista': 'abc'}).status_code, 404)
+        self.assertNotContains(self.client.get('/tarefas/'), 'Segredo')

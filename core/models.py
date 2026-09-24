@@ -32,3 +32,43 @@ class SeguidoresDia(models.Model):
 
     def __str__(self):
         return f'{self.instagram_user_id} {self.data}: {self.novos_seguidores}'
+
+
+class ItemAgenda(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='itens_agenda')
+    data = models.DateField()
+    horario = models.TimeField(null=True, blank=True)
+    titulo = models.CharField(max_length=200)
+    concluido = models.BooleanField(default=False)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = [models.F('horario').asc(nulls_last=True), 'criado_em']
+
+    def __str__(self):
+        return f'{self.data} {self.titulo}'
+
+
+class ListaTarefas(models.Model):
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listas_tarefas')
+    titulo = models.CharField(max_length=80)
+    posicao = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['posicao', 'id']
+
+    def __str__(self):
+        return self.titulo
+
+
+class Cartao(models.Model):
+    lista = models.ForeignKey(ListaTarefas, on_delete=models.CASCADE, related_name='cartoes')
+    titulo = models.CharField(max_length=300)
+    posicao = models.PositiveIntegerField(default=0)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['posicao', 'id']
+
+    def __str__(self):
+        return self.titulo
