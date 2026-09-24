@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+
+{% block page_title %}Programação{% endblock %}
+{% block page_heading %}Programação{% endblock %}
+{% block page_subheading %}Agende publicações e relatórios{% endblock %}
+
+{% block content %}
+  <div class="placeholder-state">
+    <div class="empty-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+        <path d="M16 2v4M8 2v4M3 10h18"></path>
+      </svg>
+    </div>
+    <h2>Nada programado ainda</h2>
+    <p>Conecte uma conta para começar a agendar publicações e relatórios recorrentes.</p>
+  </div>
+{% endblock %}
