@@ -279,6 +279,8 @@ img.brand-mark {
 .sidebar {
   width: 240px;
   flex-shrink: 0;
+  transition: width 0.2s ease, transform 0.25s ease;
+  z-index: 30;
   background: var(--bg-soft);
   border-right: 1px solid var(--border);
   display: flex;
@@ -439,9 +441,14 @@ img.brand-mark {
 .topbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   padding: 22px 32px;
   border-bottom: 1px solid var(--border);
+}
+
+.topbar-title {
+  flex: 1;
+  min-width: 0;
 }
 
 .topbar h1 {
@@ -993,6 +1000,17 @@ img.brand-mark {
   color: var(--text-faint);
 }
 
+@media (max-width: 520px) {
+  .chart-head {
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+
+  .chart-title {
+    white-space: nowrap;
+  }
+}
+
 .chart-empty {
   margin: 0;
   min-height: 180px;
@@ -1146,9 +1164,55 @@ img.brand-mark {
 }
 
 @media (max-width: 860px) {
-  .stat-grid,
   .chart-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .stat-grid {
+    gap: 10px;
+  }
+
+  .stat-card {
+    padding: 14px 14px 12px;
+  }
+
+  .stat-card:hover {
+    transform: none;
+  }
+
+  .stat-top {
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .stat-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 7px;
+  }
+
+  .stat-icon svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .stat-compare {
+    font-size: 11px;
+    gap: 4px 6px;
+  }
+
+  .stat-compare-label {
+    white-space: normal;
   }
 }
 
@@ -1273,33 +1337,27 @@ img.brand-mark {
 }
 
 @media (max-width: 520px) {
-  .media-grid {
-    grid-template-columns: 1fr;
-    gap: 8px;
+  .media-stats {
+    justify-content: space-between;
+    gap: 4px;
+    padding: 7px 8px;
+    font-size: 11px;
   }
 
-  .media-card {
-    display: flex;
-    align-items: center;
+  .media-stats span {
+    gap: 2px;
   }
 
-  .media-thumb {
-    width: 76px;
-    flex-shrink: 0;
+  .media-stats svg {
+    width: 11px;
+    height: 11px;
   }
 
   .media-type {
-    top: 5px;
-    right: 5px;
-    width: 20px;
-    height: 20px;
-  }
-
-  .media-stats {
-    flex: 1;
-    gap: 14px;
-    padding: 0 14px;
-    font-size: 12.5px;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
   }
 }
 
@@ -2407,25 +2465,204 @@ textarea.field {
   text-decoration: underline;
 }
 
-@media (max-width: 720px) {
-  .sidebar {
+/* ---------- Menu lateral: recolher no computador, abrir por cima no celular ---------- */
+.menu-btn,
+.sidebar-close {
+  display: none;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.menu-btn svg,
+.sidebar-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-close {
+  margin-left: auto;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 29px;
+  right: -13px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: color 0.15s, border-color 0.15s, transform 0.2s;
+}
+
+.sidebar-toggle:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.sidebar-toggle svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(3, 5, 12, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+@media (min-width: 861px) {
+  .menu-recolhido .sidebar {
     width: 76px;
   }
-  .sidebar-brand .brand-name,
-  .nav-item span,
-  .nav-label,
-  .sidebar-footer .user-info {
+
+  .menu-recolhido .sidebar-toggle {
+    transform: rotate(180deg);
+  }
+
+  .menu-recolhido .sidebar-brand .brand-name,
+  .menu-recolhido .nav-item span,
+  .menu-recolhido .nav-label,
+  .menu-recolhido .sidebar-footer .user-info {
     display: none;
   }
-  .sidebar-brand,
-  .nav-item,
-  .sidebar-footer {
+
+  .menu-recolhido .sidebar-brand,
+  .menu-recolhido .nav-item {
     justify-content: center;
   }
-  .content, .topbar {
-    padding: 20px;
+
+  .menu-recolhido .sidebar-brand {
+    padding-left: 0;
+    padding-right: 0;
   }
+
+  .menu-recolhido .sidebar-footer {
+    flex-direction: column;
+    padding: 14px 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .menu-btn,
+  .sidebar-close {
+    display: flex;
+  }
+
+  .sidebar-toggle {
+    display: none;
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    height: 100dvh;
+    width: min(280px, 84vw);
+    z-index: 60;
+    transform: translateX(-100%);
+    box-shadow: none;
+  }
+
+  .menu-aberto .sidebar {
+    transform: none;
+    box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .menu-aberto body {
+    overflow: hidden;
+  }
+
+  .sidebar-nav {
+    overflow-y: auto;
+  }
+
+  .nav-item {
+    padding: 12px;
+    font-size: 15px;
+  }
+
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 12px 16px;
+    background: rgba(10, 12, 20, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .topbar h1 {
+    font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .topbar p {
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .content {
+    padding: 18px 16px 32px;
+  }
+
   .account-meta {
     display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .board {
+    margin: 0 -16px;
+    padding: 0 16px 12px;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .board-list {
+    flex-basis: min(300px, 82vw);
+    max-height: calc(100dvh - 150px);
+    scroll-snap-align: start;
+  }
+
+  .board-list--new {
+    flex-basis: min(240px, 70vw);
+  }
+}
+
+/* No iPhone, campo com letra menor que 16px faz a página dar zoom ao tocar. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 860px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 }

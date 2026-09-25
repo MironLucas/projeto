@@ -10,19 +10,38 @@
   <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
   <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
   <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="theme-color" content="#0a0c14">
+  <script>
+    try {
+      if (localStorage.getItem('menuRecolhido') === '1') {
+        document.documentElement.classList.add('menu-recolhido');
+      }
+    } catch (erro) {}
+  </script>
 </head>
 <body>
   <div class="app">
-    <aside class="sidebar">
+    <aside class="sidebar" id="menuLateral">
       <div class="sidebar-brand">
         <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="Nextsora">
         <div class="brand-name">NEXTSORA</div>
+        <button type="button" class="sidebar-close js-fechar-menu" aria-label="Fechar menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6L6 18M6 6l12 12"></path>
+          </svg>
+        </button>
       </div>
+
+      <button type="button" class="sidebar-toggle" id="menuRecolher" aria-label="Recolher menu" title="Recolher menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6"></path>
+        </svg>
+      </button>
 
       <nav class="sidebar-nav">
         <div class="nav-label">Menu</div>
 
-        <a href="{% url 'dashboard' %}" class="nav-item {% if active_menu == 'dashboard' %}active{% endif %}">
+        <a href="{% url 'dashboard' %}" class="nav-item {% if active_menu == 'dashboard' %}active{% endif %}" title="Dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
             <rect x="14" y="3" width="7" height="5" rx="1.5"></rect>
@@ -32,7 +51,7 @@
           <span>Dashboard</span>
         </a>
 
-        <a href="{% url 'publico' %}" class="nav-item {% if active_menu == 'publico' %}active{% endif %}">
+        <a href="{% url 'publico' %}" class="nav-item {% if active_menu == 'publico' %}active{% endif %}" title="Público">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
             <circle cx="9" cy="7" r="4"></circle>
@@ -42,7 +61,7 @@
           <span>Público</span>
         </a>
 
-        <a href="{% url 'programacao' %}" class="nav-item {% if active_menu == 'programacao' %}active{% endif %}">
+        <a href="{% url 'programacao' %}" class="nav-item {% if active_menu == 'programacao' %}active{% endif %}" title="Programação">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="17" rx="2"></rect>
             <path d="M16 2v4M8 2v4M3 10h18"></path>
@@ -50,7 +69,7 @@
           <span>Programação</span>
         </a>
 
-        <a href="{% url 'tarefas' %}" class="nav-item {% if active_menu == 'tarefas' %}active{% endif %}">
+        <a href="{% url 'tarefas' %}" class="nav-item {% if active_menu == 'tarefas' %}active{% endif %}" title="Tarefas">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 11l3 3L22 4"></path>
             <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
@@ -59,7 +78,7 @@
         </a>
 
         {% if e_admin %}
-          <a href="{% url 'usuarios' %}" class="nav-item {% if active_menu == 'usuarios' %}active{% endif %}">
+          <a href="{% url 'usuarios' %}" class="nav-item {% if active_menu == 'usuarios' %}active{% endif %}" title="Usuários">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               <path d="M9 12l2 2 4-4"></path>
@@ -85,9 +104,16 @@
       </div>
     </aside>
 
+    <div class="sidebar-backdrop js-fechar-menu" hidden></div>
+
     <div class="main">
       <div class="topbar">
-        <div>
+        <button type="button" class="menu-btn" id="menuAbrir" aria-label="Abrir menu" aria-controls="menuLateral" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div class="topbar-title">
           <h1>{% block page_heading %}{% endblock %}</h1>
           <p>{% block page_subheading %}{% endblock %}</p>
         </div>
@@ -121,7 +147,40 @@
       document.addEventListener('keydown', function (evento) {
         if (evento.key === 'Escape') {
           fecharMenus(null);
+          fecharMenuLateral();
         }
+      });
+
+      // Menu lateral: no computador recolhe para só os ícones; no celular abre por cima da tela.
+      var raiz = document.documentElement;
+      var botaoAbrir = document.getElementById('menuAbrir');
+      var fundo = document.querySelector('.sidebar-backdrop');
+
+      function abrirMenuLateral() {
+        raiz.classList.add('menu-aberto');
+        fundo.hidden = false;
+        botaoAbrir.setAttribute('aria-expanded', 'true');
+      }
+
+      function fecharMenuLateral() {
+        raiz.classList.remove('menu-aberto');
+        fundo.hidden = true;
+        botaoAbrir.setAttribute('aria-expanded', 'false');
+      }
+
+      botaoAbrir.addEventListener('click', abrirMenuLateral);
+      document.querySelectorAll('.js-fechar-menu').forEach(function (elemento) {
+        elemento.addEventListener('click', fecharMenuLateral);
+      });
+      document.querySelectorAll('.sidebar .nav-item').forEach(function (item) {
+        item.addEventListener('click', fecharMenuLateral);
+      });
+
+      document.getElementById('menuRecolher').addEventListener('click', function () {
+        var recolhido = raiz.classList.toggle('menu-recolhido');
+        try {
+          localStorage.setItem('menuRecolhido', recolhido ? '1' : '0');
+        } catch (erro) {}
       });
     })();
   </script>
