@@ -468,7 +468,7 @@ class QuadroTests(TestCase):
         self.client.post('/tarefas/listas/', {'titulo': 'Ideias'})
         ideias = self._listas()[-1]
         self.assertEqual(ideias.titulo, 'Ideias')
-        self.client.post(f'/tarefas/listas/{ideias.id}/renomear/', {'titulo': 'Ideias de post'})
+        self.client.post(f'/tarefas/listas/{ideias.id}/editar/', {'titulo': 'Ideias de post'})
         ideias.refresh_from_db()
         self.assertEqual(ideias.titulo, 'Ideias de post')
         self.client.post(f'/tarefas/listas/{ideias.id}/cartoes/', {'titulo': 'Carrossel'})
@@ -602,3 +602,110 @@ class HorariosAtivosTests(SimpleTestCase):
         from .publico import _medias_por_hora_local
         referencia = _local(2026, 1, 15, 12, 0)
         self.assertEqual(_medias_por_hora_local([{'0': 7}], referencia)[5], 7)
+
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class EsteiraDeProducaoTests(TestCase):
+    PNG = b'\x89PNG\r\n\x1a\n' + b'0123456789' * 10
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.create(username='esteira')
+        self.client.force_login(self.usuario)
+        self.client.get('/tarefas/')
+        from .models import ListaTarefas
+        self.listas = list(ListaTarefas.objects.filter(usuario=self.usuario))
+
+    def _arquivo(self, nome='foto.png', conteudo=None, tipo='image/png'):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        return SimpleUploadedFile(nome, conteudo if conteudo is not None else self.PNG, content_type=tipo)
+
+    def test_cor_da_coluna_so_aceita_cores_da_paleta(self):
+        lista = self.listas[0]
+        self.client.post(f'/tarefas/listas/{lista.id}/editar/', {'titulo': lista.titulo, 'cor': '#3ddc84'})
+        lista.refresh_from_db()
+        self.assertEqual(lista.cor, '#3ddc84')
+        self.client.post(f'/tarefas/listas/{lista.id}/editar/', {'titulo': lista.titulo, 'cor': 'red;}<script>'})
+        lista.refresh_from_db()
+        self.assertEqual(lista.cor, '#3ddc84')
+
+    def test_mudar_ordem_das_colunas(self):
+        from .models import ListaTarefas
+        a_fazer = self.listas[0]
+        resp = self.client.post(f'/tarefas/listas/{a_fazer.id}/mover/', {'posicao': 2}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'ok': True})
+        ordem = list(ListaTarefas.objects.filter(usuario=self.usuario).values_list('titulo', flat=True))
+        self.assertEqual(ordem, ['Fazendo', 'Feito', 'A fazer'])
+        self.client.post(f'/tarefas/listas/{a_fazer.id}/mover/', {'posicao': 0})
+        ordem = list(ListaTarefas.objects.filter(usuario=self.usuario).values_list('titulo', flat=True))
+        self.assertEqual(ordem, ['A fazer', 'Fazendo', 'Feito'])
+
+    def test_cartao_com_legenda_e_imagem_e_servido_com_suporte_a_partes(self):
+        from .models import Cartao
+        lista = self.listas[0]
+        self.client.post(f'/tarefas/listas/{lista.id}/cartoes/', {
+            'titulo': 'Post de lançamento', 'legenda': 'Chegou! 🚀\nLink na bio.', 'arquivo': self._arquivo(),
+        })
+        cartao = Cartao.objects.get(titulo='Post de lançamento')
+        self.assertEqual(cartao.legenda, 'Chegou! 🚀\nLink na bio.')
+        self.assertTrue(cartao.e_imagem)
+        self.assertEqual(cartao.midia_tamanho, len(self.PNG))
+
+        resp = self.client.get(f'/tarefas/cartoes/{cartao.id}/arquivo/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'image/png')
+        self.assertEqual(resp.content, self.PNG)
+
+        resp = self.client.get(f'/tarefas/cartoes/{cartao.id}/arquivo/', HTTP_RANGE='bytes=0-7')
+        self.assertEqual(resp.status_code, 206)
+        self.assertEqual(resp['Content-Range'], f'bytes 0-7/{len(self.PNG)}')
+        self.assertEqual(resp.content, self.PNG[:8])
+
+        resp = self.client.get(f'/tarefas/cartoes/{cartao.id}/arquivo/', HTTP_RANGE='bytes=9999-')
+        self.assertEqual(resp.status_code, 416)
+
+        pagina = self.client.get('/tarefas/')
+        self.assertContains(pagina, f'/tarefas/cartoes/{cartao.id}/arquivo/?v=1')
+
+    def test_rejeita_tipo_nao_permitido_e_arquivo_grande(self):
+        from .models import Cartao
+        lista = self.listas[0]
+        svg = self._arquivo('x.svg', b'<svg onload="alert(1)"/>', 'image/svg+xml')
+        resp = self.client.post(f'/tarefas/listas/{lista.id}/cartoes/', {'titulo': 'SVG', 'arquivo': svg}, follow=True)
+        self.assertContains(resp, 'Envie uma imagem')
+        with mock.patch('core.quadro.LIMITE_MIDIA_MB', 0):
+            resp = self.client.post(f'/tarefas/listas/{lista.id}/cartoes/', {'titulo': 'Grande', 'arquivo': self._arquivo()}, follow=True)
+        self.assertContains(resp, 'Envie uma versão menor')
+        self.assertFalse(Cartao.objects.exists())
+
+    def test_editar_cartao_troca_coluna_e_remove_midia(self):
+        from .models import ArquivoCartao, Cartao
+        a_fazer, fazendo, _ = self.listas
+        self.client.post(f'/tarefas/listas/{a_fazer.id}/cartoes/', {'titulo': 'Reels', 'arquivo': self._arquivo('v.mp4', b'mp4', 'video/mp4')})
+        cartao = Cartao.objects.get(titulo='Reels')
+        self.assertTrue(cartao.e_video)
+
+        self.client.post(f'/tarefas/cartoes/{cartao.id}/editar/', {
+            'titulo': 'Reels editado', 'legenda': 'Nova legenda', 'lista': fazendo.id, 'remover_midia': '1',
+        })
+        cartao.refresh_from_db()
+        self.assertEqual((cartao.titulo, cartao.legenda, cartao.lista_id), ('Reels editado', 'Nova legenda', fazendo.id))
+        self.assertEqual(cartao.midia_tipo, '')
+        self.assertFalse(ArquivoCartao.objects.exists())
+        self.assertEqual(self.client.get(f'/tarefas/cartoes/{cartao.id}/arquivo/').status_code, 404)
+
+    def test_nao_acessa_midia_nem_edita_cartao_de_outro_usuario(self):
+        from django.contrib.auth.models import User
+        from .models import ArquivoCartao, Cartao, ListaTarefas
+        outro = User.objects.create(username='intruso')
+        lista = ListaTarefas.objects.create(usuario=outro, titulo='Deles')
+        cartao = Cartao.objects.create(lista=lista, titulo='Segredo', midia_tipo='image/png')
+        ArquivoCartao.objects.create(cartao=cartao, conteudo=self.PNG)
+
+        self.assertEqual(self.client.get(f'/tarefas/cartoes/{cartao.id}/arquivo/').status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/cartoes/{cartao.id}/editar/', {'titulo': 'x'}).status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/listas/{lista.id}/mover/', {'posicao': 0}).status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/listas/{lista.id}/editar/', {'cor': '#3ddc84'}).status_code, 404)
+        cartao.refresh_from_db()
+        self.assertEqual(cartao.titulo, 'Segredo')

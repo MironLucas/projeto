@@ -16,9 +16,12 @@ urlpatterns = [
 
     path('tarefas/', quadro.tarefas, name='tarefas'),
     path('tarefas/listas/', quadro.criar_lista, name='quadro_criar_lista'),
-    path('tarefas/listas/<int:lista_id>/renomear/', quadro.renomear_lista, name='quadro_renomear_lista'),
+    path('tarefas/listas/<int:lista_id>/editar/', quadro.editar_lista, name='quadro_editar_lista'),
+    path('tarefas/listas/<int:lista_id>/mover/', quadro.mover_lista, name='quadro_mover_lista'),
     path('tarefas/listas/<int:lista_id>/excluir/', quadro.excluir_lista, name='quadro_excluir_lista'),
     path('tarefas/listas/<int:lista_id>/cartoes/', quadro.criar_cartao, name='quadro_criar_cartao'),
+    path('tarefas/cartoes/<int:cartao_id>/editar/', quadro.editar_cartao, name='quadro_editar_cartao'),
+    path('tarefas/cartoes/<int:cartao_id>/arquivo/', quadro.arquivo_cartao, name='quadro_arquivo_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/mover/', quadro.mover_cartao, name='quadro_mover_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/excluir/', quadro.excluir_cartao, name='quadro_excluir_cartao'),
 

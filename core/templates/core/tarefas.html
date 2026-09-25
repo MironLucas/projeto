@@ -2,62 +2,58 @@
 
 {% block page_title %}Tarefas{% endblock %}
 {% block page_heading %}Tarefas{% endblock %}
-{% block page_subheading %}Arraste os cartões entre as colunas para acompanhar o andamento{% endblock %}
+{% block page_subheading %}Arraste cartões e colunas para organizar sua produção{% endblock %}
 
 {% block content %}
   <div class="board" id="board">
     {% for lista in listas %}
-      <section class="board-list" id="lista-{{ lista.id }}">
+      <section class="board-list" id="lista-{{ lista.id }}" style="--cor-lista: {{ lista.cor }}"
+               data-mover="{% url 'quadro_mover_lista' lista.id %}">
         <header class="board-list-head">
-          <form method="post" action="{% url 'quadro_renomear_lista' lista.id %}" class="board-list-name">
+          <span class="board-grip" draggable="true" title="Arraste para mudar a coluna de lugar">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
+          </span>
+          <form method="post" action="{% url 'quadro_editar_lista' lista.id %}" class="board-list-name">
             {% csrf_token %}
             <input type="text" name="titulo" class="board-list-title js-renomear" value="{{ lista.titulo }}" maxlength="80" required aria-label="Nome da coluna">
           </form>
           <span class="board-count">{{ lista.cartoes.all|length }}</span>
-          <form method="post" action="{% url 'quadro_excluir_lista' lista.id %}" class="js-confirmar"
-                data-mensagem="Excluir a coluna “{{ lista.titulo }}” e todos os cartões dela?">
-            {% csrf_token %}
-            <button type="submit" class="icon-btn" aria-label="Excluir coluna {{ lista.titulo }}">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
-            </button>
-          </form>
+          <button type="button" class="icon-btn icon-btn--neutral js-config-lista" aria-label="Configurar coluna {{ lista.titulo }}"
+                  data-editar="{% url 'quadro_editar_lista' lista.id %}"
+                  data-mover="{% url 'quadro_mover_lista' lista.id %}"
+                  data-excluir="{% url 'quadro_excluir_lista' lista.id %}"
+                  data-titulo="{{ lista.titulo }}" data-cor="{{ lista.cor }}"
+                  data-indice="{{ forloop.counter0 }}" data-total="{{ listas|length }}">
+            <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+          </button>
         </header>
 
         <div class="board-cards" data-lista="{{ lista.id }}">
           {% for cartao in lista.cartoes.all %}
-            <article class="board-card" draggable="true" data-mover="{% url 'quadro_mover_cartao' cartao.id %}">
-              <span class="board-card-title">{{ cartao.titulo }}</span>
-              <details class="popover card-menu">
-                <summary aria-label="Opções do cartão">
-                  <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
-                </summary>
-                <div class="card-menu-body">
-                  {% if listas|length > 1 %}
-                    <span class="card-menu-label">Mover para</span>
-                    {% for destino in listas %}
-                      {% if destino.id != lista.id %}
-                        <form method="post" action="{% url 'quadro_mover_cartao' cartao.id %}">
-                          {% csrf_token %}
-                          <input type="hidden" name="lista" value="{{ destino.id }}">
-                          <button type="submit">{{ destino.titulo }}</button>
-                        </form>
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                  <form method="post" action="{% url 'quadro_excluir_cartao' cartao.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="is-danger">Excluir cartão</button>
-                  </form>
+            <article class="board-card js-abrir-cartao" draggable="true" tabindex="0"
+                     data-mover="{% url 'quadro_mover_cartao' cartao.id %}"
+                     data-editar="{% url 'quadro_editar_cartao' cartao.id %}"
+                     data-excluir="{% url 'quadro_excluir_cartao' cartao.id %}"
+                     data-titulo="{{ cartao.titulo }}" data-legenda="{{ cartao.legenda }}" data-lista="{{ lista.id }}"
+                     {% if cartao.midia_tipo %}data-midia-url="{% url 'quadro_arquivo_cartao' cartao.id %}?v={{ cartao.midia_versao }}"
+                     data-midia-tipo="{% if cartao.e_video %}video{% else %}imagem{% endif %}" data-midia-nome="{{ cartao.midia_nome }}"{% endif %}>
+              {% if cartao.e_imagem %}
+                <img class="board-card-cover" src="{% url 'quadro_arquivo_cartao' cartao.id %}?v={{ cartao.midia_versao }}" alt="" loading="lazy" draggable="false">
+              {% elif cartao.e_video %}
+                <div class="board-card-cover board-card-cover--video">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"></path></svg>
+                  <span>Vídeo</span>
                 </div>
-              </details>
+              {% endif %}
+              <span class="board-card-title">{{ cartao.titulo }}</span>
+              {% if cartao.legenda %}<p class="board-card-caption">{{ cartao.legenda }}</p>{% endif %}
             </article>
           {% endfor %}
         </div>
 
-        <form method="post" action="{% url 'quadro_criar_cartao' lista.id %}" class="board-add">
-          {% csrf_token %}
-          <input type="text" name="titulo" class="field" placeholder="+ Adicionar cartão" maxlength="300" required aria-label="Novo cartão em {{ lista.titulo }}">
-        </form>
+        <button type="button" class="board-add-btn js-novo-cartao" data-criar="{% url 'quadro_criar_cartao' lista.id %}" data-lista="{{ lista.id }}">
+          + Adicionar cartão
+        </button>
       </section>
     {% endfor %}
 
@@ -69,6 +65,86 @@
     </section>
   </div>
 
+  <dialog class="modal" id="dialogCartao" aria-labelledby="dialogCartaoTitulo">
+    <form method="post" enctype="multipart/form-data" class="modal-body" id="formCartao">
+      {% csrf_token %}
+      <header class="modal-head">
+        <h2 id="dialogCartaoTitulo">Novo cartão</h2>
+        <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </header>
+
+      <label class="field-label" for="cartaoTitulo">Título</label>
+      <input type="text" id="cartaoTitulo" name="titulo" class="field" maxlength="300" required>
+
+      <label class="field-label" for="cartaoLegenda">Legenda</label>
+      <textarea id="cartaoLegenda" name="legenda" class="field" rows="5" maxlength="{{ tamanho_maximo_legenda }}"></textarea>
+
+      <span class="field-label">Imagem ou vídeo</span>
+      <div class="midia-preview" id="cartaoMidia" hidden></div>
+      <label class="check-row" id="cartaoRemoverMidia" hidden>
+        <input type="checkbox" name="remover_midia" value="1"> Remover mídia
+      </label>
+      <input type="file" id="cartaoArquivo" name="arquivo" class="field field-file" accept="{{ tipos_de_midia }}">
+      <p class="field-hint">JPG, PNG, GIF, WebP, MP4, MOV ou WebM, até {{ limite_midia_mb }} MB.</p>
+
+      <div id="cartaoColunaCampo" hidden>
+        <label class="field-label" for="cartaoColuna">Coluna</label>
+        <select id="cartaoColuna" name="lista" class="field">
+          {% for lista in listas %}<option value="{{ lista.id }}">{{ lista.titulo }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <footer class="modal-foot">
+        <button type="submit" class="btn-text-danger" id="cartaoExcluir" formnovalidate hidden>Excluir cartão</button>
+        <div class="modal-foot-actions">
+          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
+          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="dialogLista" aria-labelledby="dialogListaTitulo">
+    <form method="post" class="modal-body" id="formLista">
+      {% csrf_token %}
+      <header class="modal-head">
+        <h2 id="dialogListaTitulo">Coluna</h2>
+        <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </header>
+
+      <label class="field-label" for="listaTitulo">Nome</label>
+      <input type="text" id="listaTitulo" name="titulo" class="field" maxlength="80" required>
+
+      <span class="field-label">Cor</span>
+      <div class="swatches">
+        {% for cor, nome in cores_lista %}
+          <label class="swatch" title="{{ nome }}">
+            <input type="radio" name="cor" value="{{ cor }}" aria-label="{{ nome }}">
+            <span style="background: {{ cor }}"></span>
+          </label>
+        {% endfor %}
+      </div>
+
+      <span class="field-label">Posição</span>
+      <div class="modal-row">
+        <button type="submit" class="btn-ghost" id="listaEsquerda" name="posicao" formnovalidate>← Mover para a esquerda</button>
+        <button type="submit" class="btn-ghost" id="listaDireita" name="posicao" formnovalidate>Mover para a direita →</button>
+      </div>
+
+      <footer class="modal-foot">
+        <button type="submit" class="btn-text-danger" id="listaExcluir" formnovalidate>Excluir coluna</button>
+        <div class="modal-foot-actions">
+          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
+          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
   <script>
     (function () {
       var board = document.getElementById('board');
@@ -78,22 +154,146 @@
         campo.addEventListener('change', function () { campo.form.submit(); });
       });
 
-      document.querySelectorAll('.js-confirmar').forEach(function (form) {
-        form.addEventListener('submit', function (evento) {
-          if (!window.confirm(form.dataset.mensagem)) {
-            evento.preventDefault();
+      document.querySelectorAll('.modal').forEach(function (dialogo) {
+        dialogo.querySelectorAll('.js-fechar').forEach(function (botao) {
+          botao.addEventListener('click', function () { dialogo.close(); });
+        });
+        dialogo.addEventListener('click', function (evento) {
+          if (evento.target === dialogo) {
+            dialogo.close();
           }
         });
       });
 
+      // ---------- Janela do cartão ----------
+      var dialogoCartao = document.getElementById('dialogCartao');
+      var formCartao = document.getElementById('formCartao');
+      var campoArquivo = document.getElementById('cartaoArquivo');
+      var previa = document.getElementById('cartaoMidia');
+      var removerMidia = document.getElementById('cartaoRemoverMidia');
+      var botaoExcluirCartao = document.getElementById('cartaoExcluir');
+      var urlPreviaLocal = null;
+
+      function mostrarPrevia(url, tipo) {
+        previa.innerHTML = '';
+        if (!url) {
+          previa.hidden = true;
+          return;
+        }
+        var elemento = document.createElement(tipo === 'video' ? 'video' : 'img');
+        elemento.src = url;
+        if (tipo === 'video') {
+          elemento.controls = true;
+          elemento.preload = 'metadata';
+          elemento.playsInline = true;
+        }
+        previa.appendChild(elemento);
+        previa.hidden = false;
+      }
+
+      function abrirCartao(dados) {
+        formCartao.reset();
+        if (urlPreviaLocal) {
+          URL.revokeObjectURL(urlPreviaLocal);
+          urlPreviaLocal = null;
+        }
+        var editando = Boolean(dados.editar);
+        formCartao.action = editando ? dados.editar : dados.criar;
+        document.getElementById('dialogCartaoTitulo').textContent = editando ? 'Editar cartão' : 'Novo cartão';
+        document.getElementById('cartaoTitulo').value = dados.titulo || '';
+        document.getElementById('cartaoLegenda').value = dados.legenda || '';
+        document.getElementById('cartaoColunaCampo').hidden = !editando;
+        document.getElementById('cartaoColuna').value = dados.lista;
+        botaoExcluirCartao.hidden = !editando;
+        botaoExcluirCartao.formAction = dados.excluir || '';
+        removerMidia.hidden = !dados.midiaUrl;
+        mostrarPrevia(dados.midiaUrl, dados.midiaTipo);
+        dialogoCartao.showModal();
+        document.getElementById('cartaoTitulo').focus();
+      }
+
+      campoArquivo.addEventListener('change', function () {
+        var arquivo = campoArquivo.files[0];
+        if (!arquivo) {
+          return;
+        }
+        if (urlPreviaLocal) {
+          URL.revokeObjectURL(urlPreviaLocal);
+        }
+        urlPreviaLocal = URL.createObjectURL(arquivo);
+        mostrarPrevia(urlPreviaLocal, arquivo.type.indexOf('video/') === 0 ? 'video' : 'imagem');
+        removerMidia.hidden = true;
+      });
+
+      botaoExcluirCartao.addEventListener('click', function (evento) {
+        if (!window.confirm('Excluir este cartão?')) {
+          evento.preventDefault();
+          return;
+        }
+        campoArquivo.value = '';
+      });
+
+      board.addEventListener('click', function (evento) {
+        var novo = evento.target.closest('.js-novo-cartao');
+        if (novo) {
+          abrirCartao({ criar: novo.dataset.criar, lista: novo.dataset.lista });
+          return;
+        }
+        var cartao = evento.target.closest('.js-abrir-cartao');
+        if (cartao) {
+          abrirCartao(cartao.dataset);
+        }
+        var config = evento.target.closest('.js-config-lista');
+        if (config) {
+          abrirLista(config.dataset);
+        }
+      });
+
+      board.addEventListener('keydown', function (evento) {
+        var cartao = evento.target.closest('.js-abrir-cartao');
+        if (cartao && evento.key === 'Enter') {
+          abrirCartao(cartao.dataset);
+        }
+      });
+
+      // ---------- Janela da coluna ----------
+      var dialogoLista = document.getElementById('dialogLista');
+      var formLista = document.getElementById('formLista');
+
+      function abrirLista(dados) {
+        var indice = Number(dados.indice);
+        var total = Number(dados.total);
+        formLista.action = dados.editar;
+        document.getElementById('listaTitulo').value = dados.titulo;
+        formLista.querySelectorAll('input[name=cor]').forEach(function (opcao) {
+          opcao.checked = opcao.value === dados.cor;
+        });
+        var esquerda = document.getElementById('listaEsquerda');
+        var direita = document.getElementById('listaDireita');
+        esquerda.formAction = direita.formAction = dados.mover;
+        esquerda.value = indice - 1;
+        direita.value = indice + 1;
+        esquerda.disabled = indice === 0;
+        direita.disabled = indice === total - 1;
+        document.getElementById('listaExcluir').formAction = dados.excluir;
+        dialogoLista.showModal();
+      }
+
+      document.getElementById('listaExcluir').addEventListener('click', function (evento) {
+        if (!window.confirm('Excluir a coluna “' + document.getElementById('listaTitulo').value + '” e todos os cartões dela?')) {
+          evento.preventDefault();
+        }
+      });
+
+      // ---------- Foco após criar um cartão ----------
       if (location.hash.indexOf('#lista-') === 0) {
         var coluna = document.getElementById(location.hash.slice(1));
         if (coluna) {
           coluna.scrollIntoView({ inline: 'nearest', block: 'nearest' });
-          coluna.querySelector('.board-add .field').focus({ preventScroll: true });
         }
       }
 
+      // ---------- Arrastar cartões e colunas ----------
       function atualizarContagens() {
         board.querySelectorAll('.board-list').forEach(function (coluna) {
           var contador = coluna.querySelector('.board-count');
@@ -103,63 +303,19 @@
         });
       }
 
-      function cartaoAbaixoDoPonteiro(container, y) {
-        var cartoes = container.querySelectorAll('.board-card:not(.is-dragging)');
-        for (var i = 0; i < cartoes.length; i++) {
-          var caixa = cartoes[i].getBoundingClientRect();
-          if (y < caixa.top + caixa.height / 2) {
-            return cartoes[i];
+      function vizinhoDepois(itens, posicao, eixo) {
+        for (var i = 0; i < itens.length; i++) {
+          var caixa = itens[i].getBoundingClientRect();
+          var meio = eixo === 'x' ? caixa.left + caixa.width / 2 : caixa.top + caixa.height / 2;
+          if (posicao < meio) {
+            return itens[i];
           }
         }
         return null;
       }
 
-      var arrastando = null;
-      var origem = null;
-      var soltou = false;
-
-      board.addEventListener('dragstart', function (evento) {
-        var cartao = evento.target.closest('.board-card');
-        if (!cartao) {
-          return;
-        }
-        arrastando = cartao;
-        origem = { pai: cartao.parentElement, proximo: cartao.nextElementSibling };
-        soltou = false;
-        evento.dataTransfer.effectAllowed = 'move';
-        evento.dataTransfer.setData('text/plain', '');
-        requestAnimationFrame(function () { cartao.classList.add('is-dragging'); });
-      });
-
-      board.addEventListener('dragover', function (evento) {
-        if (!arrastando) {
-          return;
-        }
-        var coluna = evento.target.closest('.board-list');
-        if (!coluna || coluna.classList.contains('board-list--new')) {
-          return;
-        }
-        evento.preventDefault();
-        var container = coluna.querySelector('.board-cards');
-        var depois = cartaoAbaixoDoPonteiro(container, evento.clientY);
-        if (depois) {
-          container.insertBefore(arrastando, depois);
-        } else {
-          container.appendChild(arrastando);
-        }
-      });
-
-      board.addEventListener('drop', function (evento) {
-        if (!arrastando) {
-          return;
-        }
-        evento.preventDefault();
-        soltou = true;
-        var container = arrastando.parentElement;
-        var dados = new FormData();
-        dados.append('lista', container.dataset.lista);
-        dados.append('posicao', Array.prototype.indexOf.call(container.children, arrastando));
-        fetch(arrastando.dataset.mover, {
+      function enviar(url, dados) {
+        fetch(url, {
           method: 'POST',
           body: dados,
           headers: { 'X-CSRFToken': csrf, 'X-Requested-With': 'fetch' },
@@ -170,6 +326,76 @@
         }).catch(function () {
           location.reload();
         });
+      }
+
+      var arrastando = null;
+      var tipoArraste = null;
+      var origem = null;
+      var soltou = false;
+      var novaColuna = board.querySelector('.board-list--new');
+
+      board.addEventListener('dragstart', function (evento) {
+        var alca = evento.target.closest('.board-grip');
+        var cartao = evento.target.closest('.board-card');
+        if (alca) {
+          arrastando = alca.closest('.board-list');
+          tipoArraste = 'lista';
+          evento.dataTransfer.setDragImage(arrastando, 24, 20);
+        } else if (cartao) {
+          arrastando = cartao;
+          tipoArraste = 'cartao';
+        } else {
+          return;
+        }
+        origem = { pai: arrastando.parentElement, proximo: arrastando.nextElementSibling };
+        soltou = false;
+        evento.dataTransfer.effectAllowed = 'move';
+        evento.dataTransfer.setData('text/plain', '');
+        var elemento = arrastando;
+        requestAnimationFrame(function () { elemento.classList.add('is-dragging'); });
+      });
+
+      board.addEventListener('dragover', function (evento) {
+        if (!arrastando) {
+          return;
+        }
+        if (tipoArraste === 'lista') {
+          evento.preventDefault();
+          var colunas = board.querySelectorAll('.board-list:not(.board-list--new):not(.is-dragging)');
+          board.insertBefore(arrastando, vizinhoDepois(colunas, evento.clientX, 'x') || novaColuna);
+          return;
+        }
+        var coluna = evento.target.closest('.board-list');
+        if (!coluna || coluna === novaColuna) {
+          return;
+        }
+        evento.preventDefault();
+        var container = coluna.querySelector('.board-cards');
+        var depois = vizinhoDepois(container.querySelectorAll('.board-card:not(.is-dragging)'), evento.clientY, 'y');
+        container.insertBefore(arrastando, depois);
+      });
+
+      board.addEventListener('drop', function (evento) {
+        if (!arrastando) {
+          return;
+        }
+        evento.preventDefault();
+        soltou = true;
+        var dados = new FormData();
+        if (tipoArraste === 'lista') {
+          var colunas = Array.prototype.slice.call(board.querySelectorAll('.board-list:not(.board-list--new)'));
+          dados.append('posicao', colunas.indexOf(arrastando));
+          enviar(arrastando.dataset.mover, dados);
+          colunas.forEach(function (coluna, indice) {
+            coluna.querySelector('.js-config-lista').dataset.indice = indice;
+          });
+        } else {
+          var container = arrastando.parentElement;
+          dados.append('lista', container.dataset.lista);
+          dados.append('posicao', Array.prototype.indexOf.call(container.children, arrastando));
+          enviar(arrastando.dataset.mover, dados);
+          arrastando.dataset.lista = container.dataset.lista;
+        }
         atualizarContagens();
       });
 
@@ -182,6 +408,7 @@
           origem.pai.insertBefore(arrastando, origem.proximo);
         }
         arrastando = null;
+        tipoArraste = null;
         atualizarContagens();
       });
     })();

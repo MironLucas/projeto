@@ -53,6 +53,7 @@ class ListaTarefas(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listas_tarefas')
     titulo = models.CharField(max_length=80)
     posicao = models.PositiveIntegerField(default=0)
+    cor = models.CharField(max_length=7, default='#7c5cff')
 
     class Meta:
         ordering = ['posicao', 'id']
@@ -64,11 +65,31 @@ class ListaTarefas(models.Model):
 class Cartao(models.Model):
     lista = models.ForeignKey(ListaTarefas, on_delete=models.CASCADE, related_name='cartoes')
     titulo = models.CharField(max_length=300)
+    legenda = models.TextField(blank=True)
     posicao = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
+    # Metadados da mídia ficam aqui; os bytes ficam em ArquivoCartao para o quadro não carregá-los.
+    midia_tipo = models.CharField(max_length=50, blank=True)
+    midia_nome = models.CharField(max_length=255, blank=True)
+    midia_tamanho = models.PositiveIntegerField(default=0)
+    midia_versao = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ['posicao', 'id']
 
     def __str__(self):
         return self.titulo
+
+    @property
+    def e_imagem(self):
+        return self.midia_tipo.startswith('image/')
+
+    @property
+    def e_video(self):
+        return self.midia_tipo.startswith('video/')
+
+
+class ArquivoCartao(models.Model):
+    # Guardado no banco porque o disco do Render gratuito é apagado a cada deploy.
+    cartao = models.OneToOneField(Cartao, on_delete=models.CASCADE, primary_key=True, related_name='arquivo')
+    conteudo = models.BinaryField()
