@@ -6,33 +6,7 @@
 {% block page_subheading %}Visão geral dos seus relatórios{% endblock %}
 
 {% block topbar_right %}
-  {% if instagram %}
-    <details class="popover account-chip">
-      <summary>
-        {% if foto_perfil %}
-          <span class="account-avatar"><img src="{{ foto_perfil }}" alt="" referrerpolicy="no-referrer"></span>
-        {% else %}
-          <span class="account-avatar account-avatar--fallback">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
-              <circle cx="12" cy="12" r="4.2"></circle>
-            </svg>
-          </span>
-        {% endif %}
-        <span class="account-meta">
-          <span class="account-handle">@{{ instagram.instagram_username }}</span>
-          <span class="account-status"><span class="status-dot"></span>Conectado</span>
-        </span>
-        <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
-      </summary>
-      <div class="account-menu">
-        <form method="post" action="{% url 'instagram_desconectar' %}">
-          {% csrf_token %}
-          <button type="submit">Desconectar conta</button>
-        </form>
-      </div>
-    </details>
-  {% endif %}
+  {% include 'core/_conta_instagram.html' %}
 {% endblock %}
 
 {% block content %}
@@ -236,25 +210,6 @@
       })();
     </script>
   {% else %}
-    <div class="empty-state">
-      <div class="empty-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
-          <circle cx="12" cy="12" r="4.2"></circle>
-          <circle cx="17.6" cy="6.4" r="1.1" fill="currentColor" stroke="none"></circle>
-        </svg>
-      </div>
-      <h2>Nenhuma conta conectada ainda</h2>
-      <p>Conecte seu Instagram para começar a gerar relatórios automáticos de desempenho, engajamento e alcance direto no Nexora.</p>
-      <form method="post" action="{% url 'instagram_conectar' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn-instagram">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2.16c3.2 0 3.58.02 4.85.07 1.17.06 1.8.25 2.23.42.56.21.96.48 1.38.9.42.42.68.82.9 1.38.17.42.36 1.06.42 2.23.05 1.27.06 1.65.06 4.85s-.01 3.58-.07 4.85c-.06 1.17-.25 1.8-.42 2.23a3.7 3.7 0 0 1-.9 1.38c-.42.42-.82.68-1.38.9-.42.17-1.06.36-2.23.42-1.27.05-1.64.06-4.85.06s-3.58-.01-4.85-.07c-1.17-.06-1.8-.25-2.23-.42a3.7 3.7 0 0 1-1.38-.9 3.7 3.7 0 0 1-.9-1.38c-.17-.42-.36-1.06-.42-2.23-.05-1.26-.06-1.64-.06-4.84 0-3.2.02-3.58.07-4.85.06-1.17.25-1.8.42-2.23.21-.56.48-.96.9-1.38.42-.42.82-.68 1.38-.9.42-.17 1.05-.36 2.22-.42 1.27-.05 1.65-.06 4.86-.06Zm0 2.16c-3.15 0-3.5.01-4.74.07-.96.05-1.48.2-1.83.34-.46.18-.79.4-1.13.75-.35.34-.57.67-.75 1.13-.14.35-.3.87-.34 1.83-.05 1.24-.07 1.59-.07 4.74 0 3.15.02 3.5.07 4.74.05.96.2 1.48.34 1.83.18.46.4.79.75 1.13.34.35.67.57 1.13.75.35.14.87.3 1.83.34 1.24.06 1.59.07 4.74.07 3.15 0 3.5-.01 4.74-.07.96-.05 1.48-.2 1.83-.34.46-.18.79-.4 1.13-.75.35-.34.57-.67.75-1.13.14-.35.3-.87.34-1.83.06-1.24.07-1.59.07-4.74 0-3.15-.02-3.5-.07-4.74-.05-.96-.2-1.48-.34-1.83a3 3 0 0 0-.75-1.13 3 3 0 0 0-1.13-.75c-.35-.14-.87-.3-1.83-.34-1.24-.06-1.59-.07-4.74-.07Zm0 3.68a6 6 0 1 1 0 12 6 6 0 0 1 0-12Zm0 2.16a3.84 3.84 0 1 0 0 7.68 3.84 3.84 0 0 0 0-7.68Zm6.4-3.9a1.44 1.44 0 1 1 0 2.88 1.44 1.44 0 0 1 0-2.88Z"></path>
-          </svg>
-          Conectar com Instagram
-        </button>
-      </form>
-    </div>
+    {% include 'core/_conectar_instagram.html' %}
   {% endif %}
 {% endblock %}

@@ -1,12 +1,13 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, quadro, views
+from . import agenda, publico, quadro, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('publico/', publico.publico, name='publico'),
 
     path('programacao/', agenda.programacao, name='programacao'),
     path('programacao/itens/', agenda.adicionar_item, name='agenda_adicionar'),

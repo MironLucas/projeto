@@ -1,0 +1,16 @@
+{% load humanize l10n %}
+{% if bloco.motivo %}
+  <p class="aud-empty">{{ bloco.motivo }}</p>
+{% else %}
+  <ul class="hbar-list">
+    {% for item in bloco.dados %}
+      <li class="hbar-row">
+        <div class="hbar-label">
+          <span class="hbar-name">{{ item.nome }}</span>
+          <span class="hbar-value"><strong>{{ item.percentual|floatformat:1 }}%</strong> <span class="aud-count">{{ item.valor|intcomma }}</span></span>
+        </div>
+        <div class="hbar-track"><div class="hbar-fill" style="width: {{ item.largura|unlocalize }}%"></div></div>
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}

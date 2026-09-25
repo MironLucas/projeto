@@ -6,6 +6,7 @@ from datetime import date, timedelta
 DIAS_SEMANA = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 MAX_ROTULOS_EIXO_X = 12
+MAX_ROTULOS_EIXO_X_CELULAR = 6
 
 
 @dataclass
@@ -89,6 +90,7 @@ def montar_grafico(subtitulo, intervalos, valores, parciais=None):
     faixa = superior - inferior
     base = (0 - inferior) / faixa * 100
     passo_rotulo = max(1, math.ceil(len(intervalos) / MAX_ROTULOS_EIXO_X))
+    passo_rotulo_celular = max(1, math.ceil(len(intervalos) / MAX_ROTULOS_EIXO_X_CELULAR))
 
     barras = []
     for indice, (intervalo, valor, parcial) in enumerate(zip(intervalos, valores, parciais)):
@@ -98,6 +100,7 @@ def montar_grafico(subtitulo, intervalos, valores, parciais=None):
             'valor': valor,
             'parcial': parcial,
             'mostrar_rotulo': indice % passo_rotulo == 0,
+            'rotulo_no_celular': indice % passo_rotulo_celular == 0,
         }
         if valor is not None:
             altura = abs(valor) / faixa * 100

@@ -1,0 +1,27 @@
+  {% if instagram %}
+    <details class="popover account-chip">
+      <summary>
+        {% if foto_perfil %}
+          <span class="account-avatar"><img src="{{ foto_perfil }}" alt="" referrerpolicy="no-referrer"></span>
+        {% else %}
+          <span class="account-avatar account-avatar--fallback">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
+              <circle cx="12" cy="12" r="4.2"></circle>
+            </svg>
+          </span>
+        {% endif %}
+        <span class="account-meta">
+          <span class="account-handle">@{{ instagram.instagram_username }}</span>
+          <span class="account-status"><span class="status-dot"></span>Conectado</span>
+        </span>
+        <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+      </summary>
+      <div class="account-menu">
+        <form method="post" action="{% url 'instagram_desconectar' %}">
+          {% csrf_token %}
+          <button type="submit">Desconectar conta</button>
+        </form>
+      </div>
+    </details>
+  {% endif %}

@@ -1119,6 +1119,12 @@ button {
   white-space: nowrap;
 }
 
+@media (max-width: 640px) {
+  .chart-xaxis span.so-desktop {
+    visibility: hidden;
+  }
+}
+
 @media (max-width: 1100px) {
   .stat-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -1280,6 +1286,150 @@ button {
     gap: 14px;
     padding: 0 14px;
     font-size: 12.5px;
+  }
+}
+
+/* ---------- Público ---------- */
+.aud-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.aud-card {
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.aud-title {
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.aud-empty {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+.aud-count {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.hbar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.hbar-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.hbar-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-dim);
+}
+
+.hbar-value {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.hbar-value strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.hbar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+}
+
+.hbar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--violet);
+}
+
+.gender-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  margin-bottom: 18px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.gender-seg--f {
+  background: #f5426f;
+}
+
+.gender-seg--m {
+  background: var(--violet);
+}
+
+.gender-seg--u {
+  background: #5c6288;
+}
+
+.gender-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gender-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.gender-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.gender-name {
+  flex: 1;
+  color: var(--text-dim);
+}
+
+.gender-legend strong {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 860px) {
+  .aud-grid {
+    grid-template-columns: 1fr;
   }
 }
 

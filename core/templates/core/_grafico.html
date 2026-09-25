@@ -35,7 +35,7 @@
         </div>
       </div>
       <div class="chart-xaxis" aria-hidden="true">
-        {% for barra in grafico.barras %}<span>{% if barra.mostrar_rotulo %}{{ barra.rotulo }}{% endif %}</span>{% endfor %}
+        {% for barra in grafico.barras %}<span{% if not barra.rotulo_no_celular %} class="so-desktop"{% endif %}>{% if barra.mostrar_rotulo %}{{ barra.rotulo }}{% endif %}</span>{% endfor %}
       </div>
     </div>
   {% endif %}

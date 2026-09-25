@@ -513,3 +513,89 @@ class PaginacaoMidiasTests(SimpleTestCase):
         self.assertEqual(len(midias), 50)
         self.assertEqual(get.call_count, 2)
         self.assertIsNone(cobertas_desde)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class PublicoTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.create(username='publico')
+        self.client.force_login(self.usuario)
+
+    def _conectar(self):
+        InstagramConnection.objects.create(user=self.usuario, instagram_user_id='999', access_token='t')
+
+    def _demografia(self, pares):
+        return {'data': [{'name': 'follower_demographics', 'total_value': {'breakdowns': [{
+            'dimension_keys': ['x'],
+            'results': [{'dimension_values': [chave], 'value': valor} for chave, valor in pares],
+        }]}}]}
+
+    def _get(self, respostas_por_metrica):
+        def responder(url, params=None, timeout=None):
+            resp = mock.Mock(ok=True, status_code=200, text='')
+            params = params or {}
+            if url.endswith('/me'):
+                resp.json.return_value = {'followers_count': 1000, 'profile_picture_url': ''}
+                return resp
+            chave = params.get('breakdown') or params.get('metric')
+            ok, corpo = respostas_por_metrica.get(chave, (True, {}))
+            resp.ok, resp.status_code = ok, 200 if ok else 400
+            resp.json.return_value = corpo
+            return resp
+
+        with mock.patch('core.publico.requests.get', side_effect=responder), \
+                mock.patch('core.views.requests.get', side_effect=responder):
+            return self.client.get('/publico/')
+
+    def test_sem_conta_mostra_botao_de_conectar(self):
+        resp = self.client.get('/publico/')
+        self.assertContains(resp, 'Conectar com Instagram')
+
+    def test_mostra_publico_com_porcentagens(self):
+        self._conectar()
+        horas = {str(h): (50 if h == 16 else 10) for h in range(24)}
+        resp = self._get({
+            'city': (True, self._demografia([('São Paulo, São Paulo', 300), ('Rio de Janeiro, Rio de Janeiro', 120)])),
+            'country': (True, self._demografia([('BR', 900), ('PT', 60), ('ZZ', 5)])),
+            'age': (True, self._demografia([('25-34', 500), ('18-24', 300), ('35-44', 200)])),
+            'gender': (True, self._demografia([('F', 600), ('M', 380), ('U', 20)])),
+            'online_followers': (True, {'data': [{'values': [{'value': horas}, {'value': horas}]}]}),
+        })
+        self.assertEqual(resp.status_code, 200)
+        cidades = resp.context['cidades']['dados']
+        self.assertEqual(cidades[0]['nome'], 'São Paulo, São Paulo')
+        self.assertAlmostEqual(cidades[0]['percentual'], 30.0)
+        paises = [p['nome'] for p in resp.context['paises']['dados']]
+        self.assertEqual(paises, ['Brasil', 'Portugal', 'ZZ'])
+        self.assertEqual([i['nome'] for i in resp.context['idades']['dados']][:3], ['13-17', '18-24', '25-34'])
+        self.assertAlmostEqual(resp.context['idades']['dados'][2]['percentual'], 50.0)
+        self.assertEqual([g['nome'] for g in resp.context['generos']['dados']], ['Feminino', 'Masculino', 'Não informado'])
+        self.assertContains(resp, '30,0%')
+        self.assertContains(resp, '60,0%')
+        horarios = resp.context['horarios']['dados']
+        self.assertEqual(len(horarios['barras']), 24)
+        self.assertIn('Pico às', horarios['subtitulo'])
+
+    def test_conta_pequena_mostra_motivo_em_cada_bloco(self):
+        self._conectar()
+        recusa = (False, {'error': {'code': 100, 'message': 'Not enough users. Requires at least 100 followers'}})
+        resp = self._get({'city': recusa, 'country': recusa, 'age': recusa, 'gender': recusa, 'online_followers': recusa})
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'pelo menos 100 seguidores', count=5)
+
+
+class HorariosAtivosTests(SimpleTestCase):
+    def test_converte_horario_do_pacifico_para_brasilia(self):
+        from .publico import _medias_por_hora_local
+        # 24/09/2026: Pacífico em horário de verão (UTC-7), Brasília UTC-3 → 4 horas de diferença.
+        referencia = _local(2026, 9, 24, 12, 0)
+        medias = _medias_por_hora_local([{'0': 10, '20': 40}, {'0': 20, '20': 60}], referencia)
+        self.assertEqual(medias[4], 15)
+        self.assertEqual(medias[0], 50)
+        self.assertEqual(medias[1], 0)
+
+    def test_no_inverno_do_hemisferio_norte_a_diferenca_e_5_horas(self):
+        from .publico import _medias_por_hora_local
+        referencia = _local(2026, 1, 15, 12, 0)
+        self.assertEqual(_medias_por_hora_local([{'0': 7}], referencia)[5], 7)

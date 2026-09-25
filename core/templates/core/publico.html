@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% load humanize l10n %}
+
+{% block page_title %}Público{% endblock %}
+{% block page_heading %}Público{% endblock %}
+{% block page_subheading %}Quem são os seus seguidores{% endblock %}
+
+{% block topbar_right %}
+  {% include 'core/_conta_instagram.html' %}
+{% endblock %}
+
+{% block content %}
+  {% if instagram and erro_instagram %}
+    <div class="empty-state">
+      <h2>Não foi possível carregar os dados do Instagram</h2>
+      <p>O Instagram devolveu uma resposta que o Nexora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
+    </div>
+  {% elif instagram %}
+    <div class="dash">
+      <div class="dash-head">
+        <div class="dash-head-title">
+          <h2 class="section-title">Seus seguidores</h2>
+          {% if seguidores_total is not None %}
+            <span class="followers-total"><strong>{{ seguidores_total|intcomma }}</strong> seguidores</span>
+          {% endif %}
+        </div>
+        <span class="dash-head-hint">Retrato atual informado pelo Instagram</span>
+      </div>
+
+      <div class="aud-grid">
+        <section class="aud-card">
+          <h3 class="aud-title">Gênero</h3>
+          {% if generos.motivo %}
+            <p class="aud-empty">{{ generos.motivo }}</p>
+          {% else %}
+            <div class="gender-bar" role="img" aria-label="{% for g in generos.dados %}{{ g.nome }} {{ g.percentual|floatformat:1 }}%{% if not forloop.last %}, {% endif %}{% endfor %}">
+              {% for g in generos.dados %}
+                <span class="gender-seg gender-seg--{{ g.codigo|lower }}" style="width: {{ g.percentual|unlocalize }}%"></span>
+              {% endfor %}
+            </div>
+            <ul class="gender-legend">
+              {% for g in generos.dados %}
+                <li>
+                  <span class="gender-swatch gender-seg--{{ g.codigo|lower }}"></span>
+                  <span class="gender-name">{{ g.nome }}</span>
+                  <strong>{{ g.percentual|floatformat:1 }}%</strong>
+                  <span class="aud-count">{{ g.valor|intcomma }}</span>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </section>
+
+        <section class="aud-card">
+          <h3 class="aud-title">Faixa etária</h3>
+          {% include 'core/_barras_publico.html' with bloco=idades %}
+        </section>
+
+        <section class="aud-card">
+          <h3 class="aud-title">Principais cidades</h3>
+          {% include 'core/_barras_publico.html' with bloco=cidades %}
+        </section>
+
+        <section class="aud-card">
+          <h3 class="aud-title">Principais países</h3>
+          {% include 'core/_barras_publico.html' with bloco=paises %}
+        </section>
+      </div>
+
+      {% if horarios.motivo %}
+        <section class="chart-card">
+          <header class="chart-head">
+            <h3 class="chart-title">Horários de atividade</h3>
+          </header>
+          <p class="chart-empty">{{ horarios.motivo }}</p>
+        </section>
+      {% else %}
+        {% include 'core/_grafico.html' with grafico=horarios.dados tipo='horarios' titulo='Horários de atividade' unidade='seguidores online em média' mensagem_vazio='O Instagram ainda não tem dados de horários de atividade.' %}
+      {% endif %}
+    </div>
+  {% else %}
+    {% include 'core/_conectar_instagram.html' %}
+  {% endif %}
+{% endblock %}
