@@ -4,17 +4,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexora · {% block page_title %}{% endblock %}</title>
+  <title>Nextsora · {% block page_title %}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
 </head>
 <body>
   <div class="app">
     <aside class="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-mark">N</div>
-        <div class="brand-name">NEXORA</div>
+        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="Nextsora">
+        <div class="brand-name">NEXTSORA</div>
       </div>
 
       <nav class="sidebar-nav">

@@ -158,6 +158,16 @@ button {
   margin-bottom: 8px;
 }
 
+img.brand-mark {
+  display: block;
+  width: 76px;
+  height: 76px;
+  border-radius: 18px;
+  object-fit: cover;
+  background: #01060f;
+  box-shadow: 0 10px 28px -8px rgba(41, 140, 255, 0.55);
+}
+
 .brand-name {
   font-size: 24px;
   font-weight: 700;
@@ -287,8 +297,8 @@ button {
 }
 
 .sidebar-brand .brand-mark {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   font-size: 14px;
   border-radius: 10px;
   margin-bottom: 0;

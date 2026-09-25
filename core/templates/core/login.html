@@ -4,19 +4,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nexora · Acesso</title>
+  <title>Nextsora · Acesso</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
 </head>
 <body>
   <div class="login-page">
     <div class="login-grid"></div>
     <div class="login-card">
       <div class="brand">
-        <div class="brand-mark">N</div>
-        <div class="brand-name">NEXORA</div>
-        <div class="brand-tagline">Sistema de Relatórios</div>
+        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="Nextsora">
+        <div class="brand-name">NEXTSORA</div>
       </div>
 
       {% if form.errors %}
@@ -49,7 +50,7 @@
         <button type="submit" class="btn-primary">Entrar</button>
       </form>
 
-      <div class="login-footnote">Nexora &copy; {% now "Y" %} · Acesso restrito</div>
+      <div class="login-footnote">Nextsora &copy; {% now "Y" %} · Acesso restrito</div>
     </div>
   </div>
 </body>

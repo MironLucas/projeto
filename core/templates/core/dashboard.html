@@ -13,7 +13,7 @@
   {% if instagram and erro_instagram %}
     <div class="empty-state">
       <h2>Não foi possível carregar os dados do Instagram</h2>
-      <p>O Instagram devolveu uma resposta que o Nexora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
+      <p>O Instagram devolveu uma resposta que o Nextsora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
     </div>
   {% elif instagram %}
     <div class="dash">
@@ -100,7 +100,7 @@
       </div>
 
       <div class="chart-grid">
-        {% include 'core/_grafico.html' with grafico=grafico_seguidores tipo='seguidores' titulo='Novos seguidores' unidade='novos seguidores' mensagem_vazio='Ainda não há dados de novos seguidores para esse período. O Instagram só informa os últimos 30 dias; o Nexora guarda o histórico a partir de agora.' %}
+        {% include 'core/_grafico.html' with grafico=grafico_seguidores tipo='seguidores' titulo='Novos seguidores' unidade='novos seguidores' mensagem_vazio='Ainda não há dados de novos seguidores para esse período. O Instagram só informa os últimos 30 dias; o Nextsora guarda o histórico a partir de agora.' %}
         {% include 'core/_grafico.html' with grafico=grafico_curtidas tipo='curtidas' titulo='Curtidas' unidade='curtidas' mensagem_vazio='Não foi possível carregar as curtidas desse período.' %}
       </div>
 
