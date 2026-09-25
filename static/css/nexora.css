@@ -698,6 +698,11 @@ button {
   flex-wrap: wrap;
 }
 
+.dash-head-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
 .followers-total {
   display: inline-flex;
   align-items: center;

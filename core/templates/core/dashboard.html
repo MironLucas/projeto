@@ -54,6 +54,7 @@
           {% endif %}
         </div>
         <form method="get" class="period-filter" id="filterForm">
+          {% if ordem_atual != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_atual }}">{% endif %}
           <select name="periodo" id="periodoSelect" aria-label="Período">
             <option value="hoje" {% if periodo_atual == 'hoje' %}selected{% endif %}>Hoje</option>
             <option value="semana" {% if periodo_atual == 'semana' %}selected{% endif %}>Esta semana</option>
@@ -129,8 +130,25 @@
         {% include 'core/_grafico.html' with grafico=grafico_curtidas tipo='curtidas' titulo='Curtidas' unidade='curtidas' mensagem_vazio='Não foi possível carregar as curtidas desse período.' %}
       </div>
 
-      <div class="dash-head">
-        <h2 class="section-title">Publicações recentes</h2>
+      <div class="dash-head" id="publicacoes">
+        <div class="dash-head-title">
+          <h2 class="section-title">Publicações</h2>
+          {% if ordem_atual != 'recentes' %}
+            <span class="dash-head-hint">Entre as últimas {{ publicacoes_no_ranking }} publicações</span>
+          {% endif %}
+        </div>
+        <form method="get" action="#publicacoes" class="period-filter" id="ordemForm">
+          <input type="hidden" name="periodo" value="{{ periodo_atual }}">
+          {% if periodo_atual == 'periodo' %}
+            <input type="hidden" name="inicio" value="{{ inicio_custom }}">
+            <input type="hidden" name="fim" value="{{ fim_custom }}">
+          {% endif %}
+          <select name="ordem" id="ordemSelect" aria-label="Ordenar publicações">
+            {% for chave, nome in ordens_publicacoes.items %}
+              <option value="{{ chave }}" {% if chave == ordem_atual %}selected{% endif %}>{{ nome }}</option>
+            {% endfor %}
+          </select>
+        </form>
       </div>
 
       {% if aviso_visualizacoes %}
@@ -207,6 +225,10 @@
           } else {
             form.submit();
           }
+        });
+
+        document.getElementById('ordemSelect').addEventListener('change', function () {
+          document.getElementById('ordemForm').submit();
         });
 
         inicio.addEventListener('change', enviarSePeriodoCompleto);

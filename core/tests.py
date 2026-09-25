@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest import mock
 
 from django.test import SimpleTestCase, TestCase, override_settings
@@ -9,7 +9,7 @@ from datetime import date
 from .graficos import escala, intervalos_do_grafico, montar_grafico
 from .models import InstagramConnection, SeguidoresDia
 from .views import (
-    _buscar_visualizacoes_conta, _motivo_erro_insights, _resolver_periodo, _sincronizar_seguidores,
+    _buscar_midias_desde, _buscar_visualizacoes_conta, _motivo_erro_insights, _resolver_periodo, _sincronizar_seguidores,
     _somar_seguidores,
 )
 
@@ -204,7 +204,7 @@ class DashboardRespostasInesperadasTests(TestCase):
         InstagramConnection.objects.create(user=self.usuario, instagram_user_id='999', access_token='t')
         self.client.force_login(self.usuario)
 
-    def _get(self, respostas):
+    def _get(self, respostas, params=None):
         def fake_get(url, params=None, timeout=None):
             for sufixo, corpo, ok in respostas:
                 if url.endswith(sufixo):
@@ -216,7 +216,7 @@ class DashboardRespostasInesperadasTests(TestCase):
             return resp
 
         with mock.patch('core.views.requests.get', side_effect=fake_get):
-            return self.client.get('/dashboard/')
+            return self.client.get('/dashboard/', params or {})
 
     def _video(self):
         agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
@@ -241,6 +241,62 @@ class DashboardRespostasInesperadasTests(TestCase):
         self.assertContains(resp, '4.321 visualizações')
         self.assertContains(resp, '4,3 mil')
         self.assertContains(resp, '987 visualizações')
+
+    def _posts(self, quantidade):
+        agora = timezone.now()
+        return [{
+            'id': str(i), 'media_type': 'IMAGE', 'permalink': 'x', 'media_url': f'https://x/{i}.jpg',
+            'timestamp': (agora - timedelta(hours=i)).strftime('%Y-%m-%dT%H:%M:%S+0000'),
+            'like_count': (i * 37) % 101,
+        } for i in range(quantidade)]
+
+    def _ids_exibidos(self, resp):
+        return [m['id'] for m in resp.context['midias']]
+
+    def test_ranking_padrao_e_mais_recentes(self):
+        resp = self._get([('/media', {'data': self._posts(60)}, True)])
+        self.assertEqual(resp.context['ordem_atual'], 'recentes')
+        self.assertEqual(self._ids_exibidos(resp), [str(i) for i in range(12)])
+
+    def test_ranking_por_curtidas_considera_as_ultimas_50(self):
+        posts = self._posts(60)
+        with mock.patch('core.views.requests.get') as get:
+            def responder(url, params=None, timeout=None):
+                resp = mock.Mock(ok=True, status_code=200, text='')
+                resp.json.return_value = {'data': posts} if url.endswith('/media') else {}
+                return resp
+            get.side_effect = responder
+            resp = self.client.get('/dashboard/', {'ordem': 'curtidas'})
+        esperado = sorted(posts[:50], key=lambda m: m['like_count'], reverse=True)[:12]
+        self.assertEqual(self._ids_exibidos(resp), [m['id'] for m in esperado])
+        self.assertContains(resp, 'Entre as últimas 50 publicações')
+
+    def test_ranking_por_visualizacoes_deixa_sem_dado_por_ultimo(self):
+        posts = self._posts(4)
+        views = {'0': 10, '1': None, '2': 900, '3': 55}
+
+        def responder(url, params=None, timeout=None):
+            resp = mock.Mock(ok=True, status_code=200, text='')
+            if url.endswith('/media'):
+                resp.json.return_value = {'data': posts}
+            elif url.endswith('/insights') and url.rsplit('/', 2)[-2] in views:
+                valor = views[url.rsplit('/', 2)[-2]]
+                if valor is None:
+                    resp.ok, resp.status_code = False, 400
+                    resp.json.return_value = {'error': {'code': 100, 'error_subcode': 2108006}}
+                else:
+                    resp.json.return_value = {'data': [{'name': 'views', 'values': [{'value': valor}]}]}
+            else:
+                resp.json.return_value = {}
+            return resp
+
+        with mock.patch('core.views.requests.get', side_effect=responder):
+            resp = self.client.get('/dashboard/', {'ordem': 'visualizacoes'})
+        self.assertEqual(self._ids_exibidos(resp), ['2', '3', '0', '1'])
+
+    def test_ordem_invalida_volta_para_recentes(self):
+        resp = self._get([], {'ordem': 'xyz'})
+        self.assertEqual(resp.context['ordem_atual'], 'recentes')
 
     def test_post_sem_media_url_nao_derruba_a_pagina(self):
         resp = self._get([('/media', {'data': [self._video()]}, True)])
@@ -435,3 +491,25 @@ class QuadroTests(TestCase):
         self.assertEqual(self.client.post(f'/tarefas/cartoes/{meu_cartao.id}/mover/', {'lista': alheia.id}).status_code, 404)
         self.assertEqual(self.client.post(f'/tarefas/cartoes/{meu_cartao.id}/mover/', {'lista': 'abc'}).status_code, 404)
         self.assertNotContains(self.client.get('/tarefas/'), 'Segredo')
+
+
+class PaginacaoMidiasTests(SimpleTestCase):
+    conexao = InstagramConnection(instagram_user_id='123', access_token='t')
+
+    def test_busca_paginas_ate_ter_o_minimo_mesmo_com_periodo_curto(self):
+        agora = timezone.now()
+
+        def pagina(inicio, proxima):
+            dados = [{'id': str(i), 'timestamp': (agora - timedelta(days=i)).strftime('%Y-%m-%dT%H:%M:%S+0000')}
+                     for i in range(inicio, inicio + 25)]
+            resp = mock.Mock(ok=True)
+            resp.raise_for_status = lambda: None
+            resp.json.return_value = {'data': dados, 'paging': {'next': proxima} if proxima else {}}
+            return resp
+
+        respostas = [pagina(0, 'p2'), pagina(25, 'p3'), pagina(50, 'p4')]
+        with mock.patch('core.views.requests.get', side_effect=respostas) as get:
+            midias, cobertas_desde = _buscar_midias_desde(self.conexao, agora - timedelta(days=2), minimo=50)
+        self.assertEqual(len(midias), 50)
+        self.assertEqual(get.call_count, 2)
+        self.assertIsNone(cobertas_desde)

@@ -27,6 +27,14 @@ INSTAGRAM_SCOPES = 'instagram_business_basic,instagram_business_manage_insights'
 
 logger = logging.getLogger(__name__)
 
+ORDENS_PUBLICACOES = {
+    'recentes': 'Mais recentes',
+    'curtidas': 'Mais curtidas',
+    'visualizacoes': 'Mais visualizadas',
+}
+PUBLICACOES_NO_RANKING = 50
+PUBLICACOES_EXIBIDAS = 12
+
 
 @dataclass
 class Periodo:
@@ -47,9 +55,16 @@ def dashboard(request):
         request.GET.get('fim'),
     )
 
+    ordem = request.GET.get('ordem')
+    if ordem not in ORDENS_PUBLICACOES:
+        ordem = 'recentes'
+
     instagram = InstagramConnection.objects.filter(user=request.user).first()
     contexto = {
         'active_menu': 'dashboard',
+        'ordem_atual': ordem,
+        'ordens_publicacoes': ORDENS_PUBLICACOES,
+        'publicacoes_no_ranking': PUBLICACOES_NO_RANKING,
         'instagram': instagram,
         'periodo_atual': periodo.chave,
         'periodo_label': periodo.label,
@@ -61,7 +76,7 @@ def dashboard(request):
         return render(request, 'core/dashboard.html', contexto)
 
     try:
-        contexto.update(_dados_do_dashboard(instagram, periodo))
+        contexto.update(_dados_do_dashboard(instagram, periodo, ordem))
     except Exception:
         # Proteção na fronteira com a API: uma resposta inesperada do Instagram não pode derrubar a página.
         logger.exception('Falha ao montar o dashboard com os dados do Instagram')
@@ -69,7 +84,7 @@ def dashboard(request):
     return render(request, 'core/dashboard.html', contexto)
 
 
-def _dados_do_dashboard(instagram, periodo):
+def _dados_do_dashboard(instagram, periodo, ordem):
     _renovar_token_se_necessario(instagram)
     foto_perfil, seguidores_total = _buscar_perfil_atual(instagram)
     _sincronizar_seguidores(instagram)
@@ -82,12 +97,11 @@ def _dados_do_dashboard(instagram, periodo):
     if intervalos:
         inicio_busca = min(inicio_busca, _inicio_do_dia(intervalos[0].inicio))
 
-    midias, midias_cobertas_desde = _buscar_midias_desde(instagram, inicio_busca)
-    midias_recentes = midias[:12]
-    for midia in midias_recentes:
+    midias, midias_cobertas_desde = _buscar_midias_desde(instagram, inicio_busca, minimo=PUBLICACOES_NO_RANKING)
+    midias_exibidas = _ranking_publicacoes(instagram, midias[:PUBLICACOES_NO_RANKING], ordem)
+    for midia in midias_exibidas:
         midia['capa'] = midia.get('thumbnail_url') or midia.get('media_url') or ''
-    _adicionar_visualizacoes(instagram, midias_recentes)
-    motivos = Counter(m['visualizacoes_motivo'] for m in midias_recentes if m.get('visualizacoes_motivo'))
+    motivos = Counter(m['visualizacoes_motivo'] for m in midias_exibidas if m.get('visualizacoes_motivo'))
 
     curtidas_total, comentarios_total = _somar_engajamento(midias, periodo.desde, periodo.ate)
     curtidas_anterior, comentarios_anterior = _somar_engajamento(midias, periodo.anterior_desde, periodo.anterior_ate)
@@ -105,7 +119,7 @@ def _dados_do_dashboard(instagram, periodo):
     return {
         'foto_perfil': foto_perfil,
         'seguidores_total': seguidores_total,
-        'midias': midias_recentes,
+        'midias': midias_exibidas,
         'aviso_visualizacoes': motivos.most_common(1)[0][0] if motivos else None,
         'curtidas_total': curtidas_total,
         'comentarios_total': comentarios_total,
@@ -319,12 +333,29 @@ def _parse_timestamp_instagram(valor):
         return None
 
 
+def _ranking_publicacoes(instagram, candidatas, ordem):
+    if ordem == 'curtidas':
+        exibidas = sorted(candidatas, key=lambda m: m.get('like_count') or 0, reverse=True)[:PUBLICACOES_EXIBIDAS]
+    elif ordem == 'visualizacoes':
+        _adicionar_visualizacoes(instagram, candidatas)
+        exibidas = sorted(
+            candidatas,
+            key=lambda m: -1 if m.get('visualizacoes') is None else m['visualizacoes'],
+            reverse=True,
+        )[:PUBLICACOES_EXIBIDAS]
+        return exibidas
+    else:
+        exibidas = candidatas[:PUBLICACOES_EXIBIDAS]
+    _adicionar_visualizacoes(instagram, exibidas)
+    return exibidas
+
+
 def _publicado_entre(midia, desde, ate):
     publicado_em = _parse_timestamp_instagram(midia.get('timestamp'))
     return publicado_em is not None and desde <= publicado_em <= ate
 
 
-def _buscar_midias_desde(instagram, desde, max_paginas=8):
+def _buscar_midias_desde(instagram, desde, minimo=0, max_paginas=8):
     """Devolve (mídias, cobertas_desde). cobertas_desde é None quando a busca alcançou `desde`;
     senão é a data do post mais antigo obtido, e antes dela os números ficam incompletos."""
     # A API devolve as mídias da mais nova para a mais antiga; paginamos até cobrir o início do período.
@@ -351,9 +382,13 @@ def _buscar_midias_desde(instagram, desde, max_paginas=8):
             proxima_url = corpo.get('paging', {}).get('next')
             mais_antiga = _parse_timestamp_instagram(pagina[-1].get('timestamp')) if pagina else None
 
-            if not pagina or not proxima_url or (mais_antiga is not None and mais_antiga < desde):
+            if not pagina or not proxima_url:
                 completo = True
                 break
+            if mais_antiga is not None and mais_antiga < desde:
+                completo = True
+                if len(midias) >= minimo:
+                    break
             url, params = proxima_url, None
     except (requests.RequestException, ValueError):
         logger.warning('Falha ao buscar as publicações do Instagram')
@@ -393,7 +428,7 @@ def _adicionar_visualizacoes(instagram, midias):
             logger.warning('Resposta inesperada de visualizações da mídia %s: %s', midia['id'], resp.text[:300])
             return None, 'O Instagram devolveu uma resposta em formato inesperado.'
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=10) as executor:
         for midia, (visualizacoes, motivo) in zip(midias, executor.map(buscar, midias)):
             midia['visualizacoes'] = visualizacoes
             midia['visualizacoes_motivo'] = motivo
