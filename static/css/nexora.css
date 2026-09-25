@@ -574,6 +574,10 @@ button {
   display: none;
 }
 
+.account-chip--estatico summary {
+  pointer-events: none;
+}
+
 .account-chip summary:hover,
 .account-chip[open] summary {
   border-color: var(--text-faint);
@@ -1478,6 +1482,144 @@ button {
   }
 }
 
+/* ---------- Usuários ---------- */
+.access-legend {
+  list-style: none;
+  margin: 0 0 18px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.access-legend li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.role-badge--admin {
+  background: rgba(124, 92, 255, 0.18);
+  color: #b9a8ff;
+}
+
+.role-badge--editor {
+  background: rgba(0, 212, 255, 0.14);
+  color: #7fe6ff;
+}
+
+.role-badge--visualizador {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--text-dim);
+}
+
+.user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+}
+
+.user-row + .user-row {
+  border-top: 1px solid var(--border);
+}
+
+.user-row-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.user-row-you {
+  margin-left: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+
+.user-row-login {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.icon-btn-placeholder {
+  width: 28px;
+  flex-shrink: 0;
+}
+
+.role-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.role-option:has(input:checked) {
+  border-color: var(--violet);
+  background: rgba(124, 92, 255, 0.08);
+}
+
+.role-option input {
+  margin-top: 2px;
+  accent-color: var(--violet);
+}
+
+.role-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.role-option strong {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.field-error {
+  margin: 0;
+  font-size: 12px;
+  color: #ff8f8f;
+}
+
 /* ---------- Campos e botões compartilhados ---------- */
 .field {
   width: 100%;
@@ -1746,6 +1888,14 @@ button {
   height: 12px;
 }
 
+.check--estatico {
+  cursor: default;
+}
+
+.check--estatico:hover {
+  border-color: var(--text-faint);
+}
+
 .day-item.is-done .check {
   background: var(--violet);
   border-color: var(--violet);
@@ -1958,6 +2108,21 @@ button {
 
 .board-card:hover {
   border-color: var(--text-faint);
+}
+
+.board-card--leitura {
+  cursor: pointer;
+}
+
+span.board-list-title {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+span.board-list-title:hover {
+  background: transparent;
 }
 
 .board-card.is-dragging {

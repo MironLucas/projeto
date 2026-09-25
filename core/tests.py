@@ -709,3 +709,134 @@ class EsteiraDeProducaoTests(TestCase):
         self.assertEqual(self.client.post(f'/tarefas/listas/{lista.id}/editar/', {'cor': '#3ddc84'}).status_code, 404)
         cartao.refresh_from_db()
         self.assertEqual(cartao.titulo, 'Segredo')
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class UsuariosEPermissoesTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.admin = User.objects.get(username='mironlucas')
+        self.client.force_login(self.admin)
+
+    def _criar(self, usuario, papel, senha='Nexora#2026x'):
+        return self.client.post('/usuarios/', {'nome': usuario.title(), 'usuario': usuario, 'senha': senha, 'papel': papel})
+
+    def _entrar_como(self, usuario):
+        from django.contrib.auth.models import User
+        self.client.force_login(User.objects.get(username=usuario))
+
+    def test_admin_inicial_tem_perfil_de_administrador(self):
+        self.assertEqual(self.admin.perfil.papel, 'admin')
+        self.assertEqual(self.admin.perfil.conta, self.admin)
+        self.assertContains(self.client.get('/dashboard/'), 'href="/usuarios/"')
+
+    def test_admin_cria_usuarios_na_propria_conta(self):
+        from django.contrib.auth.models import User
+        resp = self._criar('ana', 'editor')
+        self.assertRedirects(resp, '/usuarios/', fetch_redirect_response=False)
+        ana = User.objects.get(username='ana')
+        self.assertEqual((ana.perfil.papel, ana.perfil.conta), ('editor', self.admin))
+        self.assertTrue(ana.check_password('Nexora#2026x'))
+        self.assertContains(self.client.get('/usuarios/'), '@ana')
+
+    def test_senha_fraca_usuario_repetido_e_papel_invalido_sao_recusados(self):
+        from django.contrib.auth.models import User
+        resp = self._criar('bia', 'editor', senha='12345678')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.context['form'].errors['senha'])
+        resp = self._criar('MironLucas', 'editor')
+        self.assertIn('Já existe um usuário com esse nome.', resp.context['form'].errors['usuario'])
+        resp = self._criar('caio', 'admin')
+        self.assertTrue(resp.context['form'].errors['papel'])
+        self.assertFalse(User.objects.filter(username__in=['bia', 'caio']).exists())
+
+    def test_editor_altera_dados_compartilhados_mas_nao_acessa_usuarios(self):
+        from .models import Cartao, ItemAgenda, ListaTarefas
+        self.client.get('/tarefas/')
+        lista = ListaTarefas.objects.filter(usuario=self.admin).first()
+        self._criar('ana', 'editor')
+        self._entrar_como('ana')
+
+        self.client.post(f'/tarefas/listas/{lista.id}/cartoes/', {'titulo': 'Feito pela Ana'})
+        self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Reunião'})
+        self.assertTrue(Cartao.objects.filter(lista=lista, titulo='Feito pela Ana').exists())
+        self.assertTrue(ItemAgenda.objects.filter(usuario=self.admin, titulo='Reunião').exists())
+        self.assertEqual(ListaTarefas.objects.filter(usuario__username='ana').count(), 0)
+
+        self.assertEqual(self.client.get('/usuarios/').status_code, 403)
+        self.assertEqual(self._criar('intruso', 'editor').status_code, 403)
+        self.assertNotContains(self.client.get('/dashboard/'), 'href="/usuarios/"')
+
+    def test_visualizacao_nao_altera_nada(self):
+        from .models import Cartao, ItemAgenda, ListaTarefas
+        self.client.get('/tarefas/')
+        lista = ListaTarefas.objects.filter(usuario=self.admin).first()
+        cartao = Cartao.objects.create(lista=lista, titulo='Original')
+        ItemAgenda.objects.create(usuario=self.admin, data=date(2026, 9, 24), titulo='Item')
+        self._criar('vini', 'visualizador')
+        self._entrar_como('vini')
+
+        for pagina in ['/dashboard/', '/publico/', '/programacao/', '/tarefas/']:
+            self.assertEqual(self.client.get(pagina).status_code, 200, pagina)
+
+        resp = self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Novo'}, follow=True)
+        self.assertContains(resp, 'Seu acesso é somente de visualização.')
+        self.client.post(f'/tarefas/cartoes/{cartao.id}/editar/', {'titulo': 'Alterado'})
+        self.client.post(f'/tarefas/cartoes/{cartao.id}/excluir/')
+        self.client.post(f'/tarefas/listas/{lista.id}/editar/', {'cor': '#3ddc84'})
+        self.client.post('/instagram/conectar/')
+        resp = self.client.post(f'/tarefas/cartoes/{cartao.id}/mover/', {'lista': lista.id}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.status_code, 403)
+
+        cartao.refresh_from_db()
+        lista.refresh_from_db()
+        self.assertEqual(cartao.titulo, 'Original')
+        self.assertEqual(lista.cor, '#7c5cff')
+        self.assertEqual(ItemAgenda.objects.count(), 1)
+        self.assertEqual(self.client.get('/usuarios/').status_code, 403)
+
+    def test_visualizacao_nao_ve_botoes_de_edicao(self):
+        self.client.get('/tarefas/')
+        self._criar('vini', 'visualizador')
+        self._entrar_como('vini')
+        tarefas = self.client.get('/tarefas/')
+        self.assertNotContains(tarefas, 'class="board-add-btn')
+        self.assertNotContains(tarefas, 'class="board-grip"')
+        self.assertNotContains(tarefas, 'js-config-lista"')
+        self.assertNotContains(tarefas, 'placeholder="+ Nova coluna"')
+        self.assertNotContains(self.client.get('/programacao/'), 'O que fazer neste dia?')
+        self.assertNotContains(self.client.get('/dashboard/'), 'Conectar com Instagram')
+        self.assertContains(self.client.get('/dashboard/'), 'Visualização')
+
+    def test_admin_nao_edita_a_si_mesmo_nem_membro_de_outra_conta(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        self.assertEqual(self.client.post(f'/usuarios/{self.admin.perfil.id}/excluir/').status_code, 404)
+        outro_admin = User.objects.create_user('outro', password='x')
+        estranho = User.objects.create_user('estranho', password='x')
+        perfil_estranho = Perfil.objects.create(usuario=estranho, conta=outro_admin, papel='editor')
+        self.assertEqual(self.client.post(f'/usuarios/{perfil_estranho.id}/excluir/').status_code, 404)
+        self.assertTrue(User.objects.filter(username='estranho').exists())
+
+    def test_admin_muda_acesso_senha_e_exclui_usuario(self):
+        from django.contrib.auth.models import User
+        self._criar('ana', 'editor')
+        ana = User.objects.get(username='ana')
+        self.client.post(f'/usuarios/{ana.perfil.id}/editar/', {'nome': 'Ana Souza', 'papel': 'visualizador', 'senha': 'OutraSenha#99'})
+        ana.refresh_from_db()
+        self.assertEqual((ana.first_name, ana.perfil.papel), ('Ana Souza', 'visualizador'))
+        self.assertTrue(ana.check_password('OutraSenha#99'))
+        self.client.post(f'/usuarios/{ana.perfil.id}/excluir/')
+        self.assertFalse(User.objects.filter(username='ana').exists())
+
+    def test_conectar_instagram_nao_mostra_mais_mensagem_de_sucesso(self):
+        session = self.client.session
+        session['instagram_oauth_state'] = 'abc'
+        session.save()
+        with mock.patch('core.views._trocar_code_por_token_curto', return_value={'access_token': 'c'}), \
+                mock.patch('core.views._trocar_token_curto_por_longo', return_value={'access_token': 'l', 'expires_in': 100}), \
+                mock.patch('core.views._buscar_perfil', return_value={'id': '1', 'username': 'nathaliaalexandree'}), \
+                mock.patch('core.views._dados_do_dashboard', return_value={}):
+            resp = self.client.get('/instagram/callback/', {'code': 'x', 'state': 'abc'}, follow=True)
+        self.assertNotContains(resp, 'conectada com sucesso')
+        self.assertEqual(self.admin.instagram_connection.instagram_username, 'nathaliaalexandree')

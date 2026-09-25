@@ -37,7 +37,7 @@ PAISES = {
 
 @login_required
 def publico(request):
-    instagram = InstagramConnection.objects.filter(user=request.user).first()
+    instagram = InstagramConnection.objects.filter(user=request.conta).first()
     contexto = {'active_menu': 'publico', 'instagram': instagram}
     if instagram:
         try:

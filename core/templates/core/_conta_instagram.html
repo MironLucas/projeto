@@ -1,5 +1,5 @@
   {% if instagram %}
-    <details class="popover account-chip">
+    <details class="popover account-chip{% if not pode_editar %} account-chip--estatico{% endif %}">
       <summary>
         {% if foto_perfil %}
           <span class="account-avatar"><img src="{{ foto_perfil }}" alt="" referrerpolicy="no-referrer"></span>
@@ -15,13 +15,15 @@
           <span class="account-handle">@{{ instagram.instagram_username }}</span>
           <span class="account-status"><span class="status-dot"></span>Conectado</span>
         </span>
-        <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+        {% if pode_editar %}<svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>{% endif %}
       </summary>
+      {% if pode_editar %}
       <div class="account-menu">
         <form method="post" action="{% url 'instagram_desconectar' %}">
           {% csrf_token %}
           <button type="submit">Desconectar conta</button>
         </form>
       </div>
+      {% endif %}
     </details>
   {% endif %}

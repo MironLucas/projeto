@@ -25,7 +25,7 @@ def programacao(request):
         selecionado = hoje if (hoje.year, hoje.month) == (primeiro_dia.year, primeiro_dia.month) else primeiro_dia
 
     semanas = calendar.Calendar(firstweekday=6).monthdatescalendar(primeiro_dia.year, primeiro_dia.month)
-    itens = ItemAgenda.objects.filter(usuario=request.user, data__range=(semanas[0][0], semanas[-1][-1]))
+    itens = ItemAgenda.objects.filter(usuario=request.conta, data__range=(semanas[0][0], semanas[-1][-1]))
     por_dia = {}
     for item in itens:
         por_dia.setdefault(item.data, []).append(item)
@@ -58,14 +58,14 @@ def adicionar_item(request):
         horario = datetime.strptime(request.POST.get('horario', ''), '%H:%M').time()
     except ValueError:
         pass
-    ItemAgenda.objects.create(usuario=request.user, data=data, horario=horario, titulo=titulo)
+    ItemAgenda.objects.create(usuario=request.conta, data=data, horario=horario, titulo=titulo)
     return _voltar_para(data)
 
 
 @require_POST
 @login_required
 def alternar_item(request, item_id):
-    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.user)
+    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
     item.concluido = not item.concluido
     item.save(update_fields=['concluido'])
     return _voltar_para(item.data)
@@ -74,7 +74,7 @@ def alternar_item(request, item_id):
 @require_POST
 @login_required
 def excluir_item(request, item_id):
-    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.user)
+    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
     item.delete()
     return _voltar_para(item.data)
 

@@ -1,0 +1,171 @@
+{% extends 'core/base.html' %}
+
+{% block page_title %}Usuários{% endblock %}
+{% block page_heading %}Usuários{% endblock %}
+{% block page_subheading %}Quem acessa o Nexora e o que cada pessoa pode fazer{% endblock %}
+
+{% block content %}
+  <div class="dash">
+    <div class="dash-head">
+      <h2 class="section-title">Pessoas com acesso</h2>
+      <button type="button" class="btn-primary btn-sm" id="novoUsuario">+ Novo usuário</button>
+    </div>
+
+    <ul class="access-legend">
+      <li><span class="role-badge role-badge--admin">Administrador</span> Acesso total, inclusive a esta tela.</li>
+      <li><span class="role-badge role-badge--editor">Edição</span> Altera tudo, menos os usuários.</li>
+      <li><span class="role-badge role-badge--visualizador">Visualização</span> Só vê as informações; não altera nada.</li>
+    </ul>
+
+    <ul class="user-list">
+      {% for membro in membros %}
+        <li class="user-row">
+          <span class="avatar">{{ membro.usuario.username|slice:":1"|upper }}</span>
+          <div class="user-row-info">
+            <span class="user-row-name">
+              {{ membro.usuario.first_name|default:membro.usuario.username }}
+              {% if membro.usuario == request.user %}<span class="user-row-you">você</span>{% endif %}
+            </span>
+            <span class="user-row-login">@{{ membro.usuario.username }}</span>
+          </div>
+          <span class="role-badge role-badge--{{ membro.papel }}">{{ membro.get_papel_display }}</span>
+          {% if not membro.e_admin %}
+            <button type="button" class="icon-btn icon-btn--neutral js-editar-usuario" aria-label="Editar {{ membro.usuario.username }}"
+                    data-editar="{% url 'usuarios_editar' membro.id %}" data-excluir="{% url 'usuarios_excluir' membro.id %}"
+                    data-usuario="{{ membro.usuario.username }}" data-nome="{{ membro.usuario.first_name }}" data-papel="{{ membro.papel }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            </button>
+          {% else %}
+            <span class="icon-btn-placeholder"></span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <dialog class="modal" id="dialogNovoUsuario" aria-labelledby="tituloNovoUsuario" {% if form.errors %}data-abrir="1"{% endif %}>
+    <form method="post" class="modal-body" novalidate>
+      {% csrf_token %}
+      <header class="modal-head">
+        <h2 id="tituloNovoUsuario">Novo usuário</h2>
+        <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </header>
+
+      {% for erro in form.non_field_errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+
+      <label class="field-label" for="id_nome">Nome</label>
+      <input type="text" id="id_nome" name="nome" class="field" maxlength="150" value="{{ form.nome.value|default:'' }}" placeholder="Ex.: Ana Souza">
+
+      <label class="field-label" for="id_usuario">Usuário (para entrar)</label>
+      <input type="text" id="id_usuario" name="usuario" class="field" maxlength="150" value="{{ form.usuario.value|default:'' }}" autocomplete="off" required>
+      {% for erro in form.usuario.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+
+      <label class="field-label" for="id_senha">Senha</label>
+      <input type="password" id="id_senha" name="senha" class="field" autocomplete="new-password" required>
+      {% for erro in form.senha.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+      <p class="field-hint">Mínimo de 8 caracteres, sem ser só números nem uma senha comum.</p>
+
+      <span class="field-label">Acesso</span>
+      <div class="role-options">
+        {% for valor, nome in papeis_atribuiveis %}
+          <label class="role-option">
+            <input type="radio" name="papel" value="{{ valor }}" {% if form.papel.value == valor %}checked{% endif %}>
+            <span>
+              <strong>{{ nome }}</strong>
+              {% if valor == 'editor' %}Altera tudo, menos os usuários.{% else %}Só vê as informações.{% endif %}
+            </span>
+          </label>
+        {% endfor %}
+      </div>
+
+      <footer class="modal-foot">
+        <div class="modal-foot-actions">
+          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
+          <button type="submit" class="btn-primary btn-sm">Criar usuário</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="modal" id="dialogEditarUsuario" aria-labelledby="tituloEditarUsuario">
+    <form method="post" class="modal-body" id="formEditarUsuario">
+      {% csrf_token %}
+      <header class="modal-head">
+        <h2 id="tituloEditarUsuario">Editar usuário</h2>
+        <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </header>
+
+      <label class="field-label" for="editarNome">Nome</label>
+      <input type="text" id="editarNome" name="nome" class="field" maxlength="150">
+
+      <label class="field-label" for="editarSenha">Nova senha</label>
+      <input type="password" id="editarSenha" name="senha" class="field" autocomplete="new-password" placeholder="Deixe em branco para manter a atual">
+
+      <span class="field-label">Acesso</span>
+      <div class="role-options">
+        {% for valor, nome in papeis_atribuiveis %}
+          <label class="role-option">
+            <input type="radio" name="papel" value="{{ valor }}">
+            <span><strong>{{ nome }}</strong>{% if valor == 'editor' %}Altera tudo, menos os usuários.{% else %}Só vê as informações.{% endif %}</span>
+          </label>
+        {% endfor %}
+      </div>
+
+      <footer class="modal-foot">
+        <button type="submit" class="btn-text-danger" id="excluirUsuario" formnovalidate>Excluir usuário</button>
+        <div class="modal-foot-actions">
+          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
+          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+
+  <script>
+    (function () {
+      document.querySelectorAll('.modal').forEach(function (dialogo) {
+        dialogo.querySelectorAll('.js-fechar').forEach(function (botao) {
+          botao.addEventListener('click', function () { dialogo.close(); });
+        });
+        dialogo.addEventListener('click', function (evento) {
+          if (evento.target === dialogo) {
+            dialogo.close();
+          }
+        });
+      });
+
+      var novo = document.getElementById('dialogNovoUsuario');
+      document.getElementById('novoUsuario').addEventListener('click', function () { novo.showModal(); });
+      if (novo.dataset.abrir) {
+        novo.showModal();
+      }
+
+      var editar = document.getElementById('dialogEditarUsuario');
+      var form = document.getElementById('formEditarUsuario');
+      var excluir = document.getElementById('excluirUsuario');
+      document.querySelectorAll('.js-editar-usuario').forEach(function (botao) {
+        botao.addEventListener('click', function () {
+          var dados = botao.dataset;
+          form.reset();
+          form.action = dados.editar;
+          excluir.formAction = dados.excluir;
+          document.getElementById('tituloEditarUsuario').textContent = 'Editar @' + dados.usuario;
+          document.getElementById('editarNome').value = dados.nome;
+          form.querySelectorAll('input[name=papel]').forEach(function (opcao) {
+            opcao.checked = opcao.value === dados.papel;
+          });
+          editar.showModal();
+        });
+      });
+      excluir.addEventListener('click', function (evento) {
+        if (!window.confirm('Excluir este usuário? Ele perde o acesso ao Nexora na hora.')) {
+          evento.preventDefault();
+        }
+      });
+    })();
+  </script>
+{% endblock %}

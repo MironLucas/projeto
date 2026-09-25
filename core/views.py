@@ -59,7 +59,7 @@ def dashboard(request):
     if ordem not in ORDENS_PUBLICACOES:
         ordem = 'recentes'
 
-    instagram = InstagramConnection.objects.filter(user=request.user).first()
+    instagram = InstagramConnection.objects.filter(user=request.conta).first()
     contexto = {
         'active_menu': 'dashboard',
         'ordem_atual': ordem,
@@ -164,6 +164,9 @@ def instagram_conectar(request):
 
 @login_required
 def instagram_callback(request):
+    if not request.perfil.pode_editar:
+        messages.error(request, 'Seu acesso é somente de visualização.')
+        return redirect('dashboard')
     erro = request.GET.get('error_description') or request.GET.get('error')
     if erro:
         messages.error(request, f'Conexão com o Instagram cancelada: {erro}.')
@@ -189,7 +192,7 @@ def instagram_callback(request):
         return redirect('dashboard')
 
     InstagramConnection.objects.update_or_create(
-        user=request.user,
+        user=request.conta,
         defaults={
             'instagram_user_id': str(perfil.get('id', '')),
             'instagram_username': perfil.get('username', ''),
@@ -198,13 +201,12 @@ def instagram_callback(request):
             'token_expires_at': timezone.now() + timedelta(seconds=token_longo.get('expires_in', 5184000)),
         },
     )
-    messages.success(request, f'Conta @{perfil.get("username", "")} conectada com sucesso.')
     return redirect('dashboard')
 
 
 @login_required
 def instagram_desconectar(request):
-    InstagramConnection.objects.filter(user=request.user).delete()
+    InstagramConnection.objects.filter(user=request.conta).delete()
     messages.info(request, 'Conta do Instagram desconectada.')
     return redirect('dashboard')
 

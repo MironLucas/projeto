@@ -49,22 +49,30 @@
         <ul class="day-list">
           {% for item in itens_selecionado %}
             <li class="day-item{% if item.concluido %} is-done{% endif %}">
-              <form method="post" action="{% url 'agenda_alternar' item.id %}">
-                {% csrf_token %}
-                <button type="submit" class="check" aria-label="{% if item.concluido %}Marcar como não feito{% else %}Marcar como feito{% endif %}">
+              {% if pode_editar %}
+                <form method="post" action="{% url 'agenda_alternar' item.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="check" aria-label="{% if item.concluido %}Marcar como não feito{% else %}Marcar como feito{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+                  </button>
+                </form>
+              {% else %}
+                <span class="check check--estatico" role="img" aria-label="{% if item.concluido %}Feito{% else %}Pendente{% endif %}">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
-                </button>
-              </form>
+                </span>
+              {% endif %}
               <div class="day-item-text">
                 <span class="day-item-title">{{ item.titulo }}</span>
                 {% if item.horario %}<span class="day-item-time">{{ item.horario|time:'H:i' }}</span>{% endif %}
               </div>
-              <form method="post" action="{% url 'agenda_excluir' item.id %}">
-                {% csrf_token %}
-                <button type="submit" class="icon-btn" aria-label="Excluir {{ item.titulo }}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
-                </button>
-              </form>
+              {% if pode_editar %}
+                <form method="post" action="{% url 'agenda_excluir' item.id %}">
+                  {% csrf_token %}
+                  <button type="submit" class="icon-btn" aria-label="Excluir {{ item.titulo }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
+                  </button>
+                </form>
+              {% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -72,6 +80,7 @@
         <p class="day-empty">Nada marcado para este dia.</p>
       {% endif %}
 
+      {% if pode_editar %}
       <form method="post" action="{% url 'agenda_adicionar' %}" class="day-form">
         {% csrf_token %}
         <input type="hidden" name="data" value="{{ selecionado|date:'Y-m-d' }}">
@@ -81,6 +90,7 @@
           <button type="submit" class="btn-primary btn-sm">Adicionar</button>
         </div>
       </form>
+      {% endif %}
     </aside>
   </div>
 
@@ -93,7 +103,10 @@
       if (telaEstreita) {
         document.getElementById('painel-dia').scrollIntoView({ block: 'start' });
       }
-      document.getElementById('novoItemTitulo').focus({ preventScroll: true });
+      var campo = document.getElementById('novoItemTitulo');
+      if (campo) {
+        campo.focus({ preventScroll: true });
+      }
     })();
   </script>
 {% endblock %}

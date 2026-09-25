@@ -10,6 +10,7 @@
       <section class="board-list" id="lista-{{ lista.id }}" style="--cor-lista: {{ lista.cor }}"
                data-mover="{% url 'quadro_mover_lista' lista.id %}">
         <header class="board-list-head">
+          {% if pode_editar %}
           <span class="board-grip" draggable="true" title="Arraste para mudar a coluna de lugar">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"></circle><circle cx="15" cy="6" r="1.6"></circle><circle cx="9" cy="12" r="1.6"></circle><circle cx="15" cy="12" r="1.6"></circle><circle cx="9" cy="18" r="1.6"></circle><circle cx="15" cy="18" r="1.6"></circle></svg>
           </span>
@@ -17,7 +18,11 @@
             {% csrf_token %}
             <input type="text" name="titulo" class="board-list-title js-renomear" value="{{ lista.titulo }}" maxlength="80" required aria-label="Nome da coluna">
           </form>
+          {% else %}
+          <span class="board-list-name board-list-title">{{ lista.titulo }}</span>
+          {% endif %}
           <span class="board-count">{{ lista.cartoes.all|length }}</span>
+          {% if pode_editar %}
           <button type="button" class="icon-btn icon-btn--neutral js-config-lista" aria-label="Configurar coluna {{ lista.titulo }}"
                   data-editar="{% url 'quadro_editar_lista' lista.id %}"
                   data-mover="{% url 'quadro_mover_lista' lista.id %}"
@@ -26,11 +31,12 @@
                   data-indice="{{ forloop.counter0 }}" data-total="{{ listas|length }}">
             <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
           </button>
+          {% endif %}
         </header>
 
         <div class="board-cards" data-lista="{{ lista.id }}">
           {% for cartao in lista.cartoes.all %}
-            <article class="board-card js-abrir-cartao" draggable="true" tabindex="0"
+            <article class="board-card js-abrir-cartao{% if not pode_editar %} board-card--leitura{% endif %}" draggable="{{ pode_editar|yesno:'true,false' }}" tabindex="0"
                      data-mover="{% url 'quadro_mover_cartao' cartao.id %}"
                      data-editar="{% url 'quadro_editar_cartao' cartao.id %}"
                      data-excluir="{% url 'quadro_excluir_cartao' cartao.id %}"
@@ -51,18 +57,22 @@
           {% endfor %}
         </div>
 
+        {% if pode_editar %}
         <button type="button" class="board-add-btn js-novo-cartao" data-criar="{% url 'quadro_criar_cartao' lista.id %}" data-lista="{{ lista.id }}">
           + Adicionar cartão
         </button>
+        {% endif %}
       </section>
     {% endfor %}
 
+    {% if pode_editar %}
     <section class="board-list board-list--new">
       <form method="post" action="{% url 'quadro_criar_lista' %}">
         {% csrf_token %}
         <input type="text" name="titulo" class="field" placeholder="+ Nova coluna" maxlength="80" required aria-label="Nome da nova coluna">
       </form>
     </section>
+    {% endif %}
   </div>
 
   <dialog class="modal" id="dialogCartao" aria-labelledby="dialogCartaoTitulo">
@@ -81,13 +91,13 @@
       <label class="field-label" for="cartaoLegenda">Legenda</label>
       <textarea id="cartaoLegenda" name="legenda" class="field" rows="5" maxlength="{{ tamanho_maximo_legenda }}"></textarea>
 
-      <span class="field-label">Imagem ou vídeo</span>
+      <span class="field-label" id="cartaoMidiaRotulo">Imagem ou vídeo</span>
       <div class="midia-preview" id="cartaoMidia" hidden></div>
       <label class="check-row" id="cartaoRemoverMidia" hidden>
         <input type="checkbox" name="remover_midia" value="1"> Remover mídia
       </label>
-      <input type="file" id="cartaoArquivo" name="arquivo" class="field field-file" accept="{{ tipos_de_midia }}">
-      <p class="field-hint">JPG, PNG, GIF, WebP, MP4, MOV ou WebM, até {{ limite_midia_mb }} MB.</p>
+      <input type="file" id="cartaoArquivo" name="arquivo" class="field field-file" accept="{{ tipos_de_midia }}"{% if not pode_editar %} hidden{% endif %}>
+      <p class="field-hint" id="cartaoArquivoDica"{% if not pode_editar %} hidden{% endif %}>JPG, PNG, GIF, WebP, MP4, MOV ou WebM, até {{ limite_midia_mb }} MB.</p>
 
       <div id="cartaoColunaCampo" hidden>
         <label class="field-label" for="cartaoColuna">Coluna</label>
@@ -99,8 +109,8 @@
       <footer class="modal-foot">
         <button type="submit" class="btn-text-danger" id="cartaoExcluir" formnovalidate hidden>Excluir cartão</button>
         <div class="modal-foot-actions">
-          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
-          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+          <button type="button" class="btn-ghost js-fechar">{% if pode_editar %}Cancelar{% else %}Fechar{% endif %}</button>
+          {% if pode_editar %}<button type="submit" class="btn-primary btn-sm">Salvar</button>{% endif %}
         </div>
       </footer>
     </form>
@@ -147,8 +157,9 @@
 
   <script>
     (function () {
+      var podeEditar = {{ pode_editar|yesno:'true,false' }};
       var board = document.getElementById('board');
-      var csrf = board.querySelector('input[name=csrfmiddlewaretoken]').value;
+      var csrf = document.querySelector('input[name=csrfmiddlewaretoken]').value;
 
       document.querySelectorAll('.js-renomear').forEach(function (campo) {
         campo.addEventListener('change', function () { campo.form.submit(); });
@@ -199,17 +210,22 @@
         }
         var editando = Boolean(dados.editar);
         formCartao.action = editando ? dados.editar : dados.criar;
-        document.getElementById('dialogCartaoTitulo').textContent = editando ? 'Editar cartão' : 'Novo cartão';
+        document.getElementById('dialogCartaoTitulo').textContent = !podeEditar ? 'Cartão' : (editando ? 'Editar cartão' : 'Novo cartão');
+        document.getElementById('cartaoTitulo').readOnly = !podeEditar;
+        document.getElementById('cartaoLegenda').readOnly = !podeEditar;
         document.getElementById('cartaoTitulo').value = dados.titulo || '';
         document.getElementById('cartaoLegenda').value = dados.legenda || '';
-        document.getElementById('cartaoColunaCampo').hidden = !editando;
+        document.getElementById('cartaoColunaCampo').hidden = !editando || !podeEditar;
         document.getElementById('cartaoColuna').value = dados.lista;
-        botaoExcluirCartao.hidden = !editando;
+        botaoExcluirCartao.hidden = !editando || !podeEditar;
         botaoExcluirCartao.formAction = dados.excluir || '';
-        removerMidia.hidden = !dados.midiaUrl;
+        removerMidia.hidden = !dados.midiaUrl || !podeEditar;
+        document.getElementById('cartaoMidiaRotulo').hidden = !dados.midiaUrl && !podeEditar;
         mostrarPrevia(dados.midiaUrl, dados.midiaTipo);
         dialogoCartao.showModal();
-        document.getElementById('cartaoTitulo').focus();
+        if (podeEditar) {
+          document.getElementById('cartaoTitulo').focus();
+        }
       }
 
       campoArquivo.addEventListener('change', function () {
@@ -335,6 +351,9 @@
       var novaColuna = board.querySelector('.board-list--new');
 
       board.addEventListener('dragstart', function (evento) {
+        if (!podeEditar) {
+          return;
+        }
         var alca = evento.target.closest('.board-grip');
         var cartao = evento.target.closest('.board-card');
         if (alca) {

@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, publico, quadro, views
+from . import agenda, publico, quadro, usuarios, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html'), name='login'),
@@ -24,6 +24,10 @@ urlpatterns = [
     path('tarefas/cartoes/<int:cartao_id>/arquivo/', quadro.arquivo_cartao, name='quadro_arquivo_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/mover/', quadro.mover_cartao, name='quadro_mover_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/excluir/', quadro.excluir_cartao, name='quadro_excluir_cartao'),
+
+    path('usuarios/', usuarios.usuarios, name='usuarios'),
+    path('usuarios/<int:perfil_id>/editar/', usuarios.editar_usuario, name='usuarios_editar'),
+    path('usuarios/<int:perfil_id>/excluir/', usuarios.excluir_usuario, name='usuarios_excluir'),
 
     path('instagram/conectar/', views.instagram_conectar, name='instagram_conectar'),
     path('instagram/callback/', views.instagram_callback, name='instagram_callback'),

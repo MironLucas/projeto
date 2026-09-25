@@ -93,3 +93,30 @@ class ArquivoCartao(models.Model):
     # Guardado no banco porque o disco do Render gratuito é apagado a cada deploy.
     cartao = models.OneToOneField(Cartao, on_delete=models.CASCADE, primary_key=True, related_name='arquivo')
     conteudo = models.BinaryField()
+
+
+class Perfil(models.Model):
+    ADMIN = 'admin'
+    EDITOR = 'editor'
+    VISUALIZADOR = 'visualizador'
+    PAPEIS = [
+        (ADMIN, 'Administrador'),
+        (EDITOR, 'Edição'),
+        (VISUALIZADOR, 'Visualização'),
+    ]
+
+    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil')
+    # Dono dos dados que este usuário acessa: o Instagram, a programação e as tarefas são dessa conta.
+    conta = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='membros')
+    papel = models.CharField(max_length=20, choices=PAPEIS, default=VISUALIZADOR)
+
+    def __str__(self):
+        return f'{self.usuario} ({self.get_papel_display()})'
+
+    @property
+    def e_admin(self):
+        return self.papel == self.ADMIN
+
+    @property
+    def pode_editar(self):
+        return self.papel in (self.ADMIN, self.EDITOR)

@@ -27,10 +27,10 @@ TAMANHO_MAXIMO_LEGENDA = 2200  # mesmo limite de legenda do Instagram
 
 @login_required
 def tarefas(request):
-    listas = ListaTarefas.objects.filter(usuario=request.user).prefetch_related('cartoes')
+    listas = ListaTarefas.objects.filter(usuario=request.conta).prefetch_related('cartoes')
     if not listas.exists():
         ListaTarefas.objects.bulk_create([
-            ListaTarefas(usuario=request.user, titulo=titulo, posicao=i) for i, titulo in enumerate(LISTAS_INICIAIS)
+            ListaTarefas(usuario=request.conta, titulo=titulo, posicao=i) for i, titulo in enumerate(LISTAS_INICIAIS)
         ])
     return render(request, 'core/tarefas.html', {
         'active_menu': 'tarefas',
@@ -47,9 +47,9 @@ def tarefas(request):
 def criar_lista(request):
     titulo = request.POST.get('titulo', '').strip()[:80]
     if titulo:
-        ultima = ListaTarefas.objects.filter(usuario=request.user).aggregate(m=Max('posicao'))['m']
+        ultima = ListaTarefas.objects.filter(usuario=request.conta).aggregate(m=Max('posicao'))['m']
         lista = ListaTarefas.objects.create(
-            usuario=request.user, titulo=titulo, posicao=0 if ultima is None else ultima + 1,
+            usuario=request.conta, titulo=titulo, posicao=0 if ultima is None else ultima + 1,
         )
         return _voltar_para(lista)
     return redirect('tarefas')
@@ -58,7 +58,7 @@ def criar_lista(request):
 @require_POST
 @login_required
 def editar_lista(request, lista_id):
-    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.user)
+    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.conta)
     titulo = request.POST.get('titulo', '').strip()[:80]
     if titulo:
         lista.titulo = titulo
@@ -71,9 +71,9 @@ def editar_lista(request, lista_id):
 @require_POST
 @login_required
 def mover_lista(request, lista_id):
-    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.user)
+    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.conta)
     with transaction.atomic():
-        listas = list(ListaTarefas.objects.filter(usuario=request.user).exclude(id=lista.id).select_for_update())
+        listas = list(ListaTarefas.objects.filter(usuario=request.conta).exclude(id=lista.id).select_for_update())
         listas.insert(_posicao(request, len(listas)), lista)
         for indice, item in enumerate(listas):
             item.posicao = indice
@@ -84,14 +84,14 @@ def mover_lista(request, lista_id):
 @require_POST
 @login_required
 def excluir_lista(request, lista_id):
-    get_object_or_404(ListaTarefas, id=lista_id, usuario=request.user).delete()
+    get_object_or_404(ListaTarefas, id=lista_id, usuario=request.conta).delete()
     return redirect('tarefas')
 
 
 @require_POST
 @login_required
 def criar_cartao(request, lista_id):
-    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.user)
+    lista = get_object_or_404(ListaTarefas, id=lista_id, usuario=request.conta)
     titulo = request.POST.get('titulo', '').strip()[:300]
     arquivo = request.FILES.get('arquivo')
     erro = _validar_midia(arquivo)
@@ -114,7 +114,7 @@ def criar_cartao(request, lista_id):
 @require_POST
 @login_required
 def editar_cartao(request, cartao_id):
-    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.user)
+    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.conta)
     arquivo = request.FILES.get('arquivo')
     erro = _validar_midia(arquivo)
     if erro:
@@ -145,7 +145,7 @@ def editar_cartao(request, cartao_id):
 @require_POST
 @login_required
 def mover_cartao(request, cartao_id):
-    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.user)
+    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.conta)
     destino = _lista_do_usuario(request, request.POST.get('lista'))
     if not destino:
         raise Http404('Coluna inválida')
@@ -163,7 +163,7 @@ def mover_cartao(request, cartao_id):
 @require_POST
 @login_required
 def excluir_cartao(request, cartao_id):
-    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.user)
+    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.conta)
     lista = cartao.lista
     cartao.delete()
     return _voltar_para(lista)
@@ -171,7 +171,7 @@ def excluir_cartao(request, cartao_id):
 
 @login_required
 def arquivo_cartao(request, cartao_id):
-    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.user)
+    cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.conta)
     arquivo = get_object_or_404(ArquivoCartao, cartao=cartao)
     dados = bytes(arquivo.conteudo)
     total = len(dados)
@@ -222,7 +222,7 @@ def _salvar_midia(cartao, arquivo):
 
 def _lista_do_usuario(request, valor):
     try:
-        return ListaTarefas.objects.get(id=int(valor), usuario=request.user)
+        return ListaTarefas.objects.get(id=int(valor), usuario=request.conta)
     except (TypeError, ValueError, ListaTarefas.DoesNotExist):
         return None
 
