@@ -36,6 +36,9 @@ CSRF_TRUSTED_ORIGINS = [
     origin for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://*.onrender.com').split(',') if origin
 ]
 
+# Token CSRF vencido (ex.: aba antiga no celular) volta para a página em vez da tela crua de 403.
+CSRF_FAILURE_VIEW = 'core.permissoes.falha_csrf'
+
 if not DEBUG:
     # Em produção o app fica atrás de um proxy (Caddy ou Render) que termina o HTTPS.
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

@@ -22,6 +22,8 @@
 
       {% if form.errors %}
         <div class="form-errors">Usuário ou senha inválidos. Tente novamente.</div>
+      {% elif request.GET.expirou %}
+        <div class="form-errors">A página de acesso estava desatualizada. Digite seu usuário e senha de novo.</div>
       {% endif %}
 
       <form method="post" action="{% url 'login' %}">
@@ -33,7 +35,7 @@
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
               <circle cx="12" cy="7" r="4"></circle>
             </svg>
-            <input type="text" name="username" id="id_username" placeholder="mironlucas" autocomplete="username" autofocus required>
+            <input type="text" name="username" id="id_username" placeholder="Digite seu usuário" autocomplete="username" autofocus required>
           </div>
         </div>
         <div class="form-group">

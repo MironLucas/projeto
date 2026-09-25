@@ -840,3 +840,38 @@ class UsuariosEPermissoesTests(TestCase):
             resp = self.client.get('/instagram/callback/', {'code': 'x', 'state': 'abc'}, follow=True)
         self.assertNotContains(resp, 'conectada com sucesso')
         self.assertEqual(self.admin.instagram_connection.instagram_username, 'nathaliaalexandree')
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class FalhaCsrfTests(TestCase):
+    def setUp(self):
+        from django.test import Client
+        self.client = Client(enforce_csrf_checks=True)
+
+    def test_login_com_pagina_desatualizada_volta_para_o_login(self):
+        resp = self.client.post('/', {'username': 'mironlucas', 'password': 'x', 'next': '/tarefas/'})
+        self.assertRedirects(resp, '/?expirou=1&next=/tarefas/', fetch_redirect_response=False)
+        pagina = self.client.get(resp['Location'])
+        self.assertContains(pagina, 'estava desatualizada')
+        self.assertContains(pagina, 'placeholder="Digite seu usuário"')
+
+    def test_formulario_desatualizado_volta_com_aviso_e_nao_salva(self):
+        from django.contrib.auth.models import User
+        from .models import ItemAgenda
+        self.client.force_login(User.objects.get(username='mironlucas'))
+        resp = self.client.post('/programacao/itens/', {'titulo': 'x', 'data': '2026-09-25'},
+                                HTTP_REFERER='http://testserver/programacao/')
+        self.assertRedirects(resp, 'http://testserver/programacao/', fetch_redirect_response=False)
+        self.assertFalse(ItemAgenda.objects.exists())
+
+    def test_fetch_desatualizado_recebe_json(self):
+        from django.contrib.auth.models import User
+        self.client.force_login(User.objects.get(username='mironlucas'))
+        resp = self.client.post('/tarefas/listas/', HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.status_code, 403)
+        self.assertIn('desatualizada', resp.json()['erro'])
+
+    def test_quem_ja_entrou_nao_ve_o_login_de_novo(self):
+        from django.contrib.auth.models import User
+        self.client.force_login(User.objects.get(username='mironlucas'))
+        self.assertRedirects(self.client.get('/'), '/dashboard/', fetch_redirect_response=False)

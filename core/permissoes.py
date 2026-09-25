@@ -1,4 +1,6 @@
+import logging
 from functools import wraps
+from urllib.parse import quote
 
 from django.contrib import messages
 from django.http import HttpResponseForbidden, JsonResponse
@@ -7,6 +9,8 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import Perfil
+
+logger = logging.getLogger(__name__)
 
 METODOS_DE_LEITURA = {'GET', 'HEAD', 'OPTIONS'}
 
@@ -55,10 +59,33 @@ def contexto_de_permissoes(request):
     }
 
 
+def falha_csrf(request, reason=''):
+    """Página desatualizada (token CSRF antigo, comum ao voltar para uma aba aberta há tempo no celular).
+
+    Em vez da tela crua de 403, manda a pessoa de volta para tentar de novo com um token novo.
+    """
+    logger.warning('Verificação CSRF recusada em %s: %s', request.path, reason)
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return JsonResponse({'erro': 'A página estava desatualizada. Recarregue e tente de novo.'}, status=403)
+    if request.path == reverse('login'):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+        destino = f"{reverse('login')}?expirou=1"
+        proxima = request.POST.get('next', '')
+        if proxima and url_has_allowed_host_and_scheme(proxima, allowed_hosts={request.get_host()}):
+            destino += f'&next={quote(proxima)}'
+        return redirect(destino)
+    return _voltar(request, 'A página estava desatualizada e nada foi salvo. Tente de novo.')
+
+
 def _somente_visualizacao(request):
     mensagem = 'Seu acesso é somente de visualização.'
     if request.headers.get('X-Requested-With') == 'fetch':
         return JsonResponse({'erro': mensagem}, status=403)
+    return _voltar(request, mensagem)
+
+
+def _voltar(request, mensagem):
     messages.error(request, mensagem)
     origem = request.META.get('HTTP_REFERER', '')
     if url_has_allowed_host_and_scheme(origem, allowed_hosts={request.get_host()}, require_https=request.is_secure()):
