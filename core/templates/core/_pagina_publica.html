@@ -1,0 +1,40 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ titulo }} · Nextsora</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+  <meta name="theme-color" content="#0a0c14">
+</head>
+<body>
+  <div class="legal-page">
+    <header class="legal-top">
+      <a href="{% url 'login' %}" class="legal-brand">
+        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="">
+        <span class="brand-name">NEXTSORA</span>
+      </a>
+      <nav class="legal-nav">
+        <a href="{% url 'privacidade' %}" {% if request.resolver_match.url_name == 'privacidade' %}aria-current="page"{% endif %}>Privacidade</a>
+        <a href="{% url 'termos' %}" {% if request.resolver_match.url_name == 'termos' %}aria-current="page"{% endif %}>Termos</a>
+        <a href="{% url 'exclusao_de_dados' %}" {% if request.resolver_match.url_name == 'exclusao_de_dados' %}aria-current="page"{% endif %}>Exclusão de dados</a>
+      </nav>
+    </header>
+
+    <main class="legal-card">
+      <h1>{{ titulo }}</h1>
+      <p class="legal-updated">Última atualização: {{ atualizado_em }}</p>
+      {% block conteudo %}{% endblock %}
+    </main>
+
+    <footer class="legal-footer">
+      Nextsora &copy; {% now "Y" %} · <a href="{% url 'login' %}">Acessar o Nextsora</a>
+    </footer>
+  </div>
+</body>
+</html>

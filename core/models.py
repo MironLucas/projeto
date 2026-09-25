@@ -14,6 +14,9 @@ class InstagramConnection(models.Model):
     access_token = models.TextField(blank=True)
     token_expires_at = models.DateTimeField(null=True, blank=True)
     connected_at = models.DateTimeField(auto_now_add=True)
+    # O /me do Instagram devolve dois ids (id do app e id da conta profissional); guardamos os dois
+    # para achar a conexão quando a Meta avisa que a pessoa removeu o app ou pediu a exclusão.
+    instagram_conta_id = models.CharField(max_length=64, blank=True)
 
     def __str__(self):
         return f'@{self.instagram_username}' if self.instagram_username else f'Conexão de {self.user}'
@@ -120,3 +123,14 @@ class Perfil(models.Model):
     @property
     def pode_editar(self):
         return self.papel in (self.ADMIN, self.EDITOR)
+
+
+class SolicitacaoExclusao(models.Model):
+    """Pedido de exclusão de dados recebido da Meta; o código permite à pessoa conferir o andamento."""
+    codigo = models.CharField(max_length=32, unique=True)
+    instagram_user_id = models.CharField(max_length=64)
+    criada_em = models.DateTimeField(auto_now_add=True)
+    concluida_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return f'Exclusão {self.codigo}'

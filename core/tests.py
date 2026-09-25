@@ -875,3 +875,65 @@ class FalhaCsrfTests(TestCase):
         from django.contrib.auth.models import User
         self.client.force_login(User.objects.get(username='mironlucas'))
         self.assertRedirects(self.client.get('/'), '/dashboard/', fetch_redirect_response=False)
+
+
+def _signed_request(dados, segredo='segredo-do-app'):
+    import base64
+    import hashlib
+    import hmac
+    import json
+
+    def b64(valor):
+        return base64.urlsafe_b64encode(valor).rstrip(b'=').decode()
+
+    conteudo = b64(json.dumps(dados).encode())
+    assinatura = b64(hmac.new(segredo.encode(), conteudo.encode(), hashlib.sha256).digest())
+    return f'{assinatura}.{conteudo}'
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',
+                   INSTAGRAM_CLIENT_SECRET='segredo-do-app', CONTATO_EMAIL='contato@nextsora.tech')
+class PaginasDaMetaTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.dono = User.objects.get(username='mironlucas')
+        InstagramConnection.objects.create(user=self.dono, instagram_user_id='111', instagram_conta_id='222', access_token='t')
+        SeguidoresDia.objects.create(instagram_user_id='111', data=date(2026, 9, 1), novos_seguidores=5)
+
+    def test_paginas_publicas_abrem_sem_login(self):
+        for url, texto in [('/privacidade/', 'Política de Privacidade'), ('/termos/', 'Termos de Uso'),
+                           ('/exclusao-de-dados/', 'Exclusão de dados')]:
+            resp = self.client.get(url)
+            self.assertContains(resp, texto)
+            self.assertContains(resp, 'mailto:contato@nextsora.tech')
+        login = self.client.get('/')
+        self.assertContains(login, 'href="/privacidade/"')
+
+    def test_remover_o_app_apaga_o_acesso_mas_mantem_o_historico(self):
+        resp = self.client.post('/instagram/desautorizar/', {'signed_request': _signed_request(
+            {'algorithm': 'HMAC-SHA256', 'user_id': '222'})})
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(InstagramConnection.objects.exists())
+        self.assertTrue(SeguidoresDia.objects.exists())
+
+    def test_assinatura_invalida_e_recusada(self):
+        for rota in ('/instagram/desautorizar/', '/instagram/exclusao/'):
+            resp = self.client.post(rota, {'signed_request': _signed_request(
+                {'algorithm': 'HMAC-SHA256', 'user_id': '111'}, segredo='outro')})
+            self.assertEqual(resp.status_code, 400)
+        self.assertEqual(self.client.post('/instagram/exclusao/', {'signed_request': 'lixo'}).status_code, 400)
+        self.assertEqual(self.client.get('/instagram/exclusao/').status_code, 405)
+        self.assertTrue(InstagramConnection.objects.exists())
+
+    def test_exclusao_apaga_tudo_e_devolve_codigo_para_acompanhar(self):
+        from .models import SolicitacaoExclusao
+        resp = self.client.post('/instagram/exclusao/', {'signed_request': _signed_request(
+            {'algorithm': 'HMAC-SHA256', 'user_id': '222'})}, secure=True)
+        corpo = resp.json()
+        codigo = corpo['confirmation_code']
+        self.assertEqual(corpo['url'], f'https://testserver/exclusao-de-dados/?codigo={codigo}')
+        self.assertFalse(InstagramConnection.objects.exists())
+        self.assertFalse(SeguidoresDia.objects.exists())
+        self.assertTrue(SolicitacaoExclusao.objects.filter(codigo=codigo, concluida_em__isnull=False).exists())
+        self.assertContains(self.client.get('/exclusao-de-dados/', {'codigo': codigo}), 'concluída')
+        self.assertContains(self.client.get('/exclusao-de-dados/', {'codigo': 'nao-existe'}), 'não encontrado')

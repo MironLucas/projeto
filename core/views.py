@@ -195,6 +195,7 @@ def instagram_callback(request):
         user=request.conta,
         defaults={
             'instagram_user_id': str(perfil.get('id', '')),
+            'instagram_conta_id': str(perfil.get('user_id', '')),
             'instagram_username': perfil.get('username', ''),
             'account_type': perfil.get('account_type', ''),
             'access_token': token_longo['access_token'],
@@ -235,7 +236,7 @@ def _trocar_token_curto_por_longo(token_curto):
 
 def _buscar_perfil(access_token):
     resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/me', params={
-        'fields': 'id,username,account_type,media_count',
+        'fields': 'id,user_id,username,account_type,media_count',
         'access_token': access_token,
     }, timeout=10)
     resp.raise_for_status()

@@ -60,6 +60,7 @@ if [ ! -f .env ]; then
   read -rp "Instagram App ID: " INSTAGRAM_ID
   read -rsp "Instagram App Secret (não aparece enquanto digita): " INSTAGRAM_SECRET
   echo
+  read -rp "E-mail de contato (aparece na política de privacidade): " CONTATO_EMAIL
   cat > .env <<CONFIG
 DOMINIO=$DOMINIO
 SECRET_KEY=$(openssl rand -hex 32)
@@ -70,6 +71,7 @@ POSTGRES_PASSWORD=$(openssl rand -hex 24)
 INSTAGRAM_CLIENT_ID=$INSTAGRAM_ID
 INSTAGRAM_CLIENT_SECRET=$INSTAGRAM_SECRET
 INSTAGRAM_REDIRECT_URI=https://$DOMINIO/instagram/callback/
+CONTATO_EMAIL=$CONTATO_EMAIL
 CONFIG
   chmod 600 .env
 fi

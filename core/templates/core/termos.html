@@ -1,0 +1,43 @@
+{% extends 'core/_pagina_publica.html' %}
+
+{% block conteudo %}
+<p>Estes termos regem o uso do Nextsora (<a href="https://nextsora.tech">nextsora.tech</a>). Ao acessar o sistema, você concorda com eles.</p>
+
+<h2>1. O serviço</h2>
+<p>O Nextsora mostra relatórios de desempenho de contas profissionais do Instagram e ajuda a organizar a programação e a produção de conteúdo. Os dados do Instagram são lidos pela API oficial da Meta, com a sua autorização, e em modo somente leitura.</p>
+
+<h2>2. Acesso</h2>
+<ul>
+  <li>O acesso é restrito a usuários cadastrados pelo administrador da conta.</li>
+  <li>Você é responsável por manter sua senha em sigilo e por tudo o que for feito com o seu usuário.</li>
+  <li>O administrador define o nível de acesso de cada pessoa (edição ou visualização) e pode removê-lo a qualquer momento.</li>
+</ul>
+
+<h2>3. Conta do Instagram</h2>
+<ul>
+  <li>Só conecte contas do Instagram que você administra ou que está autorizado a gerenciar.</li>
+  <li>O uso dos dados do Instagram também segue os <a href="https://help.instagram.com/581066165581870" target="_blank" rel="noopener">Termos de Uso do Instagram</a> e as políticas da Meta.</li>
+  <li>Você pode desconectar a conta a qualquer momento, pelo Nextsora ou nas configurações do Instagram.</li>
+</ul>
+
+<h2>4. Uso permitido</h2>
+<p>É proibido usar o Nextsora para atividades ilegais, para tentar acessar dados de outras contas, para enviar arquivos com vírus ou conteúdo que viole direitos de terceiros, ou para sobrecarregar ou atacar o sistema.</p>
+
+<h2>5. Seu conteúdo</h2>
+<p>Textos, imagens e vídeos que você envia continuam sendo seus. Você nos autoriza apenas a guardá-los e exibi-los dentro do Nextsora para você e para os usuários da sua conta.</p>
+
+<h2>6. Disponibilidade</h2>
+<p>Trabalhamos para manter o Nextsora sempre no ar, mas o serviço pode ficar indisponível por manutenção, por falhas técnicas ou por mudanças na API do Instagram. Os números exibidos são os informados pelo Instagram, que pode demorar a atualizá-los ou deixar de fornecer algumas métricas.</p>
+
+<h2>7. Responsabilidade</h2>
+<p>O Nextsora é oferecido no estado em que se encontra. Não nos responsabilizamos por decisões tomadas com base nos relatórios nem por perdas causadas por indisponibilidade do Instagram ou da Meta.</p>
+
+<h2>8. Encerramento</h2>
+<p>Podemos suspender acessos que violem estes termos. Você pode parar de usar o serviço e pedir a exclusão dos seus dados a qualquer momento, como explicado na <a href="{% url 'privacidade' %}">Política de Privacidade</a>.</p>
+
+<h2>9. Alterações e lei aplicável</h2>
+<p>Estes termos podem ser atualizados, e a data da última versão fica no topo desta página. Eles são regidos pelas leis do Brasil.</p>
+
+<h2>10. Contato</h2>
+<p>Fale conosco {% include 'core/_contato.html' %}.</p>
+{% endblock %}

@@ -270,6 +270,187 @@ img.brand-mark {
   margin-top: 24px;
 }
 
+.login-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.login-links a {
+  color: var(--text-dim);
+}
+
+.login-links a:hover {
+  color: var(--text);
+}
+
+/* ================= PÁGINAS PÚBLICAS (privacidade, termos, exclusão) ================= */
+.legal-page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+.legal-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px 24px;
+  margin-bottom: 24px;
+}
+
+.legal-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legal-brand img.brand-mark {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  box-shadow: none;
+}
+
+.legal-brand .brand-name {
+  font-size: 18px;
+}
+
+.legal-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.legal-nav a {
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--text-dim);
+  border: 1px solid transparent;
+}
+
+.legal-nav a:hover {
+  color: var(--text);
+}
+
+.legal-nav a[aria-current="page"] {
+  color: var(--text);
+  border-color: var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.legal-card {
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 40px;
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.legal-card h1 {
+  margin: 0;
+  font-size: 26px;
+  color: var(--text);
+}
+
+.legal-card h2 {
+  margin: 32px 0 10px;
+  font-size: 17px;
+  color: var(--text);
+}
+
+.legal-card h3 {
+  margin: 20px 0 6px;
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.legal-card p {
+  margin: 0 0 12px;
+}
+
+.legal-card ul,
+.legal-card ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+.legal-card li + li {
+  margin-top: 6px;
+}
+
+.legal-card strong {
+  color: var(--text);
+}
+
+.legal-card a {
+  color: var(--cyan);
+}
+
+.legal-card code {
+  font-size: 13px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.legal-updated {
+  font-size: 12.5px;
+  color: var(--text-faint);
+  margin: 6px 0 24px !important;
+}
+
+.legal-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 107, 107, 0.35);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.legal-status--ok {
+  border-color: rgba(61, 220, 132, 0.35);
+  background: rgba(61, 220, 132, 0.08);
+}
+
+.legal-footer {
+  margin-top: 24px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.legal-footer a {
+  color: var(--text-dim);
+}
+
+@media (max-width: 640px) {
+  .legal-page {
+    padding: 16px 16px 32px;
+  }
+
+  .legal-card {
+    padding: 24px 20px;
+    font-size: 14px;
+  }
+
+  .legal-card h1 {
+    font-size: 22px;
+  }
+}
+
 /* ================= APP LAYOUT ================= */
 .app {
   display: flex;

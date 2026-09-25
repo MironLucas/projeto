@@ -1,0 +1,69 @@
+{% extends 'core/_pagina_publica.html' %}
+
+{% block conteudo %}
+<p>O Nextsora (<a href="https://nextsora.tech">nextsora.tech</a>) é uma plataforma de relatórios e de organização de conteúdo para contas profissionais do Instagram. Esta política explica quais dados tratamos, para que os usamos e como você pode pedir a exclusão deles, em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018, LGPD).</p>
+
+<h2>1. Dados que coletamos</h2>
+
+<h3>Usuários do Nextsora</h3>
+<ul>
+  <li>Nome, nome de usuário e nível de acesso (administrador, edição ou visualização).</li>
+  <li>Senha, guardada apenas de forma criptografada (hash). Ninguém, nem a nossa equipe, consegue ver a senha.</li>
+</ul>
+
+<h3>Conta do Instagram conectada</h3>
+<p>Quando você conecta uma conta profissional do Instagram, pelo login oficial do Instagram, você autoriza o Nextsora a ler dados da conta com as permissões <code>instagram_business_basic</code> e <code>instagram_business_manage_insights</code>. O acesso é <strong>somente de leitura</strong>: o Nextsora não publica, não comenta, não envia mensagens e não altera nada no seu Instagram.</p>
+<ul>
+  <li><strong>Guardamos:</strong> o identificador e o nome de usuário da conta, o tipo de conta, o token de acesso fornecido pelo Instagram e o histórico diário do número de novos seguidores (usado para montar os gráficos de períodos maiores que 30 dias).</li>
+  <li><strong>Lemos na hora, só para exibir na tela, sem guardar:</strong> foto de perfil, total de seguidores, publicações (imagem, legenda, link, data, curtidas, comentários e visualizações), visualizações da conta, dados demográficos dos seguidores (gênero, faixa etária, cidades e países) e horários de atividade.</li>
+</ul>
+<p>Os dados demográficos e de horários são estatísticas agregadas e anônimas fornecidas pelo próprio Instagram. Eles não identificam nenhum seguidor.</p>
+
+<h3>Conteúdo que você cria</h3>
+<p>Itens da programação, colunas e cartões de tarefas, legendas, imagens e vídeos que você envia para o quadro de tarefas.</p>
+
+<h3>Cookies</h3>
+<p>Usamos apenas cookies essenciais: o da sessão de login e o de proteção contra falsificação de formulários (CSRF). Não usamos cookies de publicidade, de análise ou de terceiros.</p>
+
+<h2>2. Como usamos os dados</h2>
+<ul>
+  <li>Mostrar os relatórios de desempenho da conta conectada (seguidores, visualizações, curtidas, comentários e público).</li>
+  <li>Organizar a programação e a produção de conteúdo da equipe.</li>
+  <li>Controlar quem acessa o sistema e o que cada pessoa pode fazer.</li>
+</ul>
+<p>Não vendemos dados, não os usamos para publicidade e não criamos perfis de pessoas a partir deles.</p>
+
+<h2>3. Compartilhamento</h2>
+<p>Não compartilhamos seus dados com terceiros. Os dados ficam no servidor contratado para hospedar o Nextsora e só são acessados para operar o serviço. Podemos fornecer informações apenas se formos obrigados por lei ou por ordem judicial.</p>
+
+<h2>4. Armazenamento e segurança</h2>
+<ul>
+  <li>Todo o acesso é feito por conexão criptografada (HTTPS).</li>
+  <li>O acesso ao sistema exige usuário e senha, com permissões por nível de acesso.</li>
+  <li>O servidor tem firewall, bloqueio de tentativas repetidas de acesso e atualizações de segurança automáticas.</li>
+  <li>Fazemos cópias de segurança diárias do banco de dados, mantidas por no máximo 14 dias.</li>
+</ul>
+
+<h2>5. Por quanto tempo guardamos</h2>
+<ul>
+  <li>Enquanto a conta do Instagram estiver conectada, mantemos o token de acesso e o histórico de novos seguidores.</li>
+  <li>Ao desconectar o Instagram no Nextsora ou remover o app nas configurações do Instagram, o token de acesso é apagado na hora.</li>
+  <li>Ao pedir a exclusão dos dados, apagamos tudo o que veio do Instagram. As cópias de segurança antigas deixam de existir em até 14 dias.</li>
+  <li>Os dados de usuários e o conteúdo criado ficam guardados até o usuário ou a conta serem excluídos.</li>
+</ul>
+
+<h2>6. Seus direitos</h2>
+<p>Pela LGPD você pode, a qualquer momento: confirmar se tratamos seus dados, acessá-los, corrigi-los, pedir a portabilidade, pedir a exclusão e revogar a autorização dada. Para exercer qualquer desses direitos, fale conosco {% include 'core/_contato.html' %}. Respondemos em até 15 dias.</p>
+
+<h2>7. Exclusão de dados</h2>
+<p>Veja o passo a passo em <a href="{% url 'exclusao_de_dados' %}">Exclusão de dados</a>.</p>
+
+<h2>8. Menores de idade</h2>
+<p>O Nextsora é uma ferramenta profissional e não se destina a menores de 18 anos.</p>
+
+<h2>9. Alterações nesta política</h2>
+<p>Podemos atualizar esta política. A data da última atualização fica sempre no topo desta página. Mudanças importantes serão avisadas dentro do sistema.</p>
+
+<h2>10. Contato</h2>
+<p>Dúvidas sobre privacidade? Fale conosco {% include 'core/_contato.html' %}.</p>
+{% endblock %}

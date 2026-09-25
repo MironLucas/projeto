@@ -175,6 +175,9 @@ INSTAGRAM_CLIENT_ID = os.environ.get('INSTAGRAM_CLIENT_ID', '')
 INSTAGRAM_CLIENT_SECRET = os.environ.get('INSTAGRAM_CLIENT_SECRET', '')
 INSTAGRAM_REDIRECT_URI = os.environ.get('INSTAGRAM_REDIRECT_URI', '')
 
+# E-mail de contato mostrado na política de privacidade e nas páginas exigidas pela Meta.
+CONTATO_EMAIL = os.environ.get('CONTATO_EMAIL', '')
+
 # Envia erros (com traceback) e avisos do app para a saída padrão, que aparece nos logs do Render.
 LOGGING = {
     'version': 1,
