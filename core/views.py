@@ -364,8 +364,8 @@ def _buscar_midias_desde(instagram, desde, max_paginas=8):
 
 
 def _adicionar_visualizacoes(instagram, midias):
-    videos = [m for m in midias if m.get('media_type') == 'VIDEO']
-    if not videos:
+    # A métrica views vale para fotos, carrosséis e vídeos.
+    if not midias:
         return
 
     def buscar(midia):
@@ -394,7 +394,7 @@ def _adicionar_visualizacoes(instagram, midias):
             return None, 'O Instagram devolveu uma resposta em formato inesperado.'
 
     with ThreadPoolExecutor(max_workers=6) as executor:
-        for midia, (visualizacoes, motivo) in zip(videos, executor.map(buscar, videos)):
+        for midia, (visualizacoes, motivo) in zip(midias, executor.map(buscar, midias)):
             midia['visualizacoes'] = visualizacoes
             midia['visualizacoes_motivo'] = motivo
 

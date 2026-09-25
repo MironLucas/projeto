@@ -227,6 +227,21 @@ class DashboardRespostasInesperadasTests(TestCase):
         self.assertEqual(resp.context['periodo_atual'], 'mes')
         self.assertContains(resp, '<option value="mes" selected>')
 
+    def test_fotos_e_carrosseis_tambem_mostram_visualizacoes(self):
+        agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
+        posts = [
+            {'id': '7', 'timestamp': agora, 'media_type': 'IMAGE', 'permalink': 'x', 'media_url': 'https://x/7.jpg'},
+            {'id': '8', 'timestamp': agora, 'media_type': 'CAROUSEL_ALBUM', 'permalink': 'x', 'media_url': 'https://x/8.jpg'},
+        ]
+        resp = self._get([
+            ('/media', {'data': posts}, True),
+            ('/7/insights', {'data': [{'name': 'views', 'values': [{'value': 4321}]}]}, True),
+            ('/8/insights', {'data': [{'name': 'views', 'total_value': {'value': 987}}]}, True),
+        ])
+        self.assertContains(resp, '4.321 visualizações')
+        self.assertContains(resp, '4,3 mil')
+        self.assertContains(resp, '987 visualizações')
+
     def test_post_sem_media_url_nao_derruba_a_pagina(self):
         resp = self._get([('/media', {'data': [self._video()]}, True)])
         self.assertEqual(resp.status_code, 200)
