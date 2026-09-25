@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 FAIXAS_ETARIAS = ['13-17', '18-24', '25-34', '35-44', '45-54', '55-64', '65+']
 GENEROS = [('F', 'Feminino'), ('M', 'Masculino'), ('U', 'Não informado')]
-ITENS_POR_RANKING = 10
+ITENS_POR_RANKING = 7
 # O Instagram informa os horários de atividade no horário do Pacífico (EUA).
 FUSO_DO_INSTAGRAM = ZoneInfo('America/Los_Angeles')
 

@@ -573,6 +573,9 @@ class PublicoTests(TestCase):
         self.assertEqual([g['nome'] for g in resp.context['generos']['dados']], ['Feminino', 'Masculino', 'Não informado'])
         self.assertContains(resp, '30,0%')
         self.assertContains(resp, '60,0%')
+        self.assertContains(resp, 'id="loc-cidades"')
+        self.assertContains(resp, 'id="loc-paises" hidden')
+        self.assertNotContains(resp, 'Principais cidades')
         horarios = resp.context['horarios']['dados']
         self.assertEqual(len(horarios['barras']), 24)
         self.assertIn('Pico às', horarios['subtitulo'])
