@@ -4,7 +4,7 @@ from datetime import date, datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -64,19 +64,18 @@ def adicionar_item(request):
     data = _ler_data(request.POST.get('data'))
     titulo = request.POST.get('titulo', '').strip()[:200]
     if not data or not titulo:
-        return redirect('programacao')
+        return _responder(request, data, 'Preencha o título e o dia.')
     imagem = request.FILES.get('imagem')
     erro = _validar_imagem(imagem)
     if erro:
-        messages.error(request, erro)
-        return _voltar_para(data)
+        return _responder(request, data, erro)
     with transaction.atomic():
         item = ItemAgenda.objects.create(
             usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request), legenda=_ler_legenda(request),
         )
         if imagem:
             _salvar_imagem(item, imagem)
-    return _voltar_para(data)
+    return _responder(request, data)
 
 
 @require_POST
@@ -86,8 +85,7 @@ def editar_item(request, item_id):
     imagem = request.FILES.get('imagem')
     erro = _validar_imagem(imagem)
     if erro:
-        messages.error(request, erro)
-        return _voltar_para(item.data)
+        return _responder(request, item.data, erro)
     titulo = request.POST.get('titulo', '').strip()[:200]
     if titulo:
         item.titulo = titulo
@@ -101,7 +99,7 @@ def editar_item(request, item_id):
             ArquivoItemAgenda.objects.filter(item=item).delete()
             item.imagem_tipo = ''
         item.save()
-    return _voltar_para(item.data)
+    return _responder(request, item.data)
 
 
 @login_required
@@ -128,7 +126,7 @@ def alternar_item(request, item_id):
 def excluir_item(request, item_id):
     item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
     item.delete()
-    return _voltar_para(item.data)
+    return _responder(request, item.data)
 
 
 def _celula(dia, primeiro_dia, hoje, selecionado, itens):
@@ -151,6 +149,17 @@ def _link(dia):
 
 def _voltar_para(dia):
     return redirect(_link(dia))
+
+
+def _responder(request, dia, erro=None):
+    """A janela do item envia em segundo plano (para mostrar o progresso) e recebe JSON; sem JS, redireciona."""
+    if request.headers.get('X-Requested-With') == 'fetch':
+        if erro:
+            return JsonResponse({'erro': erro}, status=400)
+        return JsonResponse({'ok': True, 'url': _link(dia)})
+    if erro:
+        messages.error(request, erro)
+    return _voltar_para(dia) if dia else redirect('programacao')
 
 
 def _ler_legenda(request):

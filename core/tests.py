@@ -557,6 +557,25 @@ class AgendaTests(TestCase):
         self.assertEqual(item.imagem_tipo, '')
         self.assertEqual(self.client.get(f'/programacao/itens/{item.id}/imagem/').status_code, 404)
 
+    def test_janela_envia_em_segundo_plano_e_recebe_json(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from .models import ItemAgenda
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Reels'},
+                                HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'ok': True, 'url': '/programacao/?mes=2026-10&dia=2026-10-01'})
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+
+        resp = self.client.post(f'/programacao/itens/{item.id}/editar/',
+                                {'titulo': 'Reels', 'imagem': SimpleUploadedFile('a.txt', b'x', content_type='text/plain')},
+                                HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual((resp.status_code, resp.json()), (400, {'erro': 'Envie uma imagem JPG, PNG, GIF ou WebP.'}))
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': ' '}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'erro': 'Preencha o título e o dia.'})
+
+        resp = self.client.post(f'/programacao/itens/{item.id}/excluir/', HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json()['url'], '/programacao/?mes=2026-10&dia=2026-10-01')
+        self.assertFalse(ItemAgenda.objects.exists())
+
     def test_arquivo_que_nao_e_imagem_e_recusado(self):
         from django.core.files.uploadedfile import SimpleUploadedFile
         from .models import ItemAgenda

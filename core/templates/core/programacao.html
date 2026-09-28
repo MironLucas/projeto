@@ -121,19 +121,46 @@
       <span class="field-label">Cor</span>
       {% include 'core/_cores.html' %}
 
+      <div class="form-errors" id="itemErro" role="alert" hidden></div>
+      <div class="envio-progresso" id="itemProgresso" hidden><span></span></div>
+
       <footer class="modal-foot">
         <button type="submit" class="btn-text-danger" id="itemExcluir" formnovalidate>Excluir</button>
         <div class="modal-foot-actions">
           <button type="button" class="btn-ghost js-fechar">Cancelar</button>
-          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+          <button type="submit" class="btn-primary btn-sm btn-com-giro" id="itemSalvar">
+            <span class="carregando-giro" aria-hidden="true"></span>
+            <span class="btn-rotulo">Salvar</span>
+          </button>
         </div>
       </footer>
     </form>
   </dialog>
   {% endif %}
 
+  <dialog class="lightbox" id="telaCheia" aria-label="Imagem em tela cheia">
+    <img id="telaCheiaImagem" alt="">
+    <button type="button" class="lightbox-fechar" aria-label="Fechar tela cheia">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+    </button>
+  </dialog>
+
   <script>
     (function () {
+      // Tela cheia: clicar na imagem do bloco (visualização) ou na prévia da janela abre a imagem grande.
+      var telaCheia = document.getElementById('telaCheia');
+      function abrirTelaCheia(url) {
+        document.getElementById('telaCheiaImagem').src = url;
+        telaCheia.showModal();
+      }
+      telaCheia.addEventListener('click', function () { telaCheia.close(); });
+      {% if not pode_editar %}
+      document.querySelectorAll('.day-item-img').forEach(function (imagem) {
+        imagem.classList.add('is-ampliavel');
+        imagem.addEventListener('click', function () { abrirTelaCheia(imagem.src); });
+      });
+      {% endif %}
+
       var dialogo = document.getElementById('dialogItem');
       if (dialogo) {
         var form = document.getElementById('formItem');
@@ -148,16 +175,92 @@
           previa.innerHTML = '';
           previa.hidden = !url;
           if (url) {
-            var imagem = document.createElement('img');
-            imagem.src = url;
-            imagem.alt = '';
-            previa.appendChild(imagem);
+            var botao = document.createElement('button');
+            botao.type = 'button';
+            botao.className = 'midia-ampliar';
+            botao.title = 'Ver em tela cheia';
+            botao.setAttribute('aria-label', 'Ver imagem em tela cheia');
+            botao.innerHTML = '<img alt=""><span class="midia-ampliar-dica" aria-hidden="true">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg></span>';
+            botao.querySelector('img').src = url;
+            botao.addEventListener('click', function () { abrirTelaCheia(url); });
+            previa.appendChild(botao);
           }
         }
+
+        // ---------- Salvar em segundo plano, com indicador e progresso do envio ----------
+        var erro = document.getElementById('itemErro');
+        var progresso = document.getElementById('itemProgresso');
+        var salvar = document.getElementById('itemSalvar');
+        var enviando = false;
+
+        function mostrarEnvio(ativo, texto) {
+          enviando = ativo;
+          dialogo.classList.toggle('is-enviando', ativo);
+          form.querySelectorAll('button, input, textarea').forEach(function (campo) {
+            campo.disabled = ativo;
+          });
+          salvar.querySelector('.btn-rotulo').textContent = texto || 'Salvar';
+          progresso.hidden = !ativo;
+          progresso.firstElementChild.style.width = '0%';
+        }
+
+        form.addEventListener('submit', function (evento) {
+          evento.preventDefault();
+          if (enviando) {
+            return;
+          }
+          var excluindo = evento.submitter === excluir;
+          var destino = excluindo ? excluir.formAction : form.action;
+          var dados = new FormData(form);
+          var temImagem = campoImagem.files.length > 0 && !excluindo;
+          erro.hidden = true;
+          mostrarEnvio(true, excluindo ? 'Excluindo…' : (temImagem ? 'Enviando imagem…' : 'Salvando…'));
+
+          var pedido = new XMLHttpRequest();
+          pedido.open('POST', destino);
+          pedido.setRequestHeader('X-Requested-With', 'fetch');
+          pedido.responseType = 'json';
+          pedido.upload.addEventListener('progress', function (e) {
+            if (temImagem && e.lengthComputable) {
+              var porcento = Math.round(e.loaded / e.total * 100);
+              progresso.firstElementChild.style.width = porcento + '%';
+              salvar.querySelector('.btn-rotulo').textContent = porcento < 100 ? 'Enviando ' + porcento + '%' : 'Salvando…';
+            }
+          });
+          pedido.addEventListener('load', function () {
+            var resposta = pedido.response || {};
+            if (pedido.status === 200 && resposta.ok) {
+              salvar.querySelector('.btn-rotulo').textContent = 'Salvo!';
+              progresso.firstElementChild.style.width = '100%';
+              dialogo.close();
+              location.href = resposta.url;
+              return;
+            }
+            mostrarEnvio(false);
+            erro.textContent = resposta.erro || 'Não foi possível salvar. Tente de novo.';
+            erro.hidden = false;
+          });
+          pedido.addEventListener('error', function () {
+            mostrarEnvio(false);
+            erro.textContent = 'Sem conexão com o servidor. Confira a internet e tente de novo.';
+            erro.hidden = false;
+          });
+          pedido.send(dados);
+        });
+
+        // Enquanto salva, a janela não fecha pelo Esc nem clicando fora.
+        dialogo.addEventListener('cancel', function (evento) {
+          if (enviando) {
+            evento.preventDefault();
+          }
+        });
 
         // A mesma janela serve para criar (dados.criar) e para editar (dados.editar) um item.
         function abrirItem(dados) {
           form.reset();
+          erro.hidden = true;
           if (urlPreviaLocal) {
             URL.revokeObjectURL(urlPreviaLocal);
             urlPreviaLocal = null;
@@ -210,7 +313,7 @@
           botao.addEventListener('click', function () { dialogo.close(); });
         });
         dialogo.addEventListener('click', function (evento) {
-          if (evento.target === dialogo) {
+          if (evento.target === dialogo && !enviando) {
             dialogo.close();
           }
         });

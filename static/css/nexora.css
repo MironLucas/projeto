@@ -3361,3 +3361,135 @@ button.day-item-body {
     text-overflow: ellipsis;
   }
 }
+
+/* ---------- Programação: salvar com indicador e imagem em tela cheia ---------- */
+.btn-com-giro {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 96px;
+}
+
+.btn-com-giro .carregando-giro {
+  display: none;
+  border-color: rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+}
+
+.is-enviando .btn-com-giro .carregando-giro {
+  display: inline-block;
+}
+
+.is-enviando .btn-com-giro:disabled {
+  opacity: 1;
+  cursor: progress;
+}
+
+.envio-progresso {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.envio-progresso span {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--gradient);
+  transition: width 0.2s ease;
+}
+
+.midia-ampliar {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+
+.midia-ampliar-dica {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.65);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+
+.midia-ampliar:hover .midia-ampliar-dica,
+.midia-ampliar:focus-visible .midia-ampliar-dica {
+  opacity: 1;
+}
+
+.midia-ampliar-dica svg {
+  width: 15px;
+  height: 15px;
+}
+
+.day-item-img.is-ampliavel {
+  cursor: zoom-in;
+}
+
+.lightbox {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: rgba(3, 5, 12, 0.94);
+  cursor: zoom-out;
+}
+
+.lightbox[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox::backdrop {
+  background: rgba(3, 5, 12, 0.6);
+}
+
+.lightbox img {
+  max-width: 96vw;
+  max-height: 92vh;
+  max-height: 92dvh;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.lightbox-fechar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.7);
+  color: #fff;
+  cursor: pointer;
+}
+
+.lightbox-fechar svg {
+  width: 20px;
+  height: 20px;
+}
