@@ -62,15 +62,16 @@
                 </span>
               {% endif %}
               {% if pode_editar %}
-                <button type="button" class="day-item-text day-item-edit js-editar-item" title="Editar"
+                <button type="button" class="day-item-body js-editar-item" title="Editar"
                         data-editar="{% url 'agenda_editar' item.id %}" data-excluir="{% url 'agenda_excluir' item.id %}"
-                        data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}">
-                  <span class="day-item-title">{{ item.titulo }}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
+                        data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}"
+                        data-legenda="{{ item.legenda }}"{% if item.imagem_tipo %} data-imagem="{% url 'agenda_imagem' item.id %}?v={{ item.imagem_versao }}"{% endif %}>
+                  {% include 'core/_item_agenda_conteudo.html' %}
+                  <svg class="day-item-lapis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
                 </button>
               {% else %}
-                <div class="day-item-text">
-                  <span class="day-item-title">{{ item.titulo }}</span>
+                <div class="day-item-body">
+                  {% include 'core/_item_agenda_conteudo.html' %}
                 </div>
               {% endif %}
             </li>
@@ -81,22 +82,17 @@
       {% endif %}
 
       {% if pode_editar %}
-      <form method="post" action="{% url 'agenda_adicionar' %}" class="day-form">
-        {% csrf_token %}
-        <input type="hidden" name="data" value="{{ selecionado|date:'Y-m-d' }}">
-        <input type="text" name="titulo" id="novoItemTitulo" class="field" placeholder="O que fazer neste dia?" maxlength="200" required>
-        <div class="day-form-row">
-          {% include 'core/_cores.html' with marcada=cor_padrao %}
-          <button type="submit" class="btn-primary btn-sm">Adicionar</button>
-        </div>
-      </form>
+        <button type="button" class="board-add-btn day-add-btn" id="novoItem"
+                data-criar="{% url 'agenda_adicionar' %}" data-data="{{ selecionado|date:'Y-m-d' }}" data-cor="{{ cor_padrao }}">
+          + Adicionar item
+        </button>
       {% endif %}
     </aside>
   </div>
 
   {% if pode_editar %}
   <dialog class="modal" id="dialogItem" aria-labelledby="dialogItemTitulo">
-    <form method="post" class="modal-body" id="formItem">
+    <form method="post" enctype="multipart/form-data" class="modal-body" id="formItem">
       {% csrf_token %}
       <header class="modal-head">
         <h2 id="dialogItemTitulo">Editar item</h2>
@@ -110,6 +106,17 @@
 
       <label class="field-label" for="itemData">Dia</label>
       <input type="date" id="itemData" name="data" class="field" required>
+
+      <label class="field-label" for="itemLegenda">Legenda</label>
+      <textarea id="itemLegenda" name="legenda" class="field" rows="4" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Opcional"></textarea>
+
+      <span class="field-label">Imagem</span>
+      <div class="midia-preview" id="itemImagemPrevia" hidden></div>
+      <label class="check-row" id="itemRemoverImagem" hidden>
+        <input type="checkbox" name="remover_imagem" value="1"> Remover imagem
+      </label>
+      <input type="file" id="itemImagem" name="imagem" class="field field-file" accept="{{ tipos_de_imagem }}">
+      <p class="field-hint">JPG, PNG, GIF ou WebP, até {{ limite_midia_mb }} MB. Opcional.</p>
 
       <span class="field-label">Cor</span>
       {% include 'core/_cores.html' %}
@@ -132,24 +139,72 @@
         var form = document.getElementById('formItem');
         var excluir = document.getElementById('itemExcluir');
 
-        document.querySelectorAll('.js-editar-item').forEach(function (botao) {
-          botao.addEventListener('click', function () {
-            var dados = botao.dataset;
-            form.action = dados.editar;
-            excluir.formAction = dados.excluir;
-            document.getElementById('itemTitulo').value = dados.titulo;
-            document.getElementById('itemData').value = dados.data;
-            form.querySelectorAll('input[name=cor]').forEach(function (opcao) {
-              opcao.checked = opcao.value === dados.cor;
-            });
-            dialogo.showModal();
+        var campoImagem = document.getElementById('itemImagem');
+        var previa = document.getElementById('itemImagemPrevia');
+        var removerImagem = document.getElementById('itemRemoverImagem');
+        var urlPreviaLocal = null;
+
+        function mostrarPrevia(url) {
+          previa.innerHTML = '';
+          previa.hidden = !url;
+          if (url) {
+            var imagem = document.createElement('img');
+            imagem.src = url;
+            imagem.alt = '';
+            previa.appendChild(imagem);
+          }
+        }
+
+        // A mesma janela serve para criar (dados.criar) e para editar (dados.editar) um item.
+        function abrirItem(dados) {
+          form.reset();
+          if (urlPreviaLocal) {
+            URL.revokeObjectURL(urlPreviaLocal);
+            urlPreviaLocal = null;
+          }
+          var editando = Boolean(dados.editar);
+          form.action = editando ? dados.editar : dados.criar;
+          document.getElementById('dialogItemTitulo').textContent = editando ? 'Editar item' : 'Novo item';
+          excluir.hidden = !editando;
+          excluir.formAction = dados.excluir || '';
+          document.getElementById('itemTitulo').value = dados.titulo || '';
+          document.getElementById('itemData').value = dados.data;
+          document.getElementById('itemLegenda').value = dados.legenda || '';
+          form.querySelectorAll('input[name=cor]').forEach(function (opcao) {
+            opcao.checked = opcao.value === dados.cor;
           });
+          removerImagem.hidden = !dados.imagem;
+          mostrarPrevia(dados.imagem);
+          dialogo.showModal();
+          document.getElementById('itemTitulo').focus();
+        }
+
+        document.querySelectorAll('.js-editar-item').forEach(function (botao) {
+          botao.addEventListener('click', function () { abrirItem(botao.dataset); });
+        });
+        document.getElementById('novoItem').addEventListener('click', function () {
+          abrirItem(this.dataset);
+        });
+
+        campoImagem.addEventListener('change', function () {
+          var arquivo = campoImagem.files[0];
+          if (!arquivo) {
+            return;
+          }
+          if (urlPreviaLocal) {
+            URL.revokeObjectURL(urlPreviaLocal);
+          }
+          urlPreviaLocal = URL.createObjectURL(arquivo);
+          mostrarPrevia(urlPreviaLocal);
+          removerImagem.hidden = true;
         });
 
         excluir.addEventListener('click', function (evento) {
           if (!window.confirm('Excluir “' + document.getElementById('itemTitulo').value + '”?')) {
             evento.preventDefault();
+            return;
           }
+          campoImagem.value = '';
         });
         dialogo.querySelectorAll('.js-fechar').forEach(function (botao) {
           botao.addEventListener('click', function () { dialogo.close(); });
@@ -167,10 +222,6 @@
       var telaEstreita = window.matchMedia('(max-width: 1000px)').matches;
       if (telaEstreita) {
         document.getElementById('painel-dia').scrollIntoView({ block: 'start' });
-      }
-      var campo = document.getElementById('novoItemTitulo');
-      if (campo) {
-        campo.focus({ preventScroll: true });
       }
     })();
   </script>

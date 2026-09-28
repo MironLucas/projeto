@@ -531,9 +531,44 @@ class AgendaTests(TestCase):
         item.refresh_from_db()
         self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
 
+    def test_item_com_legenda_e_imagem(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from .models import ItemAgenda
+        imagem = SimpleUploadedFile('capa.png', b'\x89PNG dados', content_type='image/png')
+        self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Post lançamento',
+                                                 'legenda': 'Texto do post\ncom duas linhas', 'imagem': imagem})
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+        self.assertEqual((item.legenda, item.imagem_tipo, item.imagem_versao),
+                         ('Texto do post\ncom duas linhas', 'image/png', 1))
+
+        arquivo = self.client.get(f'/programacao/itens/{item.id}/imagem/')
+        self.assertEqual((arquivo.status_code, arquivo['Content-Type'], arquivo.content), (200, 'image/png', b'\x89PNG dados'))
+
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
+        self.assertContains(pagina, f'src="/programacao/itens/{item.id}/imagem/?v=1"', count=1)
+        self.assertContains(pagina, '<span class="day-item-caption">Texto do post\ncom duas linhas</span>', html=True)
+
+        # Editar sem mandar arquivo mantém a imagem; marcar "remover" tira.
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Post lançamento', 'legenda': ''})
+        item.refresh_from_db()
+        self.assertEqual((item.legenda, item.imagem_tipo), ('', 'image/png'))
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Post lançamento', 'remover_imagem': '1'})
+        item.refresh_from_db()
+        self.assertEqual(item.imagem_tipo, '')
+        self.assertEqual(self.client.get(f'/programacao/itens/{item.id}/imagem/').status_code, 404)
+
+    def test_arquivo_que_nao_e_imagem_e_recusado(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from .models import ItemAgenda
+        video = SimpleUploadedFile('video.mp4', b'dados', content_type='video/mp4')
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'imagem': video}, follow=True)
+        self.assertContains(resp, 'Envie uma imagem JPG, PNG, GIF ou WebP.')
+        self.assertFalse(ItemAgenda.objects.exists())
+
     def test_nao_mexe_em_item_de_outro_usuario(self):
         from .models import ItemAgenda
         item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
+        self.assertEqual(self.client.get(f'/programacao/itens/{item.id}/imagem/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'x'}).status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)

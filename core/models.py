@@ -48,8 +48,12 @@ class ItemAgenda(models.Model):
     data = models.DateField()
     horario = models.TimeField(null=True, blank=True)
     titulo = models.CharField(max_length=200)
+    legenda = models.TextField(blank=True)
     cor = models.CharField(max_length=7, default='#7c5cff')
     concluido = models.BooleanField(default=False)
+    # Tipo e versão da imagem ficam aqui; os bytes ficam em ArquivoItemAgenda para a agenda não carregá-los.
+    imagem_tipo = models.CharField(max_length=50, blank=True)
+    imagem_versao = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -112,6 +116,11 @@ class Cartao(models.Model):
 class ArquivoCartao(models.Model):
     # Guardado no banco porque o disco do Render gratuito é apagado a cada deploy.
     cartao = models.OneToOneField(Cartao, on_delete=models.CASCADE, primary_key=True, related_name='arquivo')
+    conteudo = models.BinaryField()
+
+
+class ArquivoItemAgenda(models.Model):
+    item = models.OneToOneField(ItemAgenda, on_delete=models.CASCADE, primary_key=True, related_name='arquivo')
     conteudo = models.BinaryField()
 
 

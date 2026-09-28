@@ -1,16 +1,20 @@
 import calendar
 from datetime import date, datetime
 
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .models import ItemAgenda
-from .quadro import CORES_LISTA, CORES_VALIDAS
+from .models import ArquivoItemAgenda, ItemAgenda
+from .quadro import CORES_LISTA, CORES_VALIDAS, LIMITE_MIDIA_MB, TAMANHO_MAXIMO_LEGENDA
 
 COR_PADRAO = CORES_LISTA[0][0]
+TIPOS_DE_IMAGEM = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
 
 MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
                  'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -48,6 +52,9 @@ def programacao(request):
         'itens_selecionado': por_dia.get(selecionado, []),
         'cores': CORES_LISTA,
         'cor_padrao': COR_PADRAO,
+        'tipos_de_imagem': ','.join(sorted(TIPOS_DE_IMAGEM)),
+        'limite_midia_mb': LIMITE_MIDIA_MB,
+        'tamanho_maximo_legenda': TAMANHO_MAXIMO_LEGENDA,
     })
 
 
@@ -58,7 +65,17 @@ def adicionar_item(request):
     titulo = request.POST.get('titulo', '').strip()[:200]
     if not data or not titulo:
         return redirect('programacao')
-    ItemAgenda.objects.create(usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request))
+    imagem = request.FILES.get('imagem')
+    erro = _validar_imagem(imagem)
+    if erro:
+        messages.error(request, erro)
+        return _voltar_para(data)
+    with transaction.atomic():
+        item = ItemAgenda.objects.create(
+            usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request), legenda=_ler_legenda(request),
+        )
+        if imagem:
+            _salvar_imagem(item, imagem)
     return _voltar_para(data)
 
 
@@ -66,13 +83,35 @@ def adicionar_item(request):
 @login_required
 def editar_item(request, item_id):
     item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
+    imagem = request.FILES.get('imagem')
+    erro = _validar_imagem(imagem)
+    if erro:
+        messages.error(request, erro)
+        return _voltar_para(item.data)
     titulo = request.POST.get('titulo', '').strip()[:200]
     if titulo:
         item.titulo = titulo
     item.data = _ler_data(request.POST.get('data')) or item.data
     item.cor = _ler_cor(request, item.cor)
-    item.save(update_fields=['titulo', 'data', 'cor'])
+    item.legenda = _ler_legenda(request)
+    with transaction.atomic():
+        if imagem:
+            _salvar_imagem(item, imagem)
+        elif request.POST.get('remover_imagem') and item.imagem_tipo:
+            ArquivoItemAgenda.objects.filter(item=item).delete()
+            item.imagem_tipo = ''
+        item.save()
     return _voltar_para(item.data)
+
+
+@login_required
+def imagem_item(request, item_id):
+    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
+    arquivo = get_object_or_404(ArquivoItemAgenda, item=item)
+    resposta = HttpResponse(bytes(arquivo.conteudo), content_type=item.imagem_tipo)
+    resposta['Content-Disposition'] = 'inline'
+    resposta['Cache-Control'] = 'private, max-age=86400'
+    return resposta
 
 
 @require_POST
@@ -112,6 +151,27 @@ def _link(dia):
 
 def _voltar_para(dia):
     return redirect(_link(dia))
+
+
+def _ler_legenda(request):
+    return request.POST.get('legenda', '').strip()[:TAMANHO_MAXIMO_LEGENDA]
+
+
+def _validar_imagem(imagem):
+    if not imagem:
+        return None
+    if imagem.content_type not in TIPOS_DE_IMAGEM:
+        return 'Envie uma imagem JPG, PNG, GIF ou WebP.'
+    if imagem.size > LIMITE_MIDIA_MB * 1024 * 1024:
+        return f'A imagem tem mais de {LIMITE_MIDIA_MB} MB. Envie uma versão menor.'
+    return None
+
+
+def _salvar_imagem(item, imagem):
+    ArquivoItemAgenda.objects.update_or_create(item=item, defaults={'conteudo': b''.join(imagem.chunks())})
+    item.imagem_tipo = imagem.content_type
+    item.imagem_versao += 1
+    item.save(update_fields=['imagem_tipo', 'imagem_versao'])
 
 
 def _ler_cor(request, atual=COR_PADRAO):

@@ -1,0 +1,7 @@
+{% if item.imagem_tipo %}
+  <img class="day-item-img" src="{% url 'agenda_imagem' item.id %}?v={{ item.imagem_versao }}" alt="" loading="lazy">
+{% endif %}
+<span class="day-item-text">
+  <span class="day-item-title">{{ item.titulo }}</span>
+  {% if item.legenda %}<span class="day-item-caption">{{ item.legenda }}</span>{% endif %}
+</span>

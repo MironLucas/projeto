@@ -2332,24 +2332,6 @@ img.brand-mark {
   color: var(--text-faint);
 }
 
-.day-form {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-
-.day-form-row {
-  display: flex;
-  gap: 8px;
-}
-
-.day-form-row .field {
-  flex: 1;
-  min-width: 0;
-}
-
 @media (max-width: 1000px) {
   .agenda {
     grid-template-columns: 1fr;
@@ -3015,9 +2997,20 @@ textarea.field {
   padding-left: 12px;
 }
 
-.day-item-edit {
-  flex-direction: row;
-  align-items: center;
+.day-item {
+  align-items: flex-start;
+}
+
+.day-item .check {
+  margin-top: 6px;
+}
+
+.day-item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
   gap: 8px;
   padding: 4px 0;
   border: none;
@@ -3025,43 +3018,56 @@ textarea.field {
   color: inherit;
   font: inherit;
   text-align: left;
+}
+
+button.day-item-body {
   cursor: pointer;
 }
 
-.day-item-edit .day-item-title {
-  flex: 1;
-  min-width: 0;
+.day-item-img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--bg-soft);
 }
 
-.day-item-edit svg {
+.day-item-body .day-item-text {
+  flex: 1;
+  gap: 3px;
+}
+
+.day-item-caption {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-dim);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.day-item-lapis {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
+  margin-top: 3px;
   color: var(--text-faint);
   opacity: 0.6;
   transition: opacity 0.15s, color 0.15s;
 }
 
-.day-item-edit:hover svg,
-.day-item-edit:focus-visible svg {
+.day-item-body:hover .day-item-lapis,
+.day-item-body:focus-visible .day-item-lapis {
   opacity: 1;
   color: var(--text);
 }
 
-.day-form-row {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 12px;
-}
-
-.day-form-row .swatches {
-  gap: 7px;
-  padding: 2px 0;
-}
-
-.day-form-row .swatch span {
-  width: 22px;
-  height: 22px;
+.day-add-btn {
+  margin-top: 4px;
 }
 
 /* ---------- Tarefas: prioridade do cartão ---------- */
