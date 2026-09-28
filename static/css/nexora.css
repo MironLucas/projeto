@@ -3590,3 +3590,125 @@ button.day-item-body {
 .galeria-add {
   text-align: center;
 }
+
+/* ---------- Programação: formato do conteúdo e item finalizado ---------- */
+.formato-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.formato-opcao {
+  position: relative;
+  cursor: pointer;
+}
+
+.formato-opcao input {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.formato-opcao > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.formato-opcao:hover > span {
+  border-color: var(--text-faint);
+  color: var(--text);
+}
+
+.formato-opcao input:checked + span {
+  border-color: var(--violet);
+  background: var(--gradient-soft);
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--violet) inset;
+}
+
+.formato-opcao input:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.formato-icone {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.formato-tag {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+  padding: 2px 9px 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cor, #7c5cff) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cor, #7c5cff) 35%, transparent);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.formato-tag .formato-icone {
+  width: 12px;
+  height: 12px;
+}
+
+/* Finalizado: título e legenda riscados, mídias apagadas com o selo "Finalizado". */
+.day-item.is-done .day-item-caption {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.day-item.is-done .formato-tag {
+  opacity: 0.55;
+}
+
+.day-item.is-done .day-item-galeria {
+  position: relative;
+}
+
+.day-item.is-done .day-item-midia img,
+.day-item.is-done .day-item-midia video {
+  filter: grayscale(1) brightness(0.4);
+}
+
+.day-item.is-done .midia-play {
+  display: none;
+}
+
+.day-item.is-done .day-item-galeria::after {
+  content: '✓ Finalizado';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(61, 220, 132, 0.16);
+  border: 1px solid rgba(61, 220, 132, 0.45);
+  color: #3ddc84;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}

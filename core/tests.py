@@ -493,7 +493,7 @@ class AgendaTests(TestCase):
 
     def test_adicionar_concluir_e_excluir_item(self):
         from .models import ItemAgenda
-        resp = self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Gravar reels', 'cor': '#f5426f'})
+        resp = self.client.post('/programacao/itens/', {'formato': 'reels', 'data': '2026-09-24', 'titulo': 'Gravar reels', 'cor': '#f5426f'})
         self.assertRedirects(resp, '/programacao/?mes=2026-09&dia=2026-09-24', fetch_redirect_response=False)
         item = ItemAgenda.objects.get(usuario=self.usuario)
         self.assertEqual(item.cor, '#f5426f')
@@ -512,8 +512,8 @@ class AgendaTests(TestCase):
 
     def test_item_sem_titulo_ou_data_invalida_nao_e_criado(self):
         from .models import ItemAgenda
-        self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': '   '})
-        self.client.post('/programacao/itens/', {'data': 'ontem', 'titulo': 'x'})
+        self.client.post('/programacao/itens/', {'formato': 'reels', 'data': '2026-09-24', 'titulo': '   '})
+        self.client.post('/programacao/itens/', {'formato': 'reels', 'data': 'ontem', 'titulo': 'x'})
         self.assertFalse(ItemAgenda.objects.exists())
 
     def test_editar_titulo_dia_e_cor(self):
@@ -521,13 +521,13 @@ class AgendaTests(TestCase):
         item = ItemAgenda.objects.create(usuario=self.usuario, data=date(2026, 10, 1), titulo='olá')
         self.assertEqual(item.cor, '#7c5cff')
         resp = self.client.post(f'/programacao/itens/{item.id}/editar/',
-                                {'titulo': 'Olá, gravar stories', 'data': '2026-10-02', 'cor': '#3ddc84'})
+                                {'formato': 'reels', 'titulo': 'Olá, gravar stories', 'data': '2026-10-02', 'cor': '#3ddc84'})
         self.assertRedirects(resp, '/programacao/?mes=2026-10&dia=2026-10-02', fetch_redirect_response=False)
         item.refresh_from_db()
         self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
 
         # Título vazio, dia inválido e cor fora da paleta mantêm o que já estava.
-        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': ' ', 'data': 'ontem', 'cor': 'red'})
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'formato': 'reels', 'titulo': ' ', 'data': 'ontem', 'cor': 'red'})
         item.refresh_from_db()
         self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
 
@@ -538,7 +538,7 @@ class AgendaTests(TestCase):
     def test_item_com_legenda_e_varias_imagens_e_videos(self):
         from .models import ItemAgenda
         self.client.post('/programacao/itens/', {
-            'data': '2026-10-01', 'titulo': 'Post lançamento', 'legenda': 'Texto do post\ncom duas linhas',
+            'data': '2026-10-01', 'titulo': 'Post lançamento', 'formato': 'carrossel', 'legenda': 'Texto do post\ncom duas linhas',
             'midias': [self._arquivo('capa.png', 'image/png', b'\x89PNG capa'),
                        self._arquivo('reels.mp4', 'video/mp4', b'0123456789'),
                        self._arquivo('foto.jpg', 'image/jpeg')],
@@ -561,7 +561,7 @@ class AgendaTests(TestCase):
         self.assertContains(pagina, f'&quot;id&quot;: {foto.id}')  # a janela recebe a lista para a galeria
 
         # Na edição: a lixeira remove só a marcada e dá para somar novas.
-        self.client.post(f'/programacao/itens/{item.id}/editar/', {
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'formato': 'reels',
             'titulo': 'Post lançamento', 'remover_midias': [str(reels.id)],
             'midias': [self._arquivo('nova.webp', 'image/webp')],
         })
@@ -571,25 +571,50 @@ class AgendaTests(TestCase):
     def test_limite_de_midias_e_tipos_aceitos(self):
         from .models import ItemAgenda
         resp = self.client.post('/programacao/itens/', {
-            'data': '2026-10-01', 'titulo': 'x', 'midias': [self._arquivo('a.pdf', 'application/pdf')],
+            'data': '2026-10-01', 'titulo': 'x', 'formato': 'reels', 'midias': [self._arquivo('a.pdf', 'application/pdf')],
         }, HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.status_code, 400)
         self.assertIn('“a.pdf” não é aceito', resp.json()['erro'])
 
         onze = [self._arquivo(f'{i}.png', 'image/png') for i in range(11)]
-        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'midias': onze},
+        resp = self.client.post('/programacao/itens/', {'formato': 'reels', 'data': '2026-10-01', 'titulo': 'x', 'midias': onze},
                                 HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.json(), {'erro': 'Cada item aceita até 10 imagens ou vídeos.'})
         self.assertFalse(ItemAgenda.objects.exists())
 
+    def test_formato_e_obrigatorio_e_aparece_no_bloco(self):
+        from .models import ItemAgenda
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Sem formato'},
+                                HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual((resp.status_code, resp.json()),
+                         (400, {'erro': 'Escolha o formato: Carrossel, Estático, Reels, Stories ou Outro.'}))
+        self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'formato': 'tiktok'})
+        self.assertFalse(ItemAgenda.objects.exists())
+
+        self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Bastidores', 'formato': 'stories'})
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+        self.assertEqual(item.get_formato_display(), 'Stories')
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
+        self.assertContains(pagina, 'Stories</span>')
+        self.assertContains(pagina, 'data-formato="stories"')
+        self.assertContains(pagina, '<input type="radio" name="formato" value="carrossel" required>', html=True)
+
+        # Editar também exige formato; sem ele nada muda.
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Outro título'})
+        item.refresh_from_db()
+        self.assertEqual((item.titulo, item.formato), ('Bastidores', 'stories'))
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Bastidores', 'formato': 'estatico'})
+        item.refresh_from_db()
+        self.assertEqual(item.get_formato_display(), 'Estático')
+
     def test_janela_envia_em_segundo_plano_e_recebe_json(self):
         from .models import ItemAgenda
-        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Reels'},
+        resp = self.client.post('/programacao/itens/', {'formato': 'reels', 'data': '2026-10-01', 'titulo': 'Reels'},
                                 HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.json(), {'ok': True, 'url': '/programacao/?mes=2026-10&dia=2026-10-01'})
         item = ItemAgenda.objects.get(usuario=self.usuario)
 
-        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': ' '}, HTTP_X_REQUESTED_WITH='fetch')
+        resp = self.client.post('/programacao/itens/', {'formato': 'reels', 'data': '2026-10-01', 'titulo': ' '}, HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.json(), {'erro': 'Preencha o título e o dia.'})
 
         resp = self.client.post(f'/programacao/itens/{item.id}/excluir/', HTTP_X_REQUESTED_WITH='fetch')
@@ -601,7 +626,7 @@ class AgendaTests(TestCase):
         item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
         midia = MidiaItemAgenda.objects.create(item=item, tipo='image/png', conteudo=b'x')
         self.assertEqual(self.client.get(f'/programacao/midias/{midia.id}/').status_code, 404)
-        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'x'}).status_code, 404)
+        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'formato': 'reels', 'titulo': 'x'}).status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)
         self.assertNotContains(self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'}), 'Privado')
@@ -968,7 +993,7 @@ class UsuariosEPermissoesTests(TestCase):
         self._entrar_como('ana')
 
         self.client.post(f'/tarefas/listas/{lista.id}/cartoes/', {'titulo': 'Feito pela Ana'})
-        self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Reunião'})
+        self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Reunião', 'formato': 'outro'})
         self.assertTrue(Cartao.objects.filter(lista=lista, titulo='Feito pela Ana').exists())
         self.assertTrue(ItemAgenda.objects.filter(usuario=self.admin, titulo='Reunião').exists())
         self.assertEqual(ListaTarefas.objects.filter(usuario__username='ana').count(), 0)

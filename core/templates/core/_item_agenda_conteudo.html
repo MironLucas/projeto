@@ -16,6 +16,9 @@
   {% endif %}
 {% endwith %}
 <span class="day-item-text">
+  {% if item.formato %}
+    <span class="formato-tag">{% include 'core/_icone_formato.html' with formato=item.formato %}{{ item.get_formato_display }}</span>
+  {% endif %}
   <span class="day-item-title">{{ item.titulo }}</span>
   {% if item.legenda %}<span class="day-item-caption">{{ item.legenda }}</span>{% endif %}
 </span>

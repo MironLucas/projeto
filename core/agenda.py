@@ -18,6 +18,7 @@ from .quadro import CORES_LISTA, CORES_VALIDAS, LIMITE_MIDIA_MB, TAMANHO_MAXIMO_
 
 COR_PADRAO = CORES_LISTA[0][0]
 MIDIAS_POR_ITEM = 10
+ERRO_FORMATO = 'Escolha o formato: Carrossel, Estático, Reels, Stories ou Outro.'
 
 MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
                  'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -68,6 +69,7 @@ def programacao(request):
         'tipos_de_midia': ','.join(sorted(TIPOS_DE_MIDIA)),
         'limite_midia_mb': LIMITE_MIDIA_MB,
         'midias_por_item': MIDIAS_POR_ITEM,
+        'formatos': ItemAgenda.FORMATOS,
         'tamanho_maximo_legenda': TAMANHO_MAXIMO_LEGENDA,
     })
 
@@ -79,13 +81,17 @@ def adicionar_item(request):
     titulo = request.POST.get('titulo', '').strip()[:200]
     if not data or not titulo:
         return _responder(request, data, 'Preencha o título e o dia.')
+    formato = _ler_formato(request)
+    if not formato:
+        return _responder(request, data, ERRO_FORMATO)
     novas = request.FILES.getlist('midias')
     erro = _validar_midias(novas, ja_existentes=0)
     if erro:
         return _responder(request, data, erro)
     with transaction.atomic():
         item = ItemAgenda.objects.create(
-            usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request), legenda=_ler_legenda(request),
+            usuario=request.conta, data=data, titulo=titulo, formato=formato,
+            cor=_ler_cor(request), legenda=_ler_legenda(request),
         )
         _salvar_midias(item, novas)
     return _responder(request, data)
@@ -95,6 +101,9 @@ def adicionar_item(request):
 @login_required
 def editar_item(request, item_id):
     item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
+    formato = _ler_formato(request)
+    if not formato:
+        return _responder(request, item.data, ERRO_FORMATO)
     remover = item.midias.filter(id__in=_ler_ids(request.POST.getlist('remover_midias')))
     novas = request.FILES.getlist('midias')
     erro = _validar_midias(novas, ja_existentes=item.midias.count() - remover.count())
@@ -106,6 +115,7 @@ def editar_item(request, item_id):
     item.data = _ler_data(request.POST.get('data')) or item.data
     item.cor = _ler_cor(request, item.cor)
     item.legenda = _ler_legenda(request)
+    item.formato = formato
     with transaction.atomic():
         remover.delete()
         _salvar_midias(item, novas)
@@ -167,6 +177,11 @@ def _responder(request, dia, erro=None):
     if erro:
         messages.error(request, erro)
     return _voltar_para(dia) if dia else redirect('programacao')
+
+
+def _ler_formato(request):
+    formato = request.POST.get('formato')
+    return formato if formato in dict(ItemAgenda.FORMATOS) else None
 
 
 def _ler_legenda(request):

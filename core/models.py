@@ -44,10 +44,20 @@ class SeguidoresDia(models.Model):
 
 
 class ItemAgenda(models.Model):
+    FORMATOS = [
+        ('carrossel', 'Carrossel'),
+        ('estatico', 'Estático'),
+        ('reels', 'Reels'),
+        ('stories', 'Stories'),
+        ('outro', 'Outro'),
+    ]
+
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='itens_agenda')
     data = models.DateField()
     horario = models.TimeField(null=True, blank=True)
     titulo = models.CharField(max_length=200)
+    # Obrigatório na janela; itens antigos ficam em branco até serem editados.
+    formato = models.CharField(max_length=20, choices=FORMATOS, blank=True)
     legenda = models.TextField(blank=True)
     cor = models.CharField(max_length=7, default='#7c5cff')
     concluido = models.BooleanField(default=False)
