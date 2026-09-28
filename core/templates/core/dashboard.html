@@ -17,15 +17,34 @@
     </div>
   {% elif instagram %}
     <div class="dash">
+      <section class="profile-hero">
+        <div class="profile-hero-avatar">
+          {% if perfil.foto %}
+            <img src="{{ perfil.foto }}" alt="" referrerpolicy="no-referrer">
+          {% else %}
+            <span class="profile-hero-fallback">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5.5"></rect><circle cx="12" cy="12" r="4.2"></circle></svg>
+            </span>
+          {% endif %}
+          <span class="profile-hero-dot" title="Conectado"></span>
+        </div>
+        <div class="profile-hero-info">
+          <h2 class="profile-hero-name">{% firstof perfil.nome perfil.username instagram.instagram_username %}</h2>
+          <a class="profile-hero-handle" href="https://www.instagram.com/{% firstof perfil.username instagram.instagram_username %}/" target="_blank" rel="noopener">@{% firstof perfil.username instagram.instagram_username %}</a>
+          <dl class="profile-hero-stats">
+            {% for rotulo, valor in perfil_numeros %}
+              <div>
+                <dt>{{ rotulo }}</dt>
+                <dd {% if valor is not None %}title="{{ valor|intcomma }}"{% endif %}>{% if valor is None %}&mdash;{% else %}{{ valor|compacto:True }}{% endif %}</dd>
+              </div>
+            {% endfor %}
+          </dl>
+        </div>
+      </section>
+
       <div class="dash-head">
         <div class="dash-head-title">
           <h2 class="section-title">Resumo</h2>
-          {% if seguidores_total is not None %}
-            <span class="followers-total">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-              <strong>{{ seguidores_total|intcomma }}</strong> seguidores
-            </span>
-          {% endif %}
         </div>
         <form method="get" class="period-filter" id="filterForm">
           {% if ordem_atual != 'recentes' %}<input type="hidden" name="ordem" value="{{ ordem_atual }}">{% endif %}

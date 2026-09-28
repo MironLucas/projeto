@@ -86,7 +86,7 @@ def dashboard(request):
 
 def _dados_do_dashboard(instagram, periodo, ordem):
     _renovar_token_se_necessario(instagram)
-    foto_perfil, seguidores_total = _buscar_perfil_atual(instagram)
+    perfil = _buscar_dados_perfil(instagram)
     _sincronizar_seguidores(instagram)
 
     hoje = timezone.localdate()
@@ -117,8 +117,13 @@ def _dados_do_dashboard(instagram, periodo, ordem):
     visualizacoes_anterior = _buscar_visualizacoes_conta(instagram, periodo.anterior_desde, periodo.anterior_ate)
 
     return {
-        'foto_perfil': foto_perfil,
-        'seguidores_total': seguidores_total,
+        'perfil': perfil,
+        'perfil_numeros': [
+            ('Seguidores', perfil['seguidores']),
+            ('Posts', perfil['posts']),
+            ('Seguindo', perfil['seguindo']),
+        ],
+        'foto_perfil': perfil['foto'],
         'midias': midias_exibidas,
         'aviso_visualizacoes': motivos.most_common(1)[0][0] if motivos else None,
         'curtidas_total': curtidas_total,
@@ -490,16 +495,29 @@ def _buscar_visualizacoes_conta(instagram, desde, ate):
 
 def _buscar_perfil_atual(instagram):
     """Devolve (url da foto de perfil, total de seguidores)."""
+    perfil = _buscar_dados_perfil(instagram)
+    return perfil['foto'], perfil['seguidores']
+
+
+def _buscar_dados_perfil(instagram):
+    """Foto, nome, @ e números do perfil (seguidores, seguindo e posts) para o topo do dashboard."""
     try:
         resp = requests.get(f'{INSTAGRAM_GRAPH_URL}/me', params={
-            'fields': 'profile_picture_url,followers_count',
+            'fields': 'profile_picture_url,name,username,followers_count,follows_count,media_count',
             'access_token': instagram.access_token,
         }, timeout=10)
         resp.raise_for_status()
         dados = resp.json()
     except (requests.RequestException, ValueError):
-        return '', None
-    return dados.get('profile_picture_url', ''), dados.get('followers_count')
+        dados = {}
+    return {
+        'foto': dados.get('profile_picture_url') or '',
+        'nome': dados.get('name') or '',
+        'username': dados.get('username') or instagram.instagram_username,
+        'seguidores': dados.get('followers_count'),
+        'seguindo': dados.get('follows_count'),
+        'posts': dados.get('media_count'),
+    }
 
 
 def _sincronizar_seguidores(instagram):

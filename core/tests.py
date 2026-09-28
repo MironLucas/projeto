@@ -227,6 +227,23 @@ class DashboardRespostasInesperadasTests(TestCase):
         self.assertEqual(resp.context['periodo_atual'], 'mes')
         self.assertContains(resp, '<option value="mes" selected>')
 
+    def test_topo_mostra_nome_arroba_e_numeros_do_perfil(self):
+        resp = self._get([('/me', {
+            'name': 'Cejana Baiocchi Souza', 'username': 'dra.cejana', 'profile_picture_url': 'https://foto',
+            'followers_count': 74912, 'media_count': 364, 'follows_count': 634,
+        }, True)])
+        self.assertContains(resp, '<h2 class="profile-hero-name">Cejana Baiocchi Souza</h2>', html=True)
+        self.assertContains(resp, '@dra.cejana')
+        self.assertContains(resp, '<dd title="74.912">74,9 mil</dd>', html=True)
+        self.assertContains(resp, '<dd title="364">364</dd>', html=True)
+        self.assertContains(resp, '<dd title="634">634</dd>', html=True)
+
+    def test_topo_sem_resposta_do_perfil_usa_o_arroba_salvo(self):
+        InstagramConnection.objects.filter(user=self.usuario).update(instagram_username='salvo')
+        resp = self._get([('/me', {}, False)])
+        self.assertContains(resp, '<h2 class="profile-hero-name">salvo</h2>', html=True)
+        self.assertContains(resp, '<dd>&mdash;</dd>', html=True)
+
     def test_fotos_e_carrosseis_tambem_mostram_visualizacoes(self):
         agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
         posts = [
@@ -363,6 +380,9 @@ class NumeroCompactoTests(SimpleTestCase):
                  999950: '1 mi', 1250000: '1,2 mi', -2300: '-2,3 mil', None: None}
         for valor, esperado in casos.items():
             self.assertEqual(compacto(valor), esperado, valor)
+        detalhados = {74912: '74,9 mil', 12345: '12,3 mil', 150000: '150 mil', 40000: '40 mil', 1_250_000: '1,2 mi'}
+        for valor, esperado in detalhados.items():
+            self.assertEqual(compacto(valor, True), esperado, valor)
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')

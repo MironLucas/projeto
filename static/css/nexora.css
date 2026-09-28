@@ -923,6 +923,164 @@ img.brand-mark {
   height: 14px;
 }
 
+/* ---------- Perfil do Instagram no topo do dashboard ---------- */
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  margin-bottom: 30px;
+}
+
+.profile-hero-avatar {
+  position: relative;
+  flex-shrink: 0;
+  width: 116px;
+  height: 116px;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--gradient);
+  box-shadow: 0 0 28px -4px rgba(0, 212, 255, 0.45), 0 0 44px -10px rgba(124, 92, 255, 0.6);
+}
+
+.profile-hero-avatar img,
+.profile-hero-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--bg);
+  object-fit: cover;
+  background: var(--bg-soft);
+}
+
+.profile-hero-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+}
+
+.profile-hero-fallback svg {
+  width: 40%;
+  height: 40%;
+}
+
+.profile-hero-dot {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: #3ddc84;
+  border: 3px solid var(--bg);
+}
+
+.profile-hero-info {
+  min-width: 0;
+}
+
+.profile-hero-name {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.15;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.profile-hero-handle {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  background: var(--gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.profile-hero-handle:hover {
+  filter: brightness(1.2);
+}
+
+.profile-hero-stats {
+  display: flex;
+  gap: 34px;
+  margin: 16px 0 0;
+}
+
+.profile-hero-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+}
+
+.profile-hero-stats dd {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.profile-hero-stats dt {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+@media (max-width: 520px) {
+  .profile-hero {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .profile-hero-avatar {
+    width: 84px;
+    height: 84px;
+    padding: 3px;
+  }
+
+  .profile-hero-avatar img,
+  .profile-hero-fallback {
+    border-width: 2px;
+  }
+
+  .profile-hero-dot {
+    right: 5px;
+    bottom: 5px;
+    width: 13px;
+    height: 13px;
+  }
+
+  .profile-hero-name {
+    font-size: 20px;
+  }
+
+  .profile-hero-handle {
+    font-size: 13.5px;
+  }
+
+  .profile-hero-stats {
+    gap: 20px;
+    margin-top: 10px;
+  }
+
+  .profile-hero-stats dd {
+    font-size: 17px;
+  }
+
+  .profile-hero-stats dt {
+    font-size: 10px;
+    letter-spacing: 0.5px;
+  }
+}
+
 .period-filter {
   display: flex;
   align-items: center;

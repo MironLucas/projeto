@@ -6,8 +6,11 @@ UNIDADES = [(1_000, 'mil'), (1_000_000, 'mi'), (1_000_000_000, 'bi')]
 
 
 @register.filter
-def compacto(valor):
-    """Número curto no estilo do Instagram: 1523 -> '1,5 mil', 12345 -> '12 mil'."""
+def compacto(valor, detalhado=False):
+    """Número curto no estilo do Instagram: 1523 -> '1,5 mil', 12345 -> '12 mil'.
+
+    Com detalhado (usado no topo do perfil) mantém uma casa até 100: 74912 -> '74,9 mil'.
+    """
     try:
         numero = int(valor)
     except (TypeError, ValueError):
@@ -18,7 +21,7 @@ def compacto(valor):
 
     for limite, sufixo in UNIDADES:
         reduzido = numero / limite
-        casas = 1 if reduzido < 10 else 0
+        casas = 1 if reduzido < (100 if detalhado else 10) else 0
         arredondado = round(reduzido, casas)
         if arredondado < 1000 or sufixo == UNIDADES[-1][1]:
             break
