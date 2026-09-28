@@ -5,12 +5,13 @@ from zoneinfo import ZoneInfo
 
 import requests
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
 from .graficos import Intervalo, montar_grafico
 from .models import InstagramConnection
-from .views import INSTAGRAM_GRAPH_URL, _buscar_perfil_atual, _renovar_token_se_necessario
+from .views import INSTAGRAM_GRAPH_URL, _buscar_dados_perfil, _guardar_perfil, _renovar_token_se_necessario
 
 logger = logging.getLogger(__name__)
 
@@ -40,27 +41,40 @@ def publico(request):
     instagram = InstagramConnection.objects.filter(user=request.conta).first()
     contexto = {'active_menu': 'publico', 'instagram': instagram}
     if instagram:
-        try:
-            contexto.update(_dados_do_publico(instagram))
-        except Exception:
-            logger.exception('Falha ao montar a página de público com os dados do Instagram')
-            contexto['erro_instagram'] = True
+        # Abre na hora com o último total de seguidores salvo; os gráficos chegam por publico_dados.
+        contexto.update({'foto_perfil': instagram.perfil_foto, 'seguidores_total': instagram.perfil_seguidores})
     return render(request, 'core/publico.html', contexto)
+
+
+@login_required
+def publico_dados(request):
+    instagram = InstagramConnection.objects.filter(user=request.conta).first()
+    if not instagram:
+        return HttpResponse(status=204)
+    contexto = {'instagram': instagram}
+    try:
+        contexto.update(_dados_do_publico(instagram))
+    except Exception:
+        logger.exception('Falha ao montar a página de público com os dados do Instagram')
+        contexto['erro_instagram'] = True
+    return render(request, 'core/_publico_dados.html', contexto)
 
 
 def _dados_do_publico(instagram):
     _renovar_token_se_necessario(instagram)
     with ThreadPoolExecutor(max_workers=6) as executor:
-        perfil = executor.submit(_buscar_perfil_atual, instagram)
+        perfil = executor.submit(_buscar_dados_perfil, instagram)
         cidades = executor.submit(_buscar_demografia, instagram, 'city')
         paises = executor.submit(_buscar_demografia, instagram, 'country')
         idades = executor.submit(_buscar_demografia, instagram, 'age')
         generos = executor.submit(_buscar_demografia, instagram, 'gender')
         horarios = executor.submit(_buscar_horarios_ativos, instagram)
 
-    foto_perfil, seguidores_total = perfil.result()
+    perfil = perfil.result()
+    _guardar_perfil(instagram, perfil)
+    seguidores_total = perfil['seguidores']
     return {
-        'foto_perfil': foto_perfil,
+        'foto_perfil': perfil['foto'],
         'seguidores_total': seguidores_total,
         'cidades': _bloco(cidades.result(), lambda itens: _ranking(itens, seguidores_total)),
         'paises': _bloco(paises.result(), lambda itens: _ranking(itens, seguidores_total, PAISES.get)),

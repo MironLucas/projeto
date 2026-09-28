@@ -1,0 +1,140 @@
+{% load humanize nexora %}
+{% if erro_instagram %}
+  <div class="empty-state">
+    <h2>Não foi possível carregar os dados do Instagram</h2>
+    <p>O Instagram devolveu uma resposta que o Nextsora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
+  </div>
+{% else %}
+<template data-substitui="perfilTopo">{% include 'core/_perfil_topo.html' %}</template>
+
+<div class="stat-grid">
+  <div class="stat-card stat-card--followers">
+    <div class="stat-top">
+      <span class="stat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg>
+      </span>
+      <span class="stat-label">Novos seguidores</span>
+    </div>
+    {% if seguidores_ganhos is None %}
+      <div class="stat-value stat-value--muted">&mdash;</div>
+      <div class="stat-period">Sem dados do Instagram para este período</div>
+    {% else %}
+      <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos|intcomma }}</div>
+      {% include 'core/_comparacao.html' with comparacao=comparacao_seguidores %}
+    {% endif %}
+  </div>
+
+  <div class="stat-card stat-card--views">
+    <div class="stat-top">
+      <span class="stat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      </span>
+      <span class="stat-label">Visualizações</span>
+    </div>
+    {% if visualizacoes_total is None %}
+      <div class="stat-value stat-value--muted">&mdash;</div>
+      <div class="stat-period">Sem dados do Instagram para este período</div>
+    {% else %}
+      <div class="stat-value">{{ visualizacoes_total|intcomma }}</div>
+      {% include 'core/_comparacao.html' with comparacao=comparacao_visualizacoes %}
+    {% endif %}
+  </div>
+
+  <div class="stat-card stat-card--likes">
+    <div class="stat-top">
+      <span class="stat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
+      </span>
+      <span class="stat-label">Curtidas</span>
+    </div>
+    <div class="stat-value">{{ curtidas_total|intcomma }}</div>
+    {% include 'core/_comparacao.html' with comparacao=comparacao_curtidas %}
+  </div>
+
+  <div class="stat-card stat-card--comments">
+    <div class="stat-top">
+      <span class="stat-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.8 8.8 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"></path></svg>
+      </span>
+      <span class="stat-label">Comentários</span>
+    </div>
+    <div class="stat-value">{{ comentarios_total|intcomma }}</div>
+    {% include 'core/_comparacao.html' with comparacao=comparacao_comentarios %}
+  </div>
+</div>
+
+<div class="chart-grid">
+  {% include 'core/_grafico.html' with grafico=grafico_seguidores tipo='seguidores' titulo='Novos seguidores' unidade='novos seguidores' mensagem_vazio='Ainda não há dados de novos seguidores para esse período. O Instagram só informa os últimos 30 dias; o Nextsora guarda o histórico a partir de agora.' %}
+  {% include 'core/_grafico.html' with grafico=grafico_curtidas tipo='curtidas' titulo='Curtidas' unidade='curtidas' mensagem_vazio='Não foi possível carregar as curtidas desse período.' %}
+</div>
+
+<div class="dash-head" id="publicacoes">
+  <div class="dash-head-title">
+    <h2 class="section-title">Publicações</h2>
+    {% if ordem_atual != 'recentes' %}
+      <span class="dash-head-hint">Entre as últimas {{ publicacoes_no_ranking }} publicações</span>
+    {% endif %}
+  </div>
+  <form method="get" action="#publicacoes" class="period-filter" id="ordemForm">
+    <input type="hidden" name="periodo" value="{{ periodo_atual }}">
+    {% if periodo_atual == 'periodo' %}
+      <input type="hidden" name="inicio" value="{{ inicio_custom }}">
+      <input type="hidden" name="fim" value="{{ fim_custom }}">
+    {% endif %}
+    <select name="ordem" id="ordemSelect" aria-label="Ordenar publicações">
+      {% for chave, nome in ordens_publicacoes.items %}
+        <option value="{{ chave }}" {% if chave == ordem_atual %}selected{% endif %}>{{ nome }}</option>
+      {% endfor %}
+    </select>
+  </form>
+</div>
+
+{% if aviso_visualizacoes %}
+  <p class="media-notice">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+    <span>Visualizações indisponíveis. {{ aviso_visualizacoes }}</span>
+  </p>
+{% endif %}
+
+{% if midias %}
+  <div class="media-grid">
+    {% for midia in midias %}
+      <a class="media-card" href="{{ midia.permalink }}" target="_blank" rel="noopener">
+        <div class="media-thumb"{% if midia.capa %} style="background-image: url('{{ midia.capa }}');"{% endif %}>
+          {% if midia.media_type == 'VIDEO' %}
+            <span class="media-type" title="Vídeo">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"></path></svg>
+            </span>
+          {% elif midia.media_type == 'CAROUSEL_ALBUM' %}
+            <span class="media-type" title="Carrossel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="14" height="14" rx="2"></rect><path d="M3 17V5a2 2 0 0 1 2-2h12"></path></svg>
+            </span>
+          {% else %}
+            <span class="media-type" title="Foto">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="M21 15l-5-5L5 21"></path></svg>
+            </span>
+          {% endif %}
+        </div>
+        <div class="media-stats">
+          <span title="{{ midia.like_count|default:0|intcomma }} curtidas">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"></path></svg>
+            {{ midia.like_count|default:0|compacto }}
+          </span>
+          <span title="{{ midia.comments_count|default:0|intcomma }} comentários">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.8 8.8 0 0 1-3.8-.9L3 21l1.9-5.2a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3a8.4 8.4 0 0 1 8.5 8.5z"></path></svg>
+            {{ midia.comments_count|default:0|compacto }}
+          </span>
+          <span title="{% if midia.visualizacoes_motivo %}{{ midia.visualizacoes_motivo }}{% else %}{{ midia.visualizacoes|intcomma }} visualizações{% endif %}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              {% if midia.visualizacoes is None %}&mdash;{% else %}{{ midia.visualizacoes|compacto }}{% endif %}
+            </span>
+        </div>
+      </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <p style="margin:0; color: var(--text-dim); font-size: 13.5px;">Nenhuma publicação encontrada.</p>
+  </div>
+{% endif %}
+{% endif %}

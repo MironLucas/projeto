@@ -176,6 +176,41 @@
         item.addEventListener('click', fecharMenuLateral);
       });
 
+      // Partes que dependem da API do Instagram chegam depois que a página já abriu.
+      document.querySelectorAll('[data-carregar]').forEach(function (area) {
+        fetch(area.dataset.carregar, { headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin' })
+          .then(function (resposta) {
+            if (!resposta.ok) {
+              throw new Error('HTTP ' + resposta.status);
+            }
+            return resposta.text();
+          })
+          .then(function (html) {
+            area.innerHTML = html;
+            area.removeAttribute('aria-busy');
+            area.querySelectorAll('template[data-substitui]').forEach(function (modelo) {
+              var antigo = document.getElementById(modelo.dataset.substitui);
+              if (antigo) {
+                antigo.replaceWith(modelo.content.cloneNode(true));
+              }
+              modelo.remove();
+            });
+            var ancora = location.hash && document.getElementById(location.hash.slice(1));
+            if (ancora && area.contains(ancora)) {
+              ancora.scrollIntoView();
+            }
+          })
+          .catch(function () {
+            area.removeAttribute('aria-busy');
+            area.innerHTML = '<div class="empty-state"><h2>Não foi possível carregar os dados</h2>' +
+              '<p>A conexão com o Instagram demorou ou falhou.</p>' +
+              '<button type="button" class="btn-primary btn-sm">Tentar de novo</button></div>';
+            area.querySelector('button').addEventListener('click', function () {
+              location.reload();
+            });
+          });
+      });
+
       document.getElementById('menuRecolher').addEventListener('click', function () {
         var recolhido = raiz.classList.toggle('menu-recolhido');
         try {

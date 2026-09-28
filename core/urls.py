@@ -7,7 +7,9 @@ urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('dashboard/dados/', views.dashboard_dados, name='dashboard_dados'),
     path('publico/', publico.publico, name='publico'),
+    path('publico/dados/', publico.publico_dados, name='publico_dados'),
 
     path('programacao/', agenda.programacao, name='programacao'),
     path('programacao/itens/', agenda.adicionar_item, name='agenda_adicionar'),

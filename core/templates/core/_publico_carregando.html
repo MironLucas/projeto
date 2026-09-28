@@ -1,0 +1,20 @@
+<div class="aud-grid" aria-hidden="true">
+  {% for _ in '123' %}
+    <div class="aud-card esqueleto-card">
+      <span class="esqueleto" style="width: 40%; height: 14px"></span>
+      {% for _ in '12345' %}
+        <span class="esqueleto" style="width: 100%; height: 10px; margin-top: 20px"></span>
+      {% endfor %}
+    </div>
+  {% endfor %}
+</div>
+
+<p class="carregando-aviso" role="status">
+  <span class="carregando-giro"></span>
+  Buscando os dados do Instagram…
+</p>
+
+<div class="chart-card esqueleto-card" aria-hidden="true">
+  <span class="esqueleto" style="width: 25%; height: 14px"></span>
+  <span class="esqueleto esqueleto-grafico"></span>
+</div>

@@ -12,6 +12,7 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
@@ -49,6 +50,28 @@ class Periodo:
 
 @login_required
 def dashboard(request):
+    # Abre na hora com o perfil salvo; cards, gráficos e publicações chegam depois por dashboard_dados.
+    contexto, instagram, _, _ = _contexto_do_dashboard(request)
+    if instagram:
+        contexto.update(_contexto_do_perfil(_perfil_salvo(instagram)))
+    return render(request, 'core/dashboard.html', contexto)
+
+
+@login_required
+def dashboard_dados(request):
+    contexto, instagram, periodo, ordem = _contexto_do_dashboard(request)
+    if not instagram:
+        return HttpResponse(status=204)
+    try:
+        contexto.update(_dados_do_dashboard(instagram, periodo, ordem))
+    except Exception:
+        # Proteção na fronteira com a API: uma resposta inesperada do Instagram não pode derrubar a página.
+        logger.exception('Falha ao montar o dashboard com os dados do Instagram')
+        contexto['erro_instagram'] = True
+    return render(request, 'core/_dashboard_dados.html', contexto)
+
+
+def _contexto_do_dashboard(request):
     periodo = _resolver_periodo(
         request.GET.get('periodo', 'mes'),
         request.GET.get('inicio'),
@@ -72,21 +95,13 @@ def dashboard(request):
         'inicio_custom': request.GET.get('inicio', ''),
         'fim_custom': request.GET.get('fim', ''),
     }
-    if not instagram:
-        return render(request, 'core/dashboard.html', contexto)
-
-    try:
-        contexto.update(_dados_do_dashboard(instagram, periodo, ordem))
-    except Exception:
-        # Proteção na fronteira com a API: uma resposta inesperada do Instagram não pode derrubar a página.
-        logger.exception('Falha ao montar o dashboard com os dados do Instagram')
-        contexto['erro_instagram'] = True
-    return render(request, 'core/dashboard.html', contexto)
+    return contexto, instagram, periodo, ordem
 
 
 def _dados_do_dashboard(instagram, periodo, ordem):
     _renovar_token_se_necessario(instagram)
     perfil = _buscar_dados_perfil(instagram)
+    _guardar_perfil(instagram, perfil)
     _sincronizar_seguidores(instagram)
 
     hoje = timezone.localdate()
@@ -117,13 +132,7 @@ def _dados_do_dashboard(instagram, periodo, ordem):
     visualizacoes_anterior = _buscar_visualizacoes_conta(instagram, periodo.anterior_desde, periodo.anterior_ate)
 
     return {
-        'perfil': perfil,
-        'perfil_numeros': [
-            ('Seguidores', perfil['seguidores']),
-            ('Posts', perfil['posts']),
-            ('Seguindo', perfil['seguindo']),
-        ],
-        'foto_perfil': perfil['foto'],
+        **_contexto_do_perfil(perfil),
         'midias': midias_exibidas,
         'aviso_visualizacoes': motivos.most_common(1)[0][0] if motivos else None,
         'curtidas_total': curtidas_total,
@@ -493,10 +502,46 @@ def _buscar_visualizacoes_conta(instagram, desde, ate):
     return total
 
 
-def _buscar_perfil_atual(instagram):
-    """Devolve (url da foto de perfil, total de seguidores)."""
-    perfil = _buscar_dados_perfil(instagram)
-    return perfil['foto'], perfil['seguidores']
+def _contexto_do_perfil(perfil):
+    return {
+        'perfil': perfil,
+        'perfil_numeros': [
+            ('Seguidores', perfil['seguidores']),
+            ('Posts', perfil['posts']),
+            ('Seguindo', perfil['seguindo']),
+        ],
+        'foto_perfil': perfil['foto'],
+    }
+
+
+def _perfil_salvo(instagram):
+    return {
+        'foto': instagram.perfil_foto,
+        'nome': instagram.perfil_nome,
+        'username': instagram.instagram_username,
+        'seguidores': instagram.perfil_seguidores,
+        'seguindo': instagram.perfil_seguindo,
+        'posts': instagram.perfil_posts,
+    }
+
+
+def _guardar_perfil(instagram, perfil):
+    """Guarda a leitura do perfil para a próxima abertura do dashboard ser instantânea."""
+    if perfil['seguidores'] is None:
+        return  # o Instagram não respondeu: mantém a última leitura boa
+    campos = {
+        'perfil_foto': perfil['foto'],
+        'perfil_nome': perfil['nome'][:200],
+        'perfil_seguidores': perfil['seguidores'],
+        'perfil_seguindo': perfil['seguindo'],
+        'perfil_posts': perfil['posts'],
+    }
+    if perfil['username']:
+        campos['instagram_username'] = perfil['username'][:150]
+    if any(getattr(instagram, campo) != valor for campo, valor in campos.items()):
+        InstagramConnection.objects.filter(pk=instagram.pk).update(**campos)
+        for campo, valor in campos.items():
+            setattr(instagram, campo, valor)
 
 
 def _buscar_dados_perfil(instagram):

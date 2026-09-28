@@ -17,6 +17,12 @@ class InstagramConnection(models.Model):
     # O /me do Instagram devolve dois ids (id do app e id da conta profissional); guardamos os dois
     # para achar a conexão quando a Meta avisa que a pessoa removeu o app ou pediu a exclusão.
     instagram_conta_id = models.CharField(max_length=64, blank=True)
+    # Última leitura do perfil: o topo do dashboard abre na hora com ela enquanto o resto carrega.
+    perfil_nome = models.CharField(max_length=200, blank=True)
+    perfil_foto = models.TextField(blank=True)
+    perfil_seguidores = models.PositiveIntegerField(null=True, blank=True)
+    perfil_seguindo = models.PositiveIntegerField(null=True, blank=True)
+    perfil_posts = models.PositiveIntegerField(null=True, blank=True)
 
     def __str__(self):
         return f'@{self.instagram_username}' if self.instagram_username else f'Conexão de {self.user}'

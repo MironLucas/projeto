@@ -216,16 +216,41 @@ class DashboardRespostasInesperadasTests(TestCase):
             return resp
 
         with mock.patch('core.views.requests.get', side_effect=fake_get):
-            return self.client.get('/dashboard/', params or {})
+            return self.client.get('/dashboard/dados/', params or {})
 
     def _video(self):
         agora = timezone.now().strftime('%Y-%m-%dT%H:%M:%S+0000')
         return {'id': '1', 'timestamp': agora, 'media_type': 'VIDEO', 'permalink': 'x'}
 
     def test_dashboard_abre_em_este_mes(self):
-        resp = self._get([])
+        resp = self.client.get('/dashboard/')
         self.assertEqual(resp.context['periodo_atual'], 'mes')
         self.assertContains(resp, '<option value="mes" selected>')
+
+    def test_pagina_abre_na_hora_com_o_perfil_salvo_e_carrega_o_resto_depois(self):
+        InstagramConnection.objects.filter(user=self.usuario).update(
+            instagram_username='xbiomed.br', perfil_nome='Xbiomed | Suplementos Premium',
+            perfil_seguidores=7600, perfil_posts=4, perfil_seguindo=1400)
+        with mock.patch('core.views.requests.get') as get:
+            resp = self.client.get('/dashboard/', {'periodo': 'semana'})
+        get.assert_not_called()
+        self.assertContains(resp, 'Xbiomed | Suplementos Premium')
+        self.assertContains(resp, '@xbiomed.br')
+        self.assertContains(resp, '<dd title="7.600">7,6 mil</dd>', html=True)
+        self.assertContains(resp, 'data-carregar="/dashboard/dados/?periodo=semana"')
+
+        # Os dados chegam depois e atualizam o perfil salvo para a próxima abertura.
+        dados = self._get([('/me', {'name': 'Xbiomed', 'username': 'xbiomed.br', 'profile_picture_url': 'https://f',
+                                    'followers_count': 7700, 'media_count': 5, 'follows_count': 1400}, True)])
+        self.assertContains(dados, 'data-substitui="perfilTopo"')
+        conexao = InstagramConnection.objects.get(user=self.usuario)
+        self.assertEqual((conexao.perfil_nome, conexao.perfil_seguidores, conexao.perfil_posts, conexao.perfil_foto),
+                         ('Xbiomed', 7700, 5, 'https://f'))
+
+        # Se o Instagram falhar, a última leitura boa é mantida.
+        self._get([('/me', {}, False)])
+        conexao.refresh_from_db()
+        self.assertEqual(conexao.perfil_seguidores, 7700)
 
     def test_topo_mostra_nome_arroba_e_numeros_do_perfil(self):
         resp = self._get([('/me', {
@@ -283,7 +308,7 @@ class DashboardRespostasInesperadasTests(TestCase):
                 resp.json.return_value = {'data': posts} if url.endswith('/media') else {}
                 return resp
             get.side_effect = responder
-            resp = self.client.get('/dashboard/', {'ordem': 'curtidas'})
+            resp = self.client.get('/dashboard/dados/', {'ordem': 'curtidas'})
         esperado = sorted(posts[:50], key=lambda m: m['like_count'], reverse=True)[:12]
         self.assertEqual(self._ids_exibidos(resp), [m['id'] for m in esperado])
         self.assertContains(resp, 'Entre as últimas 50 publicações')
@@ -308,7 +333,7 @@ class DashboardRespostasInesperadasTests(TestCase):
             return resp
 
         with mock.patch('core.views.requests.get', side_effect=responder):
-            resp = self.client.get('/dashboard/', {'ordem': 'visualizacoes'})
+            resp = self.client.get('/dashboard/dados/', {'ordem': 'visualizacoes'})
         self.assertEqual(self._ids_exibidos(resp), ['2', '3', '0', '1'])
 
     def test_ordem_invalida_volta_para_recentes(self):
@@ -608,7 +633,7 @@ class PublicoTests(TestCase):
 
         with mock.patch('core.publico.requests.get', side_effect=responder), \
                 mock.patch('core.views.requests.get', side_effect=responder):
-            return self.client.get('/publico/')
+            return self.client.get('/publico/dados/')
 
     def test_sem_conta_mostra_botao_de_conectar(self):
         resp = self.client.get('/publico/')

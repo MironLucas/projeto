@@ -1,0 +1,66 @@
+{% load humanize l10n %}
+{% if erro_instagram %}
+  <div class="empty-state">
+    <h2>Não foi possível carregar os dados do Instagram</h2>
+    <p>O Instagram devolveu uma resposta que o Nextsora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
+  </div>
+{% else %}
+<template data-substitui="publicoSeguidores">{% include 'core/_publico_seguidores.html' %}</template>
+
+<div class="aud-grid">
+  <section class="aud-card">
+    <h3 class="aud-title">Gênero</h3>
+    {% if generos.motivo %}
+      <p class="aud-empty">{{ generos.motivo }}</p>
+    {% else %}
+      <div class="gender-bar" role="img" aria-label="{% for g in generos.dados %}{{ g.nome }} {{ g.percentual|floatformat:1 }}%{% if not forloop.last %}, {% endif %}{% endfor %}">
+        {% for g in generos.dados %}
+          <span class="gender-seg gender-seg--{{ g.codigo|lower }}" style="width: {{ g.percentual|unlocalize }}%"></span>
+        {% endfor %}
+      </div>
+      <ul class="gender-legend">
+        {% for g in generos.dados %}
+          <li>
+            <span class="gender-swatch gender-seg--{{ g.codigo|lower }}"></span>
+            <span class="gender-name">{{ g.nome }}</span>
+            <strong>{{ g.percentual|floatformat:1 }}%</strong>
+            <span class="aud-count">{{ g.valor|intcomma }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  <section class="aud-card">
+    <h3 class="aud-title">Faixa etária</h3>
+    {% include 'core/_barras_publico.html' with bloco=idades %}
+  </section>
+
+  <section class="aud-card" id="localizacao">
+    <header class="aud-head">
+      <h3 class="aud-title">Localização</h3>
+      <div class="segmented" role="group" aria-label="Ver por">
+        <button type="button" class="segmented-btn" data-alvo="loc-cidades" aria-pressed="true">Cidades</button>
+        <button type="button" class="segmented-btn" data-alvo="loc-paises" aria-pressed="false">Países</button>
+      </div>
+    </header>
+    <div id="loc-cidades">
+      {% include 'core/_barras_publico.html' with bloco=cidades %}
+    </div>
+    <div id="loc-paises" hidden>
+      {% include 'core/_barras_publico.html' with bloco=paises %}
+    </div>
+  </section>
+</div>
+
+{% if horarios.motivo %}
+  <section class="chart-card">
+    <header class="chart-head">
+      <h3 class="chart-title">Horários de atividade</h3>
+    </header>
+    <p class="chart-empty">{{ horarios.motivo }}</p>
+  </section>
+{% else %}
+  {% include 'core/_grafico.html' with grafico=horarios.dados tipo='horarios' titulo='Horários de atividade' unidade='seguidores online em média' mensagem_vazio='O Instagram ainda não tem dados de horários de atividade.' %}
+{% endif %}
+{% endif %}

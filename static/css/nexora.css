@@ -3159,3 +3159,69 @@ textarea.field {
 .prio-option input:disabled + span {
   cursor: default;
 }
+
+/* ---------- Carregamento: esqueleto enquanto os dados do Instagram chegam ---------- */
+.esqueleto-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.esqueleto-card:hover {
+  transform: none;
+  border-color: var(--border);
+}
+
+.esqueleto {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: esqueleto-brilho 1.4s ease-in-out infinite;
+}
+
+.esqueleto-grafico {
+  width: 100%;
+  height: 180px;
+  margin-top: 22px;
+  border-radius: 10px;
+}
+
+.esqueleto-midia {
+  aspect-ratio: 1;
+  border-radius: 12px;
+}
+
+.carregando-aviso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 18px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.carregando-giro {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-top-color: var(--cyan);
+  animation: girar 0.8s linear infinite;
+}
+
+@keyframes esqueleto-brilho {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@keyframes girar {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .esqueleto,
+  .carregando-giro {
+    animation: none;
+  }
+}

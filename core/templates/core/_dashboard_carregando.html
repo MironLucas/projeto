@@ -1,0 +1,29 @@
+<div class="stat-grid" aria-hidden="true">
+  {% for _ in '1234' %}
+    <div class="stat-card esqueleto-card">
+      <span class="esqueleto" style="width: 55%; height: 14px"></span>
+      <span class="esqueleto" style="width: 45%; height: 28px; margin-top: 18px"></span>
+      <span class="esqueleto" style="width: 70%; height: 12px; margin-top: 14px"></span>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="chart-grid" aria-hidden="true">
+  {% for _ in '12' %}
+    <div class="chart-card esqueleto-card">
+      <span class="esqueleto" style="width: 35%; height: 14px"></span>
+      <span class="esqueleto esqueleto-grafico"></span>
+    </div>
+  {% endfor %}
+</div>
+
+<p class="carregando-aviso" role="status">
+  <span class="carregando-giro"></span>
+  Buscando os dados do Instagram…
+</p>
+
+<div class="media-grid" aria-hidden="true">
+  {% for _ in '1234' %}
+    <span class="esqueleto esqueleto-midia"></span>
+  {% endfor %}
+</div>

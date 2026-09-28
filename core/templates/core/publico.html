@@ -1,5 +1,4 @@
 {% extends 'core/base.html' %}
-{% load humanize l10n %}
 
 {% block page_title %}Público{% endblock %}
 {% block page_heading %}Público{% endblock %}
@@ -10,91 +9,33 @@
 {% endblock %}
 
 {% block content %}
-  {% if instagram and erro_instagram %}
-    <div class="empty-state">
-      <h2>Não foi possível carregar os dados do Instagram</h2>
-      <p>O Instagram devolveu uma resposta que o Nextsora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
-    </div>
-  {% elif instagram %}
+  {% if instagram %}
     <div class="dash">
       <div class="dash-head">
         <div class="dash-head-title">
           <h2 class="section-title">Seus seguidores</h2>
-          {% if seguidores_total is not None %}
-            <span class="followers-total"><strong>{{ seguidores_total|intcomma }}</strong> seguidores</span>
-          {% endif %}
+          {% include 'core/_publico_seguidores.html' %}
         </div>
         <span class="dash-head-hint">Retrato atual informado pelo Instagram</span>
       </div>
 
-      <div class="aud-grid">
-        <section class="aud-card">
-          <h3 class="aud-title">Gênero</h3>
-          {% if generos.motivo %}
-            <p class="aud-empty">{{ generos.motivo }}</p>
-          {% else %}
-            <div class="gender-bar" role="img" aria-label="{% for g in generos.dados %}{{ g.nome }} {{ g.percentual|floatformat:1 }}%{% if not forloop.last %}, {% endif %}{% endfor %}">
-              {% for g in generos.dados %}
-                <span class="gender-seg gender-seg--{{ g.codigo|lower }}" style="width: {{ g.percentual|unlocalize }}%"></span>
-              {% endfor %}
-            </div>
-            <ul class="gender-legend">
-              {% for g in generos.dados %}
-                <li>
-                  <span class="gender-swatch gender-seg--{{ g.codigo|lower }}"></span>
-                  <span class="gender-name">{{ g.nome }}</span>
-                  <strong>{{ g.percentual|floatformat:1 }}%</strong>
-                  <span class="aud-count">{{ g.valor|intcomma }}</span>
-                </li>
-              {% endfor %}
-            </ul>
-          {% endif %}
-        </section>
-
-        <section class="aud-card">
-          <h3 class="aud-title">Faixa etária</h3>
-          {% include 'core/_barras_publico.html' with bloco=idades %}
-        </section>
-
-        <section class="aud-card" id="localizacao">
-          <header class="aud-head">
-            <h3 class="aud-title">Localização</h3>
-            <div class="segmented" role="group" aria-label="Ver por">
-              <button type="button" class="segmented-btn" data-alvo="loc-cidades" aria-pressed="true">Cidades</button>
-              <button type="button" class="segmented-btn" data-alvo="loc-paises" aria-pressed="false">Países</button>
-            </div>
-          </header>
-          <div id="loc-cidades">
-            {% include 'core/_barras_publico.html' with bloco=cidades %}
-          </div>
-          <div id="loc-paises" hidden>
-            {% include 'core/_barras_publico.html' with bloco=paises %}
-          </div>
-        </section>
+      <div class="carregavel" data-carregar="{% url 'publico_dados' %}" aria-busy="true">
+        {% include 'core/_publico_carregando.html' %}
       </div>
-
-      {% if horarios.motivo %}
-        <section class="chart-card">
-          <header class="chart-head">
-            <h3 class="chart-title">Horários de atividade</h3>
-          </header>
-          <p class="chart-empty">{{ horarios.motivo }}</p>
-        </section>
-      {% else %}
-        {% include 'core/_grafico.html' with grafico=horarios.dados tipo='horarios' titulo='Horários de atividade' unidade='seguidores online em média' mensagem_vazio='O Instagram ainda não tem dados de horários de atividade.' %}
-      {% endif %}
     </div>
 
     <script>
       (function () {
-        var botoes = document.querySelectorAll('#localizacao .segmented-btn');
-        botoes.forEach(function (botao) {
-          botao.addEventListener('click', function () {
-            botoes.forEach(function (outro) {
-              var ativo = outro === botao;
-              outro.setAttribute('aria-pressed', ativo ? 'true' : 'false');
-              document.getElementById(outro.dataset.alvo).hidden = !ativo;
-            });
+        // Os botões Cidades/Países chegam junto com os dados, depois que a página abre.
+        document.addEventListener('click', function (evento) {
+          var botao = evento.target.closest('#localizacao .segmented-btn');
+          if (!botao) {
+            return;
+          }
+          document.querySelectorAll('#localizacao .segmented-btn').forEach(function (outro) {
+            var ativo = outro === botao;
+            outro.setAttribute('aria-pressed', ativo ? 'true' : 'false');
+            document.getElementById(outro.dataset.alvo).hidden = !ativo;
           });
         });
       })();
