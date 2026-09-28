@@ -32,10 +32,10 @@
                {% if dia.selecionado %}aria-current="date"{% endif %}>
               <span class="cal-num">{{ dia.numero }}</span>
               {% for item in dia.itens %}
-                <span class="cal-chip{% if item.concluido %} is-done{% endif %}">{% if item.horario %}{{ item.horario|time:'H:i' }} {% endif %}{{ item.titulo }}</span>
+                <span class="cal-chip{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}">{{ item.titulo }}</span>
               {% endfor %}
               {% if dia.restantes %}<span class="cal-more">+{{ dia.restantes }} mais</span>{% endif %}
-              {% if dia.total %}<span class="cal-dot"></span>{% endif %}
+              {% if dia.total %}<span class="cal-dot" style="--cor: {{ dia.itens.0.cor }}"></span>{% endif %}
             </a>
           {% endfor %}
         {% endfor %}
@@ -48,7 +48,7 @@
       {% if itens_selecionado %}
         <ul class="day-list">
           {% for item in itens_selecionado %}
-            <li class="day-item{% if item.concluido %} is-done{% endif %}">
+            <li class="day-item{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}">
               {% if pode_editar %}
                 <form method="post" action="{% url 'agenda_alternar' item.id %}">
                   {% csrf_token %}
@@ -61,17 +61,17 @@
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
                 </span>
               {% endif %}
-              <div class="day-item-text">
-                <span class="day-item-title">{{ item.titulo }}</span>
-                {% if item.horario %}<span class="day-item-time">{{ item.horario|time:'H:i' }}</span>{% endif %}
-              </div>
               {% if pode_editar %}
-                <form method="post" action="{% url 'agenda_excluir' item.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="icon-btn" aria-label="Excluir {{ item.titulo }}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>
-                  </button>
-                </form>
+                <button type="button" class="day-item-text day-item-edit js-editar-item" title="Editar"
+                        data-editar="{% url 'agenda_editar' item.id %}" data-excluir="{% url 'agenda_excluir' item.id %}"
+                        data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}">
+                  <span class="day-item-title">{{ item.titulo }}</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
+                </button>
+              {% else %}
+                <div class="day-item-text">
+                  <span class="day-item-title">{{ item.titulo }}</span>
+                </div>
               {% endif %}
             </li>
           {% endfor %}
@@ -86,7 +86,7 @@
         <input type="hidden" name="data" value="{{ selecionado|date:'Y-m-d' }}">
         <input type="text" name="titulo" id="novoItemTitulo" class="field" placeholder="O que fazer neste dia?" maxlength="200" required>
         <div class="day-form-row">
-          <input type="time" name="horario" id="novoItemHorario" class="field" aria-label="Horário (opcional)">
+          {% include 'core/_cores.html' with marcada=cor_padrao %}
           <button type="submit" class="btn-primary btn-sm">Adicionar</button>
         </div>
       </form>
@@ -94,8 +94,73 @@
     </aside>
   </div>
 
+  {% if pode_editar %}
+  <dialog class="modal" id="dialogItem" aria-labelledby="dialogItemTitulo">
+    <form method="post" class="modal-body" id="formItem">
+      {% csrf_token %}
+      <header class="modal-head">
+        <h2 id="dialogItemTitulo">Editar item</h2>
+        <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
+      </header>
+
+      <label class="field-label" for="itemTitulo">Título</label>
+      <input type="text" id="itemTitulo" name="titulo" class="field" maxlength="200" required>
+
+      <label class="field-label" for="itemData">Dia</label>
+      <input type="date" id="itemData" name="data" class="field" required>
+
+      <span class="field-label">Cor</span>
+      {% include 'core/_cores.html' %}
+
+      <footer class="modal-foot">
+        <button type="submit" class="btn-text-danger" id="itemExcluir" formnovalidate>Excluir</button>
+        <div class="modal-foot-actions">
+          <button type="button" class="btn-ghost js-fechar">Cancelar</button>
+          <button type="submit" class="btn-primary btn-sm">Salvar</button>
+        </div>
+      </footer>
+    </form>
+  </dialog>
+  {% endif %}
+
   <script>
     (function () {
+      var dialogo = document.getElementById('dialogItem');
+      if (dialogo) {
+        var form = document.getElementById('formItem');
+        var excluir = document.getElementById('itemExcluir');
+
+        document.querySelectorAll('.js-editar-item').forEach(function (botao) {
+          botao.addEventListener('click', function () {
+            var dados = botao.dataset;
+            form.action = dados.editar;
+            excluir.formAction = dados.excluir;
+            document.getElementById('itemTitulo').value = dados.titulo;
+            document.getElementById('itemData').value = dados.data;
+            form.querySelectorAll('input[name=cor]').forEach(function (opcao) {
+              opcao.checked = opcao.value === dados.cor;
+            });
+            dialogo.showModal();
+          });
+        });
+
+        excluir.addEventListener('click', function (evento) {
+          if (!window.confirm('Excluir “' + document.getElementById('itemTitulo').value + '”?')) {
+            evento.preventDefault();
+          }
+        });
+        dialogo.querySelectorAll('.js-fechar').forEach(function (botao) {
+          botao.addEventListener('click', function () { dialogo.close(); });
+        });
+        dialogo.addEventListener('click', function (evento) {
+          if (evento.target === dialogo) {
+            dialogo.close();
+          }
+        });
+      }
+
       if (!new URLSearchParams(location.search).has('dia')) {
         return;
       }

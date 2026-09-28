@@ -8,6 +8,9 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from .models import ItemAgenda
+from .quadro import CORES_LISTA, CORES_VALIDAS
+
+COR_PADRAO = CORES_LISTA[0][0]
 
 MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
                  'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -43,6 +46,8 @@ def programacao(request):
         'selecionado': selecionado,
         'titulo_selecionado': _data_por_extenso(selecionado),
         'itens_selecionado': por_dia.get(selecionado, []),
+        'cores': CORES_LISTA,
+        'cor_padrao': COR_PADRAO,
     })
 
 
@@ -53,13 +58,21 @@ def adicionar_item(request):
     titulo = request.POST.get('titulo', '').strip()[:200]
     if not data or not titulo:
         return redirect('programacao')
-    horario = None
-    try:
-        horario = datetime.strptime(request.POST.get('horario', ''), '%H:%M').time()
-    except ValueError:
-        pass
-    ItemAgenda.objects.create(usuario=request.conta, data=data, horario=horario, titulo=titulo)
+    ItemAgenda.objects.create(usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request))
     return _voltar_para(data)
+
+
+@require_POST
+@login_required
+def editar_item(request, item_id):
+    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
+    titulo = request.POST.get('titulo', '').strip()[:200]
+    if titulo:
+        item.titulo = titulo
+    item.data = _ler_data(request.POST.get('data')) or item.data
+    item.cor = _ler_cor(request, item.cor)
+    item.save(update_fields=['titulo', 'data', 'cor'])
+    return _voltar_para(item.data)
 
 
 @require_POST
@@ -99,6 +112,11 @@ def _link(dia):
 
 def _voltar_para(dia):
     return redirect(_link(dia))
+
+
+def _ler_cor(request, atual=COR_PADRAO):
+    cor = request.POST.get('cor')
+    return cor if cor in CORES_VALIDAS else atual
 
 
 def _ler_mes(valor):

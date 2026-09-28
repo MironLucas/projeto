@@ -2326,12 +2326,6 @@ img.brand-mark {
   text-decoration: line-through;
 }
 
-.day-item-time {
-  font-size: 11.5px;
-  color: var(--text-faint);
-  font-variant-numeric: tabular-nums;
-}
-
 .day-empty {
   margin: 0 0 16px;
   font-size: 13px;
@@ -2391,7 +2385,7 @@ img.brand-mark {
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--violet);
+    background: var(--cor, var(--violet));
   }
 }
 
@@ -3004,4 +2998,164 @@ textarea.field {
       font-size: 16px !important;
     }
   }
+}
+
+/* ---------- Programação: cor de cada item e edição ---------- */
+.cal-chip {
+  background: color-mix(in srgb, var(--cor, #7c5cff) 22%, transparent);
+  box-shadow: inset 2px 0 0 var(--cor, #7c5cff);
+}
+
+.cal-chip.is-done {
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--cor, #7c5cff) 45%, transparent);
+}
+
+.day-item {
+  box-shadow: inset 3px 0 0 var(--cor, #7c5cff);
+  padding-left: 12px;
+}
+
+.day-item-edit {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.day-item-edit .day-item-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.day-item-edit svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-faint);
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.day-item-edit:hover svg,
+.day-item-edit:focus-visible svg {
+  opacity: 1;
+  color: var(--text);
+}
+
+.day-form-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.day-form-row .swatches {
+  gap: 7px;
+  padding: 2px 0;
+}
+
+.day-form-row .swatch span {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Tarefas: prioridade do cartão ---------- */
+.board-prio {
+  --prio: #3ddc84;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 5px;
+  padding: 1px 7px 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--prio) 12%, transparent);
+  color: var(--prio);
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.board-prio::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--prio);
+}
+
+.board-prio--medio {
+  --prio: #f5a524;
+}
+
+.board-prio--urgente {
+  --prio: #ff6b6b;
+}
+
+.prio-options {
+  display: flex;
+  gap: 8px;
+}
+
+.prio-option {
+  --prio: #3ddc84;
+  flex: 1;
+  position: relative;
+  cursor: pointer;
+}
+
+.prio-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.prio-option span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.prio-option span::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--prio);
+}
+
+.prio-option--medio {
+  --prio: #f5a524;
+}
+
+.prio-option--urgente {
+  --prio: #ff6b6b;
+}
+
+.prio-option input:checked + span {
+  border-color: var(--prio);
+  background: color-mix(in srgb, var(--prio) 12%, transparent);
+  color: var(--text);
+}
+
+.prio-option input:focus-visible + span {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.prio-option input:disabled + span {
+  cursor: default;
 }

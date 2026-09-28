@@ -1,0 +1,8 @@
+<div class="swatches">
+  {% for cor, nome in cores %}
+    <label class="swatch" title="{{ nome }}">
+      <input type="radio" name="cor" value="{{ cor }}" aria-label="{{ nome }}"{% if cor == marcada %} checked{% endif %}>
+      <span style="background: {{ cor }}"></span>
+    </label>
+  {% endfor %}
+</div>

@@ -42,11 +42,12 @@ class ItemAgenda(models.Model):
     data = models.DateField()
     horario = models.TimeField(null=True, blank=True)
     titulo = models.CharField(max_length=200)
+    cor = models.CharField(max_length=7, default='#7c5cff')
     concluido = models.BooleanField(default=False)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = [models.F('horario').asc(nulls_last=True), 'criado_em']
+        ordering = ['criado_em', 'id']
 
     def __str__(self):
         return f'{self.data} {self.titulo}'
@@ -66,9 +67,15 @@ class ListaTarefas(models.Model):
 
 
 class Cartao(models.Model):
+    # O número define a ordem na coluna: urgentes em cima, depois médios, depois normais.
+    URGENTE, MEDIO, NORMAL = 0, 1, 2
+    PRIORIDADES = [(URGENTE, 'Urgente'), (MEDIO, 'Médio'), (NORMAL, 'Normal')]
+    CHAVES_PRIORIDADE = {URGENTE: 'urgente', MEDIO: 'medio', NORMAL: 'normal'}
+
     lista = models.ForeignKey(ListaTarefas, on_delete=models.CASCADE, related_name='cartoes')
     titulo = models.CharField(max_length=300)
     legenda = models.TextField(blank=True)
+    prioridade = models.PositiveSmallIntegerField(choices=PRIORIDADES, default=NORMAL)
     posicao = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
     # Metadados da mídia ficam aqui; os bytes ficam em ArquivoCartao para o quadro não carregá-los.
@@ -78,10 +85,14 @@ class Cartao(models.Model):
     midia_versao = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ['posicao', 'id']
+        ordering = ['prioridade', 'posicao', 'id']
 
     def __str__(self):
         return self.titulo
+
+    @property
+    def prioridade_chave(self):
+        return self.CHAVES_PRIORIDADE.get(self.prioridade, 'normal')
 
     @property
     def e_imagem(self):

@@ -36,6 +36,8 @@ def tarefas(request):
         'active_menu': 'tarefas',
         'listas': list(listas.all()),
         'cores_lista': CORES_LISTA,
+        'prioridades': [(valor, nome, Cartao.CHAVES_PRIORIDADE[valor]) for valor, nome in Cartao.PRIORIDADES],
+        'prioridade_padrao': Cartao.NORMAL,
         'tipos_de_midia': ','.join(sorted(TIPOS_DE_MIDIA)),
         'limite_midia_mb': LIMITE_MIDIA_MB,
         'tamanho_maximo_legenda': TAMANHO_MAXIMO_LEGENDA,
@@ -104,6 +106,7 @@ def criar_cartao(request, lista_id):
                 lista=lista,
                 titulo=titulo,
                 legenda=request.POST.get('legenda', '').strip()[:TAMANHO_MAXIMO_LEGENDA],
+                prioridade=_ler_prioridade(request, Cartao.NORMAL),
                 posicao=0 if ultima is None else ultima + 1,
             )
             if arquivo:
@@ -126,6 +129,7 @@ def editar_cartao(request, cartao_id):
         if titulo:
             cartao.titulo = titulo
         cartao.legenda = request.POST.get('legenda', '').strip()[:TAMANHO_MAXIMO_LEGENDA]
+        cartao.prioridade = _ler_prioridade(request, cartao.prioridade)
 
         destino = _lista_do_usuario(request, request.POST.get('lista'))
         if destino and destino.id != cartao.lista_id:
@@ -218,6 +222,14 @@ def _salvar_midia(cartao, arquivo):
     cartao.midia_tamanho = arquivo.size
     cartao.midia_versao += 1
     cartao.save(update_fields=['midia_tipo', 'midia_nome', 'midia_tamanho', 'midia_versao'])
+
+
+def _ler_prioridade(request, atual):
+    try:
+        prioridade = int(request.POST.get('prioridade'))
+    except (TypeError, ValueError):
+        return atual
+    return prioridade if prioridade in Cartao.CHAVES_PRIORIDADE else atual
 
 
 def _lista_do_usuario(request, valor):

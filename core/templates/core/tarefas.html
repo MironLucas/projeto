@@ -2,7 +2,7 @@
 
 {% block page_title %}Tarefas{% endblock %}
 {% block page_heading %}Tarefas{% endblock %}
-{% block page_subheading %}Arraste cartões e colunas para organizar sua produção{% endblock %}
+{% block page_subheading %}Arraste cartões e colunas para organizar sua produção. Os urgentes ficam sempre no topo.{% endblock %}
 
 {% block content %}
   <div class="board" id="board">
@@ -41,6 +41,7 @@
                      data-editar="{% url 'quadro_editar_cartao' cartao.id %}"
                      data-excluir="{% url 'quadro_excluir_cartao' cartao.id %}"
                      data-titulo="{{ cartao.titulo }}" data-legenda="{{ cartao.legenda }}" data-lista="{{ lista.id }}"
+                     data-prioridade="{{ cartao.prioridade }}"
                      {% if cartao.midia_tipo %}data-midia-url="{% url 'quadro_arquivo_cartao' cartao.id %}?v={{ cartao.midia_versao }}"
                      data-midia-tipo="{% if cartao.e_video %}video{% else %}imagem{% endif %}" data-midia-nome="{{ cartao.midia_nome }}"{% endif %}>
               {% if cartao.e_imagem %}
@@ -51,6 +52,7 @@
                   <span>Vídeo</span>
                 </div>
               {% endif %}
+              <span class="board-prio board-prio--{{ cartao.prioridade_chave }}">{{ cartao.get_prioridade_display }}</span>
               <span class="board-card-title">{{ cartao.titulo }}</span>
               {% if cartao.legenda %}<p class="board-card-caption">{{ cartao.legenda }}</p>{% endif %}
             </article>
@@ -87,6 +89,16 @@
 
       <label class="field-label" for="cartaoTitulo">Título</label>
       <input type="text" id="cartaoTitulo" name="titulo" class="field" maxlength="300" required>
+
+      <span class="field-label">Prioridade</span>
+      <div class="prio-options">
+        {% for valor, nome, chave in prioridades %}
+          <label class="prio-option prio-option--{{ chave }}">
+            <input type="radio" name="prioridade" value="{{ valor }}"{% if not pode_editar %} disabled{% endif %}>
+            <span>{{ nome }}</span>
+          </label>
+        {% endfor %}
+      </div>
 
       <label class="field-label" for="cartaoLegenda">Legenda</label>
       <textarea id="cartaoLegenda" name="legenda" class="field" rows="5" maxlength="{{ tamanho_maximo_legenda }}"></textarea>
@@ -215,6 +227,10 @@
         document.getElementById('cartaoLegenda').readOnly = !podeEditar;
         document.getElementById('cartaoTitulo').value = dados.titulo || '';
         document.getElementById('cartaoLegenda').value = dados.legenda || '';
+        var prioridade = dados.prioridade || '{{ prioridade_padrao }}';
+        formCartao.querySelectorAll('input[name=prioridade]').forEach(function (opcao) {
+          opcao.checked = opcao.value === prioridade;
+        });
         document.getElementById('cartaoColunaCampo').hidden = !editando || !podeEditar;
         document.getElementById('cartaoColuna').value = dados.lista;
         botaoExcluirCartao.hidden = !editando || !podeEditar;
@@ -389,8 +405,16 @@
           return;
         }
         evento.preventDefault();
+        // O cartão só se mexe entre os da mesma prioridade: urgentes ficam sempre em cima, normais embaixo.
         var container = coluna.querySelector('.board-cards');
-        var depois = vizinhoDepois(container.querySelectorAll('.board-card:not(.is-dragging)'), evento.clientY, 'y');
+        var prioridade = Number(arrastando.dataset.prioridade);
+        var outros = Array.prototype.filter.call(container.querySelectorAll('.board-card:not(.is-dragging)'), function (cartao) {
+          return cartao !== arrastando;
+        });
+        var mesmos = outros.filter(function (cartao) { return Number(cartao.dataset.prioridade) === prioridade; });
+        var depois = vizinhoDepois(mesmos, evento.clientY, 'y') || outros.find(function (cartao) {
+          return Number(cartao.dataset.prioridade) > prioridade;
+        }) || null;
         container.insertBefore(arrastando, depois);
       });
 

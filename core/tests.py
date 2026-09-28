@@ -412,13 +412,15 @@ class AgendaTests(TestCase):
 
     def test_adicionar_concluir_e_excluir_item(self):
         from .models import ItemAgenda
-        resp = self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Gravar reels', 'horario': '14:30'})
+        resp = self.client.post('/programacao/itens/', {'data': '2026-09-24', 'titulo': 'Gravar reels', 'cor': '#f5426f'})
         self.assertRedirects(resp, '/programacao/?mes=2026-09&dia=2026-09-24', fetch_redirect_response=False)
         item = ItemAgenda.objects.get(usuario=self.usuario)
-        self.assertEqual(str(item.horario), '14:30:00')
+        self.assertEqual(item.cor, '#f5426f')
 
         pagina = self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'})
         self.assertContains(pagina, 'Gravar reels')
+        self.assertContains(pagina, 'style="--cor: #f5426f"')
+        self.assertNotContains(pagina, 'type="time"')
 
         self.client.post(f'/programacao/itens/{item.id}/concluir/')
         item.refresh_from_db()
@@ -433,9 +435,25 @@ class AgendaTests(TestCase):
         self.client.post('/programacao/itens/', {'data': 'ontem', 'titulo': 'x'})
         self.assertFalse(ItemAgenda.objects.exists())
 
+    def test_editar_titulo_dia_e_cor(self):
+        from .models import ItemAgenda
+        item = ItemAgenda.objects.create(usuario=self.usuario, data=date(2026, 10, 1), titulo='olá')
+        self.assertEqual(item.cor, '#7c5cff')
+        resp = self.client.post(f'/programacao/itens/{item.id}/editar/',
+                                {'titulo': 'Olá, gravar stories', 'data': '2026-10-02', 'cor': '#3ddc84'})
+        self.assertRedirects(resp, '/programacao/?mes=2026-10&dia=2026-10-02', fetch_redirect_response=False)
+        item.refresh_from_db()
+        self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
+
+        # Título vazio, dia inválido e cor fora da paleta mantêm o que já estava.
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': ' ', 'data': 'ontem', 'cor': 'red'})
+        item.refresh_from_db()
+        self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
+
     def test_nao_mexe_em_item_de_outro_usuario(self):
         from .models import ItemAgenda
         item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
+        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'x'}).status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)
         self.assertNotContains(self.client.get('/programacao/', {'mes': '2026-09', 'dia': '2026-09-24'}), 'Privado')
@@ -462,6 +480,30 @@ class QuadroTests(TestCase):
         self.assertEqual([l.titulo for l in self._listas()], ['A fazer', 'Fazendo', 'Feito'])
         self.client.get('/tarefas/')
         self.assertEqual(len(self._listas()), 3)
+
+    def test_prioridade_ordena_urgentes_medios_e_normais(self):
+        from .models import Cartao
+        self.client.get('/tarefas/')
+        a_fazer = self._listas()[0]
+        url = f'/tarefas/listas/{a_fazer.id}/cartoes/'
+        self.client.post(url, {'titulo': 'Normal 1'})
+        self.client.post(url, {'titulo': 'Urgente', 'prioridade': Cartao.URGENTE})
+        self.client.post(url, {'titulo': 'Medio', 'prioridade': Cartao.MEDIO})
+        self.client.post(url, {'titulo': 'Normal 2', 'prioridade': 'inventada'})
+        self.assertEqual(self._titulos(a_fazer), ['Urgente', 'Medio', 'Normal 1', 'Normal 2'])
+
+        pagina = self.client.get('/tarefas/')
+        self.assertContains(pagina, '<span class="board-prio board-prio--urgente">Urgente</span>', html=True)
+        self.assertContains(pagina, '<span class="board-prio board-prio--medio">Médio</span>', html=True)
+        self.assertContains(pagina, '<span class="board-prio board-prio--normal">Normal</span>', count=2, html=True)
+
+        # Mudar para urgente sobe o cartão; arrastar respeita a ordem dentro da mesma prioridade.
+        normal2 = a_fazer.cartoes.get(titulo='Normal 2')
+        self.client.post(f'/tarefas/cartoes/{normal2.id}/editar/',
+                         {'titulo': 'Normal 2', 'prioridade': Cartao.URGENTE, 'lista': a_fazer.id})
+        self.assertEqual(self._titulos(a_fazer), ['Urgente', 'Normal 2', 'Medio', 'Normal 1'])
+        self.client.post(f'/tarefas/cartoes/{normal2.id}/mover/', {'lista': a_fazer.id, 'posicao': 0})
+        self.assertEqual(self._titulos(a_fazer), ['Normal 2', 'Urgente', 'Medio', 'Normal 1'])
 
     def test_criar_e_mover_cartoes_mantendo_a_ordem(self):
         self.client.get('/tarefas/')
