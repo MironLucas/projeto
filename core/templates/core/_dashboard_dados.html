@@ -22,6 +22,7 @@
       <div class="stat-value {% if seguidores_ganhos > 0 %}is-up{% elif seguidores_ganhos < 0 %}is-down{% endif %}">{% if seguidores_ganhos > 0 %}+{% endif %}{{ seguidores_ganhos|intcomma }}</div>
       {% include 'core/_comparacao.html' with comparacao=comparacao_seguidores %}
     {% endif %}
+    {% include 'core/_minigrafico.html' with grafico=minigrafico_seguidores chave='seguidores' unidade='novos seguidores' %}
   </div>
 
   <div class="stat-card stat-card--views">
@@ -38,6 +39,7 @@
       <div class="stat-value">{{ visualizacoes_total|intcomma }}</div>
       {% include 'core/_comparacao.html' with comparacao=comparacao_visualizacoes %}
     {% endif %}
+    {% include 'core/_minigrafico.html' with grafico=minigrafico_visualizacoes chave='visualizacoes' unidade='visualizações' %}
   </div>
 
   <div class="stat-card stat-card--likes">
@@ -49,6 +51,7 @@
     </div>
     <div class="stat-value">{{ curtidas_total|intcomma }}</div>
     {% include 'core/_comparacao.html' with comparacao=comparacao_curtidas %}
+    {% include 'core/_minigrafico.html' with grafico=minigrafico_curtidas chave='curtidas' unidade='curtidas' %}
   </div>
 
   <div class="stat-card stat-card--comments">
@@ -60,6 +63,7 @@
     </div>
     <div class="stat-value">{{ comentarios_total|intcomma }}</div>
     {% include 'core/_comparacao.html' with comparacao=comparacao_comentarios %}
+    {% include 'core/_minigrafico.html' with grafico=minigrafico_comentarios chave='comentarios' unidade='comentários' %}
   </div>
 </div>
 

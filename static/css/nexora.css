@@ -3225,3 +3225,133 @@ textarea.field {
     animation: none;
   }
 }
+
+/* ---------- Minigráfico de linha nos cards do resumo ---------- */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.spark {
+  margin-top: auto;
+  padding-top: 14px;
+}
+
+.spark-plot {
+  position: relative;
+  height: 48px;
+}
+
+.spark-plot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.spark-linha {
+  fill: none;
+  stroke-width: 2px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.spark-linha--atual {
+  stroke: var(--accent);
+}
+
+.spark-linha--anterior {
+  stroke: var(--text-faint);
+  stroke-dasharray: 3 4;
+}
+
+.spark-final,
+.spark-marca {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--panel-solid), 0 0 10px var(--accent);
+  pointer-events: none;
+}
+
+.spark-slots {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.spark-slot {
+  height: 100%;
+  cursor: crosshair;
+  outline: none;
+}
+
+.spark-marca {
+  display: none;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  box-shadow: 0 0 0 2px var(--panel-solid);
+}
+
+.spark-marca--anterior {
+  background: var(--text-dim);
+}
+
+.spark-tip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  display: none;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.spark-tip strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.spark-slot:hover .spark-marca,
+.spark-slot:focus-visible .spark-marca {
+  display: block;
+}
+
+.spark-slot:hover .spark-tip,
+.spark-slot:focus-visible .spark-tip {
+  display: flex;
+}
+
+.spark-eixo {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-faint);
+}
+
+.spark:has(.spark-slot:hover) .spark-eixo,
+.spark:has(.spark-slot:focus-visible) .spark-eixo {
+  visibility: hidden;
+}
+
+@media (max-width: 520px) {
+  .spark-plot {
+    height: 40px;
+  }
+
+  .spark-tip span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}

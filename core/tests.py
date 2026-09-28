@@ -263,6 +263,16 @@ class DashboardRespostasInesperadasTests(TestCase):
         self.assertContains(resp, '<dd title="364">364</dd>', html=True)
         self.assertContains(resp, '<dd title="634">634</dd>', html=True)
 
+    def test_cards_ganham_minigrafico_e_visualizacoes_somam_as_faixas(self):
+        with _congelar_em(2026, 9, 28, 15, 0):
+            resp = self._get([('/insights', {'data': [{'total_value': {'value': 100}}]}, True)])
+        # Este mês (01 a 28/09) e o mesmo trecho de agosto viram 7 faixas cada: 7 × 100 visualizações.
+        self.assertEqual(resp.context['visualizacoes_total'], 700)
+        self.assertEqual(resp.context['comparacao_visualizacoes'], {'direcao': 'equal', 'valor': 0})
+        self.assertEqual(len(resp.context['minigrafico_visualizacoes']['fatias']), 14)
+        self.assertContains(resp, 'class="spark"', count=3)  # sem nenhum dia de seguidores salvo, esse card fica sem
+        self.assertContains(resp, 'aria-label="Este mês, 25–28/09: 100 visualizações"')
+
     def test_topo_sem_resposta_do_perfil_usa_o_arroba_salvo(self):
         InstagramConnection.objects.filter(user=self.usuario).update(instagram_username='salvo')
         resp = self._get([('/me', {}, False)])
@@ -396,6 +406,52 @@ class VisualizacoesContaTests(SimpleTestCase):
         recusa = mock.Mock(ok=False, status_code=400, text='{"error": {}}')
         with mock.patch('core.views.requests.get', return_value=recusa):
             self.assertIsNone(_buscar_visualizacoes_conta(self.conexao, _local(2026, 9, 1), _local(2026, 9, 24)))
+
+
+class MinigraficoTests(SimpleTestCase):
+    def test_divide_o_periodo_em_ate_7_faixas_seguidas(self):
+        from .minigrafico import dividir_em_baldes
+        faixas = dividir_em_baldes(date(2026, 9, 1), date(2026, 9, 28))
+        self.assertEqual(len(faixas), 7)
+        self.assertEqual(faixas[0], (date(2026, 9, 1), date(2026, 9, 4)))
+        self.assertEqual(faixas[-1][1], date(2026, 9, 28))
+        for (_, fim), (inicio, _) in zip(faixas, faixas[1:]):
+            self.assertEqual(inicio - fim, timedelta(days=1))
+        self.assertEqual(dividir_em_baldes(date(2026, 9, 28), date(2026, 9, 28)),
+                         [(date(2026, 9, 28), date(2026, 9, 28))])
+
+    def test_descricao_das_faixas(self):
+        from .minigrafico import descrever_balde
+        self.assertEqual(descrever_balde(date(2026, 9, 5), date(2026, 9, 5)), '05/09')
+        self.assertEqual(descrever_balde(date(2026, 9, 1), date(2026, 9, 7)), '01–07/09')
+        self.assertEqual(descrever_balde(date(2026, 8, 30), date(2026, 9, 2)), '30/08–02/09')
+
+    def test_linha_anterior_e_atual_com_ponto_final(self):
+        from .minigrafico import montar_minigrafico
+        grafico = montar_minigrafico([('a', 10), ('b', 30)], [('c', 20), ('d', 0)])
+        self.assertTrue(grafico['linha_anterior'].startswith('M0.00,'))
+        self.assertEqual(grafico['linha_anterior'].count('C'), 2)  # vai até o primeiro ponto atual
+        self.assertEqual(grafico['linha_atual'].count('C'), 1)
+        self.assertTrue(grafico['area'].endswith('Z'))
+        self.assertEqual(grafico['final'], {'x': 100, 'y': 87.5})  # menor valor fica embaixo
+        self.assertEqual([f['atual'] for f in grafico['fatias']], [False, False, True, True])
+        self.assertAlmostEqual(sum(f['largura'] for f in grafico['fatias']), 100)
+
+    def test_faixas_sem_dado(self):
+        from .minigrafico import montar_minigrafico
+        # No período atual, faltar dado tira o gráfico; no anterior, só a faixa sai.
+        self.assertIsNone(montar_minigrafico([('a', 1)], [('b', 3), ('c', None)]))
+        self.assertIsNone(montar_minigrafico([('a', 1)], []))
+        grafico = montar_minigrafico([('a', None), ('b', 2)], [('c', 3), ('d', 4)])
+        self.assertEqual([f['descricao'] for f in grafico['fatias']], ['b', 'c', 'd'])
+
+    def test_um_ponto_so_no_periodo_atual_liga_ao_anterior_na_cor_do_card(self):
+        from .minigrafico import montar_minigrafico
+        hoje = montar_minigrafico([('ontem', 5)], [('hoje', 5)])
+        self.assertEqual(hoje['linha_anterior'], '')
+        self.assertEqual(hoje['linha_atual'].count('C'), 1)
+        self.assertEqual(hoje['final']['y'], 50)
+        self.assertEqual(montar_minigrafico([], [('hoje', 5)])['linha_atual'], 'M100.00,20.00')
 
 
 class NumeroCompactoTests(SimpleTestCase):

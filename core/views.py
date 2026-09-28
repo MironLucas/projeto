@@ -17,6 +17,7 @@ from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from .graficos import DIAS_SEMANA, intervalos_do_grafico, montar_grafico
+from .minigrafico import descrever_balde, dividir_em_baldes, montar_minigrafico
 from .models import InstagramConnection, SeguidoresDia
 
 INSTAGRAM_AUTH_URL = 'https://api.instagram.com/oauth/authorize'
@@ -128,8 +129,25 @@ def _dados_do_dashboard(instagram, periodo, ordem):
     seguidores_anterior, anterior_completo = _somar_seguidores(
         seguidores_por_dia, _data_local(periodo.anterior_desde), _data_local(periodo.anterior_ate), hoje,
     )
-    visualizacoes_total = _buscar_visualizacoes_conta(instagram, periodo.desde, periodo.ate)
-    visualizacoes_anterior = _buscar_visualizacoes_conta(instagram, periodo.anterior_desde, periodo.anterior_ate)
+    # Cada card ganha um minigráfico: o período anterior e o atual divididos em faixas de dias.
+    faixas_anteriores = _faixas(periodo.anterior_desde, periodo.anterior_ate)
+    faixas_atuais = _faixas(periodo.desde, periodo.ate)
+    todas_as_faixas = faixas_anteriores + faixas_atuais
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        visualizacoes_por_faixa = list(executor.map(
+            lambda faixa: _buscar_visualizacoes_conta(instagram, faixa[2], faixa[3]), todas_as_faixas,
+        ))
+    visualizacoes_anterior = _somar_faixas(visualizacoes_por_faixa[:len(faixas_anteriores)])
+    visualizacoes_total = _somar_faixas(visualizacoes_por_faixa[len(faixas_anteriores):])
+
+    def minigrafico(valores):
+        pontos = [(descrever_balde(faixa[0], faixa[1]), valor) for faixa, valor in zip(todas_as_faixas, valores)]
+        return montar_minigrafico(pontos[:len(faixas_anteriores)], pontos[len(faixas_anteriores):])
+
+    engajamento_por_faixa = [_somar_engajamento(midias, faixa[2], faixa[3]) for faixa in todas_as_faixas]
+    seguidores_por_faixa = [
+        _somar_seguidores(seguidores_por_dia, faixa[0], faixa[1], hoje)[0] for faixa in todas_as_faixas
+    ]
 
     return {
         **_contexto_do_perfil(perfil),
@@ -143,6 +161,10 @@ def _dados_do_dashboard(instagram, periodo, ordem):
         'comparacao_comentarios': _comparar(comentarios_total, comentarios_anterior),
         'visualizacoes_total': visualizacoes_total,
         'comparacao_visualizacoes': _comparar(visualizacoes_total, visualizacoes_anterior),
+        'minigrafico_seguidores': minigrafico(seguidores_por_faixa),
+        'minigrafico_visualizacoes': minigrafico(visualizacoes_por_faixa),
+        'minigrafico_curtidas': minigrafico([curtidas for curtidas, _ in engajamento_por_faixa]),
+        'minigrafico_comentarios': minigrafico([comentarios for _, comentarios in engajamento_por_faixa]),
         'grafico_seguidores': montar_grafico(
             subtitulo, intervalos, *_serie_seguidores(seguidores_por_dia, intervalos, hoje),
         ),
@@ -339,6 +361,18 @@ def _somar_engajamento(midias, desde, ate):
     curtidas = sum(m.get('like_count') or 0 for m in no_periodo)
     comentarios = sum(m.get('comments_count') or 0 for m in no_periodo)
     return curtidas, comentarios
+
+
+def _faixas(desde, ate):
+    """Faixas de dias do período como (dia inicial, dia final, início exato, fim exato)."""
+    return [
+        (inicio, fim, max(_inicio_do_dia(inicio), desde), min(_fim_do_dia(fim), ate))
+        for inicio, fim in dividir_em_baldes(_data_local(desde), _data_local(ate))
+    ]
+
+
+def _somar_faixas(valores):
+    return None if any(valor is None for valor in valores) else sum(valores)
 
 
 def _parse_timestamp_instagram(valor):

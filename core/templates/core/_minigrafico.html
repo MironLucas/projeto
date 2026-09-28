@@ -1,0 +1,37 @@
+{% load humanize l10n %}
+{% if grafico %}
+  <div class="spark">
+    <div class="spark-plot">
+      <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="spark-area-{{ chave }}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" style="stop-color: var(--accent); stop-opacity: 0.28"></stop>
+            <stop offset="1" style="stop-color: var(--accent); stop-opacity: 0"></stop>
+          </linearGradient>
+        </defs>
+        {% if grafico.area %}<path class="spark-area" d="{{ grafico.area }}" fill="url(#spark-area-{{ chave }})"></path>{% endif %}
+        {% if grafico.linha_anterior %}<path class="spark-linha spark-linha--anterior" d="{{ grafico.linha_anterior }}"></path>{% endif %}
+        <path class="spark-linha spark-linha--atual" d="{{ grafico.linha_atual }}"></path>
+      </svg>
+      <span class="spark-final" style="left: {{ grafico.final.x|unlocalize }}%; top: {{ grafico.final.y|unlocalize }}%"></span>
+      <div class="spark-slots">
+        {% for fatia in grafico.fatias %}
+          <span class="spark-slot" tabindex="0" style="width: {{ fatia.largura|unlocalize }}%"
+                aria-label="{% if fatia.atual %}{{ periodo_label }}{% else %}Período anterior{% endif %}, {{ fatia.descricao }}: {{ fatia.valor|intcomma }} {{ unidade }}">
+            <span class="spark-marca{% if not fatia.atual %} spark-marca--anterior{% endif %}" style="left: {{ fatia.x|unlocalize }}%; top: {{ fatia.y|unlocalize }}%"></span>
+            <span class="spark-tip" aria-hidden="true">
+              <span>{% if fatia.atual %}{{ periodo_label }}{% else %}Anterior{% endif %} · {{ fatia.descricao }}</span>
+              <strong>{{ fatia.valor|intcomma }}</strong>
+            </span>
+          </span>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="spark-eixo" aria-hidden="true">
+      {% with primeira=grafico.fatias|first ultima=grafico.fatias|last %}
+        <span>{{ primeira.descricao }}</span>
+        <span>{{ ultima.descricao }}</span>
+      {% endwith %}
+    </div>
+  </div>
+{% endif %}
