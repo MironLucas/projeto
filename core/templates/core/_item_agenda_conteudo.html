@@ -1,6 +1,20 @@
-{% if item.imagem_tipo %}
-  <img class="day-item-img" src="{% url 'agenda_imagem' item.id %}?v={{ item.imagem_versao }}" alt="" loading="lazy">
-{% endif %}
+{% with midias=item.midias.all %}
+  {% if midias %}
+    <span class="day-item-galeria{% if midias|length == 1 %} is-unica{% endif %}">
+      {% for midia in midias|slice:':4' %}
+        <span class="day-item-midia" data-url="{% url 'agenda_midia' midia.id %}" data-video="{{ midia.e_video|yesno:'1,' }}">
+          {% if midia.e_video %}
+            <video src="{% url 'agenda_midia' midia.id %}#t=0.1" preload="metadata" muted playsinline></video>
+            <span class="midia-play" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"></path></svg></span>
+          {% else %}
+            <img src="{% url 'agenda_midia' midia.id %}" alt="" loading="lazy">
+          {% endif %}
+          {% if forloop.last and midias|length > 4 %}<span class="day-item-mais">+{{ midias|length|add:'-4' }}</span>{% endif %}
+        </span>
+      {% endfor %}
+    </span>
+  {% endif %}
+{% endwith %}
 <span class="day-item-text">
   <span class="day-item-title">{{ item.titulo }}</span>
   {% if item.legenda %}<span class="day-item-caption">{{ item.legenda }}</span>{% endif %}

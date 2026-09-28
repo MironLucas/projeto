@@ -531,44 +531,64 @@ class AgendaTests(TestCase):
         item.refresh_from_db()
         self.assertEqual((item.titulo, item.data, item.cor), ('Olá, gravar stories', date(2026, 10, 2), '#3ddc84'))
 
-    def test_item_com_legenda_e_imagem(self):
+    def _arquivo(self, nome, tipo, dados=b'dados'):
         from django.core.files.uploadedfile import SimpleUploadedFile
-        from .models import ItemAgenda
-        imagem = SimpleUploadedFile('capa.png', b'\x89PNG dados', content_type='image/png')
-        self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Post lançamento',
-                                                 'legenda': 'Texto do post\ncom duas linhas', 'imagem': imagem})
-        item = ItemAgenda.objects.get(usuario=self.usuario)
-        self.assertEqual((item.legenda, item.imagem_tipo, item.imagem_versao),
-                         ('Texto do post\ncom duas linhas', 'image/png', 1))
+        return SimpleUploadedFile(nome, dados, content_type=tipo)
 
-        arquivo = self.client.get(f'/programacao/itens/{item.id}/imagem/')
-        self.assertEqual((arquivo.status_code, arquivo['Content-Type'], arquivo.content), (200, 'image/png', b'\x89PNG dados'))
+    def test_item_com_legenda_e_varias_imagens_e_videos(self):
+        from .models import ItemAgenda
+        self.client.post('/programacao/itens/', {
+            'data': '2026-10-01', 'titulo': 'Post lançamento', 'legenda': 'Texto do post\ncom duas linhas',
+            'midias': [self._arquivo('capa.png', 'image/png', b'\x89PNG capa'),
+                       self._arquivo('reels.mp4', 'video/mp4', b'0123456789'),
+                       self._arquivo('foto.jpg', 'image/jpeg')],
+        })
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+        self.assertEqual(item.legenda, 'Texto do post\ncom duas linhas')
+        capa, reels, foto = item.midias.all()
+        self.assertEqual([m.tipo for m in (capa, reels, foto)], ['image/png', 'video/mp4', 'image/jpeg'])
+        self.assertTrue(reels.e_video)
+
+        arquivo = self.client.get(f'/programacao/midias/{capa.id}/')
+        self.assertEqual((arquivo.status_code, arquivo['Content-Type'], arquivo.content), (200, 'image/png', b'\x89PNG capa'))
+        parte = self.client.get(f'/programacao/midias/{reels.id}/', HTTP_RANGE='bytes=2-5')
+        self.assertEqual((parte.status_code, parte.content, parte['Content-Range']), (206, b'2345', 'bytes 2-5/10'))
 
         pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
-        self.assertContains(pagina, f'src="/programacao/itens/{item.id}/imagem/?v=1"', count=1)
+        self.assertContains(pagina, f'<img src="/programacao/midias/{capa.id}/" alt="" loading="lazy">', html=True)
+        self.assertContains(pagina, f'src="/programacao/midias/{reels.id}/#t=0.1"')
         self.assertContains(pagina, '<span class="day-item-caption">Texto do post\ncom duas linhas</span>', html=True)
+        self.assertContains(pagina, f'&quot;id&quot;: {foto.id}')  # a janela recebe a lista para a galeria
 
-        # Editar sem mandar arquivo mantém a imagem; marcar "remover" tira.
-        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Post lançamento', 'legenda': ''})
-        item.refresh_from_db()
-        self.assertEqual((item.legenda, item.imagem_tipo), ('', 'image/png'))
-        self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Post lançamento', 'remover_imagem': '1'})
-        item.refresh_from_db()
-        self.assertEqual(item.imagem_tipo, '')
-        self.assertEqual(self.client.get(f'/programacao/itens/{item.id}/imagem/').status_code, 404)
+        # Na edição: a lixeira remove só a marcada e dá para somar novas.
+        self.client.post(f'/programacao/itens/{item.id}/editar/', {
+            'titulo': 'Post lançamento', 'remover_midias': [str(reels.id)],
+            'midias': [self._arquivo('nova.webp', 'image/webp')],
+        })
+        self.assertEqual([m.nome for m in item.midias.all()], ['capa.png', 'foto.jpg', 'nova.webp'])
+        self.assertEqual(self.client.get(f'/programacao/midias/{reels.id}/').status_code, 404)
+
+    def test_limite_de_midias_e_tipos_aceitos(self):
+        from .models import ItemAgenda
+        resp = self.client.post('/programacao/itens/', {
+            'data': '2026-10-01', 'titulo': 'x', 'midias': [self._arquivo('a.pdf', 'application/pdf')],
+        }, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('“a.pdf” não é aceito', resp.json()['erro'])
+
+        onze = [self._arquivo(f'{i}.png', 'image/png') for i in range(11)]
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'midias': onze},
+                                HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'erro': 'Cada item aceita até 10 imagens ou vídeos.'})
+        self.assertFalse(ItemAgenda.objects.exists())
 
     def test_janela_envia_em_segundo_plano_e_recebe_json(self):
-        from django.core.files.uploadedfile import SimpleUploadedFile
         from .models import ItemAgenda
         resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Reels'},
                                 HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.json(), {'ok': True, 'url': '/programacao/?mes=2026-10&dia=2026-10-01'})
         item = ItemAgenda.objects.get(usuario=self.usuario)
 
-        resp = self.client.post(f'/programacao/itens/{item.id}/editar/',
-                                {'titulo': 'Reels', 'imagem': SimpleUploadedFile('a.txt', b'x', content_type='text/plain')},
-                                HTTP_X_REQUESTED_WITH='fetch')
-        self.assertEqual((resp.status_code, resp.json()), (400, {'erro': 'Envie uma imagem JPG, PNG, GIF ou WebP.'}))
         resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': ' '}, HTTP_X_REQUESTED_WITH='fetch')
         self.assertEqual(resp.json(), {'erro': 'Preencha o título e o dia.'})
 
@@ -576,18 +596,11 @@ class AgendaTests(TestCase):
         self.assertEqual(resp.json()['url'], '/programacao/?mes=2026-10&dia=2026-10-01')
         self.assertFalse(ItemAgenda.objects.exists())
 
-    def test_arquivo_que_nao_e_imagem_e_recusado(self):
-        from django.core.files.uploadedfile import SimpleUploadedFile
-        from .models import ItemAgenda
-        video = SimpleUploadedFile('video.mp4', b'dados', content_type='video/mp4')
-        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'imagem': video}, follow=True)
-        self.assertContains(resp, 'Envie uma imagem JPG, PNG, GIF ou WebP.')
-        self.assertFalse(ItemAgenda.objects.exists())
-
     def test_nao_mexe_em_item_de_outro_usuario(self):
-        from .models import ItemAgenda
+        from .models import ItemAgenda, MidiaItemAgenda
         item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
-        self.assertEqual(self.client.get(f'/programacao/itens/{item.id}/imagem/').status_code, 404)
+        midia = MidiaItemAgenda.objects.create(item=item, tipo='image/png', conteudo=b'x')
+        self.assertEqual(self.client.get(f'/programacao/midias/{midia.id}/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'x'}).status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)

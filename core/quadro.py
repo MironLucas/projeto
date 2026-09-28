@@ -1,14 +1,13 @@
-import re
-
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Max
-from django.http import Http404, HttpResponse, JsonResponse
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from .arquivos import responder_arquivo
 from .models import ArquivoCartao, Cartao, ListaTarefas
 
 LISTAS_INICIAIS = ['A fazer', 'Fazendo', 'Feito']
@@ -177,32 +176,7 @@ def excluir_cartao(request, cartao_id):
 def arquivo_cartao(request, cartao_id):
     cartao = get_object_or_404(Cartao, id=cartao_id, lista__usuario=request.conta)
     arquivo = get_object_or_404(ArquivoCartao, cartao=cartao)
-    dados = bytes(arquivo.conteudo)
-    total = len(dados)
-    inicio, fim, status = 0, total - 1, 200
-
-    # Suporte a Range: o Safari (iPhone) só toca vídeo se o servidor aceitar pedidos por partes.
-    faixa = re.fullmatch(r'bytes=(\d*)-(\d*)', request.headers.get('Range', ''))
-    if faixa and (faixa[1] or faixa[2]):
-        if faixa[1]:
-            inicio = int(faixa[1])
-            fim = min(int(faixa[2]), total - 1) if faixa[2] else total - 1
-        else:
-            inicio = max(0, total - int(faixa[2]))
-        if inicio > fim:
-            resposta = HttpResponse(status=416)
-            resposta['Content-Range'] = f'bytes */{total}'
-            return resposta
-        status = 206
-
-    resposta = HttpResponse(dados[inicio:fim + 1], status=status, content_type=cartao.midia_tipo)
-    resposta['Accept-Ranges'] = 'bytes'
-    resposta['Content-Length'] = str(fim - inicio + 1)
-    resposta['Content-Disposition'] = 'inline'
-    resposta['Cache-Control'] = 'private, max-age=86400'
-    if status == 206:
-        resposta['Content-Range'] = f'bytes {inicio}-{fim}/{total}'
-    return resposta
+    return responder_arquivo(request, bytes(arquivo.conteudo), cartao.midia_tipo)
 
 
 def _validar_midia(arquivo):

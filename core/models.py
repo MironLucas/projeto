@@ -51,9 +51,6 @@ class ItemAgenda(models.Model):
     legenda = models.TextField(blank=True)
     cor = models.CharField(max_length=7, default='#7c5cff')
     concluido = models.BooleanField(default=False)
-    # Tipo e versão da imagem ficam aqui; os bytes ficam em ArquivoItemAgenda para a agenda não carregá-los.
-    imagem_tipo = models.CharField(max_length=50, blank=True)
-    imagem_versao = models.PositiveIntegerField(default=0)
     criado_em = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -119,9 +116,21 @@ class ArquivoCartao(models.Model):
     conteudo = models.BinaryField()
 
 
-class ArquivoItemAgenda(models.Model):
-    item = models.OneToOneField(ItemAgenda, on_delete=models.CASCADE, primary_key=True, related_name='arquivo')
+class MidiaItemAgenda(models.Model):
+    """Imagem ou vídeo de um item da programação; um item pode ter vários."""
+    item = models.ForeignKey(ItemAgenda, on_delete=models.CASCADE, related_name='midias')
+    tipo = models.CharField(max_length=50)
+    nome = models.CharField(max_length=255, blank=True)
+    tamanho = models.PositiveIntegerField(default=0)
+    posicao = models.PositiveIntegerField(default=0)
     conteudo = models.BinaryField()
+
+    class Meta:
+        ordering = ['posicao', 'id']
+
+    @property
+    def e_video(self):
+        return self.tipo.startswith('video/')
 
 
 class Perfil(models.Model):

@@ -1,20 +1,23 @@
 import calendar
+import json
 from datetime import date, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import HttpResponse, JsonResponse
+from django.db.models import Max, Prefetch
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .models import ArquivoItemAgenda, ItemAgenda
-from .quadro import CORES_LISTA, CORES_VALIDAS, LIMITE_MIDIA_MB, TAMANHO_MAXIMO_LEGENDA
+from .arquivos import responder_arquivo
+from .models import ItemAgenda, MidiaItemAgenda
+from .quadro import CORES_LISTA, CORES_VALIDAS, LIMITE_MIDIA_MB, TAMANHO_MAXIMO_LEGENDA, TIPOS_DE_MIDIA
 
 COR_PADRAO = CORES_LISTA[0][0]
-TIPOS_DE_IMAGEM = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+MIDIAS_POR_ITEM = 10
 
 MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
                  'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -36,6 +39,16 @@ def programacao(request):
     por_dia = {}
     for item in itens:
         por_dia.setdefault(item.data, []).append(item)
+    itens_selecionado = list(
+        ItemAgenda.objects.filter(usuario=request.conta, data=selecionado)
+        .prefetch_related(Prefetch('midias', queryset=MidiaItemAgenda.objects.defer('conteudo')))
+    )
+    for item in itens_selecionado:
+        # A janela de edição recebe a lista de mídias do item para montar a galeria.
+        item.midias_json = json.dumps([
+            {'id': midia.id, 'url': reverse('agenda_midia', args=[midia.id]), 'video': midia.e_video}
+            for midia in item.midias.all()
+        ])
 
     return render(request, 'core/programacao.html', {
         'active_menu': 'programacao',
@@ -49,11 +62,12 @@ def programacao(request):
         'mes_de_hoje': f'{hoje:%Y-%m}',
         'selecionado': selecionado,
         'titulo_selecionado': _data_por_extenso(selecionado),
-        'itens_selecionado': por_dia.get(selecionado, []),
+        'itens_selecionado': itens_selecionado,
         'cores': CORES_LISTA,
         'cor_padrao': COR_PADRAO,
-        'tipos_de_imagem': ','.join(sorted(TIPOS_DE_IMAGEM)),
+        'tipos_de_midia': ','.join(sorted(TIPOS_DE_MIDIA)),
         'limite_midia_mb': LIMITE_MIDIA_MB,
+        'midias_por_item': MIDIAS_POR_ITEM,
         'tamanho_maximo_legenda': TAMANHO_MAXIMO_LEGENDA,
     })
 
@@ -65,16 +79,15 @@ def adicionar_item(request):
     titulo = request.POST.get('titulo', '').strip()[:200]
     if not data or not titulo:
         return _responder(request, data, 'Preencha o título e o dia.')
-    imagem = request.FILES.get('imagem')
-    erro = _validar_imagem(imagem)
+    novas = request.FILES.getlist('midias')
+    erro = _validar_midias(novas, ja_existentes=0)
     if erro:
         return _responder(request, data, erro)
     with transaction.atomic():
         item = ItemAgenda.objects.create(
             usuario=request.conta, data=data, titulo=titulo, cor=_ler_cor(request), legenda=_ler_legenda(request),
         )
-        if imagem:
-            _salvar_imagem(item, imagem)
+        _salvar_midias(item, novas)
     return _responder(request, data)
 
 
@@ -82,8 +95,9 @@ def adicionar_item(request):
 @login_required
 def editar_item(request, item_id):
     item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
-    imagem = request.FILES.get('imagem')
-    erro = _validar_imagem(imagem)
+    remover = item.midias.filter(id__in=_ler_ids(request.POST.getlist('remover_midias')))
+    novas = request.FILES.getlist('midias')
+    erro = _validar_midias(novas, ja_existentes=item.midias.count() - remover.count())
     if erro:
         return _responder(request, item.data, erro)
     titulo = request.POST.get('titulo', '').strip()[:200]
@@ -93,23 +107,16 @@ def editar_item(request, item_id):
     item.cor = _ler_cor(request, item.cor)
     item.legenda = _ler_legenda(request)
     with transaction.atomic():
-        if imagem:
-            _salvar_imagem(item, imagem)
-        elif request.POST.get('remover_imagem') and item.imagem_tipo:
-            ArquivoItemAgenda.objects.filter(item=item).delete()
-            item.imagem_tipo = ''
+        remover.delete()
+        _salvar_midias(item, novas)
         item.save()
     return _responder(request, item.data)
 
 
 @login_required
-def imagem_item(request, item_id):
-    item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
-    arquivo = get_object_or_404(ArquivoItemAgenda, item=item)
-    resposta = HttpResponse(bytes(arquivo.conteudo), content_type=item.imagem_tipo)
-    resposta['Content-Disposition'] = 'inline'
-    resposta['Cache-Control'] = 'private, max-age=86400'
-    return resposta
+def midia_item(request, midia_id):
+    midia = get_object_or_404(MidiaItemAgenda, id=midia_id, item__usuario=request.conta)
+    return responder_arquivo(request, bytes(midia.conteudo), midia.tipo)
 
 
 @require_POST
@@ -166,21 +173,29 @@ def _ler_legenda(request):
     return request.POST.get('legenda', '').strip()[:TAMANHO_MAXIMO_LEGENDA]
 
 
-def _validar_imagem(imagem):
-    if not imagem:
-        return None
-    if imagem.content_type not in TIPOS_DE_IMAGEM:
-        return 'Envie uma imagem JPG, PNG, GIF ou WebP.'
-    if imagem.size > LIMITE_MIDIA_MB * 1024 * 1024:
-        return f'A imagem tem mais de {LIMITE_MIDIA_MB} MB. Envie uma versão menor.'
+def _validar_midias(arquivos, ja_existentes):
+    if ja_existentes + len(arquivos) > MIDIAS_POR_ITEM:
+        return f'Cada item aceita até {MIDIAS_POR_ITEM} imagens ou vídeos.'
+    for arquivo in arquivos:
+        if arquivo.content_type not in TIPOS_DE_MIDIA:
+            return f'“{arquivo.name}” não é aceito. Envie imagens (JPG, PNG, GIF, WebP) ou vídeos (MP4, MOV, WebM).'
+        if arquivo.size > LIMITE_MIDIA_MB * 1024 * 1024:
+            return f'“{arquivo.name}” tem mais de {LIMITE_MIDIA_MB} MB. Envie uma versão menor.'
     return None
 
 
-def _salvar_imagem(item, imagem):
-    ArquivoItemAgenda.objects.update_or_create(item=item, defaults={'conteudo': b''.join(imagem.chunks())})
-    item.imagem_tipo = imagem.content_type
-    item.imagem_versao += 1
-    item.save(update_fields=['imagem_tipo', 'imagem_versao'])
+def _salvar_midias(item, arquivos):
+    ultima = item.midias.aggregate(m=Max('posicao'))['m']
+    proxima = 0 if ultima is None else ultima + 1
+    for indice, arquivo in enumerate(arquivos):
+        MidiaItemAgenda.objects.create(
+            item=item, tipo=arquivo.content_type, nome=arquivo.name[:255], tamanho=arquivo.size,
+            posicao=proxima + indice, conteudo=b''.join(arquivo.chunks()),
+        )
+
+
+def _ler_ids(valores):
+    return [int(valor) for valor in valores if valor.isdigit()]
 
 
 def _ler_cor(request, atual=COR_PADRAO):

@@ -3024,15 +3024,6 @@ button.day-item-body {
   cursor: pointer;
 }
 
-.day-item-img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  border-radius: 8px;
-  background: var(--bg-soft);
-}
-
 .day-item-body .day-item-text {
   flex: 1;
   gap: 3px;
@@ -3401,47 +3392,6 @@ button.day-item-body {
   transition: width 0.2s ease;
 }
 
-.midia-ampliar {
-  position: relative;
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: zoom-in;
-}
-
-.midia-ampliar-dica {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(10, 12, 20, 0.65);
-  backdrop-filter: blur(6px);
-  color: #fff;
-  opacity: 0.85;
-  transition: opacity 0.15s;
-}
-
-.midia-ampliar:hover .midia-ampliar-dica,
-.midia-ampliar:focus-visible .midia-ampliar-dica {
-  opacity: 1;
-}
-
-.midia-ampliar-dica svg {
-  width: 15px;
-  height: 15px;
-}
-
-.day-item-img.is-ampliavel {
-  cursor: zoom-in;
-}
-
 .lightbox {
   width: 100vw;
   height: 100vh;
@@ -3465,7 +3415,8 @@ button.day-item-body {
   background: rgba(3, 5, 12, 0.6);
 }
 
-.lightbox img {
+.lightbox img,
+.lightbox video {
   max-width: 96vw;
   max-height: 92vh;
   max-height: 92dvh;
@@ -3492,4 +3443,150 @@ button.day-item-body {
 .lightbox-fechar svg {
   width: 20px;
   height: 20px;
+}
+
+/* ---------- Programação: várias imagens e vídeos por item ---------- */
+.visualmente-oculto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.day-item-galeria {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+
+.day-item-galeria.is-unica {
+  grid-template-columns: 1fr;
+}
+
+.day-item-midia {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--bg-soft);
+}
+
+.day-item-galeria.is-unica .day-item-midia {
+  aspect-ratio: 16 / 10;
+}
+
+.day-item-midia img,
+.day-item-midia video,
+.galeria-abrir img,
+.galeria-abrir video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+}
+
+.day-item-midia.is-ampliavel {
+  cursor: zoom-in;
+}
+
+.midia-play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.6);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  pointer-events: none;
+}
+
+.midia-play svg {
+  width: 15px;
+  height: 15px;
+  margin-left: 2px;
+}
+
+.day-item-mais {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.6);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.galeria-edicao {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.galeria-item {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.galeria-abrir {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-soft);
+  cursor: zoom-in;
+}
+
+.galeria-abrir:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+.galeria-lixeira {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.72);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.galeria-lixeira:hover,
+.galeria-lixeira:focus-visible {
+  background: #e5484d;
+}
+
+.galeria-lixeira svg {
+  width: 14px;
+  height: 14px;
+}
+
+.galeria-add {
+  text-align: center;
 }
