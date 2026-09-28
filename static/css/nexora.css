@@ -3490,10 +3490,6 @@ button.day-item-body {
   pointer-events: none;
 }
 
-.day-item-midia.is-ampliavel {
-  cursor: zoom-in;
-}
-
 .midia-play {
   position: absolute;
   left: 50%;
@@ -3711,4 +3707,38 @@ button.day-item-body {
   white-space: nowrap;
   backdrop-filter: blur(4px);
   pointer-events: none;
+}
+
+/* Janela da programação: mais larga para os 5 formatos caberem numa linha. */
+.modal--largo {
+  width: min(600px, calc(100vw - 32px));
+}
+
+/* Quem só visualiza: janela aberta para ver, sem cara de clicável nos campos. */
+.formato-opcao:has(input:disabled),
+.swatch:has(input:disabled) {
+  cursor: default;
+}
+
+.formato-opcao:has(input:disabled):hover > span {
+  border-color: var(--border);
+  color: var(--text-dim);
+}
+
+.formato-opcao input:disabled:checked + span {
+  color: var(--text);
+}
+
+.formato-opcao input:disabled:not(:checked) + span,
+.swatch input:disabled:not(:checked) + span {
+  opacity: 0.45;
+}
+
+.field[readonly] {
+  cursor: default;
+}
+
+.field[readonly]:focus {
+  border-color: var(--border);
+  box-shadow: none;
 }

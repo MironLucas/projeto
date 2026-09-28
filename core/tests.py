@@ -1039,9 +1039,22 @@ class UsuariosEPermissoesTests(TestCase):
         self.assertNotContains(tarefas, 'class="board-grip"')
         self.assertNotContains(tarefas, 'js-config-lista"')
         self.assertNotContains(tarefas, 'placeholder="+ Nova coluna"')
-        self.assertNotContains(self.client.get('/programacao/'), 'O que fazer neste dia?')
         self.assertNotContains(self.client.get('/dashboard/'), 'Conectar com Instagram')
         self.assertContains(self.client.get('/dashboard/'), 'Visualização')
+
+    def test_visualizacao_abre_o_item_da_programacao_so_para_ver(self):
+        from .models import ItemAgenda
+        ItemAgenda.objects.create(usuario=self.admin, data=date(2026, 10, 1), titulo='Reels', formato='reels')
+        self._criar('vini', 'visualizador')
+        self._entrar_como('vini')
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
+        self.assertContains(pagina, 'class="day-item-body js-abrir-item" title="Ver detalhes"')
+        self.assertContains(pagina, 'data-formato="reels"')
+        self.assertContains(pagina, 'id="dialogItem"')
+        self.assertContains(pagina, '<input type="radio" name="formato" value="reels" required disabled>', html=True)
+        self.assertContains(pagina, 'placeholder="Sem legenda" readonly')
+        for so_de_quem_edita in ('data-editar=', 'id="novoItem"', 'id="itemSalvar"', 'id="itemExcluir"', 'id="itemAdicionarMidias"'):
+            self.assertNotContains(pagina, so_de_quem_edita)
 
     def test_admin_nao_edita_a_si_mesmo_nem_membro_de_outra_conta(self):
         from django.contrib.auth.models import User
