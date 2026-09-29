@@ -160,6 +160,13 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Imagens e vídeos da programação ficam em disco (pasta montada fora do container, em /opt/nexora/media).
+# Não há MEDIA_URL público: cada arquivo passa pela view, que confere a conta de quem pede.
+MEDIA_ROOT = Path(os.environ.get('MEDIA_ROOT', BASE_DIR / 'media'))
+# Envios grandes vão para um arquivo temporário na mesma pasta, para salvar ser só mover o arquivo.
+FILE_UPLOAD_TEMP_DIR = MEDIA_ROOT / '.envios'
+FILE_UPLOAD_TEMP_DIR.mkdir(parents=True, exist_ok=True)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.0/ref/settings/#default-auto-field
 

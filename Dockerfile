@@ -12,4 +12,5 @@ COPY . .
 RUN SECRET_KEY=somente-para-o-build DEBUG=False python manage.py collectstatic --noinput
 
 EXPOSE 8000
-CMD ["gunicorn", "projeto.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+# Threads: um envio de vídeo grande (ou alguém assistindo) não trava o sistema para os outros.
+CMD ["gunicorn", "projeto.wsgi:application", "--bind", "0.0.0.0:8000", "--worker-class", "gthread", "--workers", "3", "--threads", "8", "--timeout", "300"]

@@ -469,7 +469,14 @@ class NumeroCompactoTests(SimpleTestCase):
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class AgendaTests(TestCase):
     def setUp(self):
+        import tempfile
         from django.contrib.auth.models import User
+        # As mídias vão para o disco: cada teste usa uma pasta temporária própria.
+        pasta = tempfile.TemporaryDirectory()
+        self.addCleanup(pasta.cleanup)
+        configuracao = override_settings(MEDIA_ROOT=pasta.name)
+        configuracao.enable()
+        self.addCleanup(configuracao.disable)
         self.usuario = User.objects.create(username='agenda')
         self.outro = User.objects.create(username='outro')
         self.client.force_login(self.usuario)
@@ -550,9 +557,11 @@ class AgendaTests(TestCase):
         self.assertTrue(reels.e_video)
 
         arquivo = self.client.get(f'/programacao/midias/{capa.id}/')
-        self.assertEqual((arquivo.status_code, arquivo['Content-Type'], arquivo.content), (200, 'image/png', b'\x89PNG capa'))
+        self.assertEqual((arquivo.status_code, arquivo['Content-Type'], b''.join(arquivo.streaming_content)),
+                         (200, 'image/png', b'\x89PNG capa'))
         parte = self.client.get(f'/programacao/midias/{reels.id}/', HTTP_RANGE='bytes=2-5')
-        self.assertEqual((parte.status_code, parte.content, parte['Content-Range']), (206, b'2345', 'bytes 2-5/10'))
+        self.assertEqual((parte.status_code, b''.join(parte.streaming_content), parte['Content-Range']),
+                         (206, b'2345', 'bytes 2-5/10'))
 
         pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
         self.assertContains(pagina, f'<img src="/programacao/midias/{capa.id}/" alt="" loading="lazy">', html=True)
@@ -567,6 +576,44 @@ class AgendaTests(TestCase):
         })
         self.assertEqual([m.nome for m in item.midias.all()], ['capa.png', 'foto.jpg', 'nova.webp'])
         self.assertEqual(self.client.get(f'/programacao/midias/{reels.id}/').status_code, 404)
+
+    def test_videos_grandes_sao_aceitos_e_ficam_em_disco(self):
+        import os
+        from unittest import mock
+        from .models import ItemAgenda
+        video = self._arquivo('IMG_3055.mov', 'video/quicktime', b'v' * (26 * 1024 * 1024))
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'Reels', 'formato': 'reels',
+                                                         'midias': [video]}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.status_code, 200)
+        midia = ItemAgenda.objects.get(usuario=self.usuario).midias.get()
+        self.assertEqual((midia.nome, midia.tamanho), ('IMG_3055.mov', 26 * 1024 * 1024))
+        self.assertTrue(midia.arquivo.name.startswith('agenda/') and midia.arquivo.name.endswith('.mov'))
+        caminho = midia.arquivo.path
+        self.assertEqual(os.path.getsize(caminho), 26 * 1024 * 1024)
+
+        # Entrega em blocos, também por partes (Range).
+        parte = self.client.get(f'/programacao/midias/{midia.id}/', HTTP_RANGE='bytes=10-19')
+        self.assertEqual((parte.status_code, b''.join(parte.streaming_content)), (206, b'v' * 10))
+        inteiro = self.client.get(f'/programacao/midias/{midia.id}/')
+        self.assertEqual(inteiro['Content-Length'], str(26 * 1024 * 1024))
+
+        # Imagem continua limitada a 25 MB; vídeo acima do limite é recusado.
+        imagem = self._arquivo('foto.png', 'image/png', b'i' * (26 * 1024 * 1024))
+        resp = self.client.post('/programacao/itens/', {'data': '2026-10-01', 'titulo': 'x', 'formato': 'reels',
+                                                         'midias': [imagem]}, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'erro': '“foto.png” tem mais de 25 MB. Envie uma versão menor.'})
+        with mock.patch('core.agenda.LIMITE_VIDEO_MB', 1):
+            resp = self.client.post('/programacao/itens/', {
+                'data': '2026-10-01', 'titulo': 'x', 'formato': 'reels',
+                'midias': [self._arquivo('longo.mp4', 'video/mp4', b'v' * (2 * 1024 * 1024))],
+            }, HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'erro': '“longo.mp4” tem mais de 1 MB. Envie uma versão menor.'})
+
+        # Excluir o item apaga o arquivo do disco.
+        item = ItemAgenda.objects.get(usuario=self.usuario)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.client.post(f'/programacao/itens/{item.id}/excluir/')
+        self.assertFalse(os.path.exists(caminho))
 
     def test_limite_de_midias_e_tipos_aceitos(self):
         from .models import ItemAgenda
@@ -624,7 +671,7 @@ class AgendaTests(TestCase):
     def test_nao_mexe_em_item_de_outro_usuario(self):
         from .models import ItemAgenda, MidiaItemAgenda
         item = ItemAgenda.objects.create(usuario=self.outro, data=date(2026, 9, 24), titulo='Privado')
-        midia = MidiaItemAgenda.objects.create(item=item, tipo='image/png', conteudo=b'x')
+        midia = MidiaItemAgenda.objects.create(item=item, tipo='image/png', arquivo=self._arquivo('x.png', 'image/png'))
         self.assertEqual(self.client.get(f'/programacao/midias/{midia.id}/').status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/editar/', {'formato': 'reels', 'titulo': 'x'}).status_code, 404)
         self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/concluir/').status_code, 404)

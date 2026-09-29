@@ -5,19 +5,22 @@ from datetime import date, datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max, Prefetch
-from django.http import JsonResponse
+from django.db.models import Max
+from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .arquivos import responder_arquivo
+from .arquivos import responder_arquivo_em_disco
 from .models import ItemAgenda, MidiaItemAgenda
-from .quadro import CORES_LISTA, CORES_VALIDAS, LIMITE_MIDIA_MB, TAMANHO_MAXIMO_LEGENDA, TIPOS_DE_MIDIA
+from .quadro import CORES_LISTA, CORES_VALIDAS, TAMANHO_MAXIMO_LEGENDA, TIPOS_DE_MIDIA
 
 COR_PADRAO = CORES_LISTA[0][0]
 MIDIAS_POR_ITEM = 10
+# Vídeos gravados no celular passam fácil de 25 MB; como ficam em disco, o limite deles é bem maior.
+LIMITE_IMAGEM_MB = 25
+LIMITE_VIDEO_MB = 500
 ERRO_FORMATO = 'Escolha o formato: Carrossel, Estático, Reels, Stories ou Outro.'
 
 MESES_EXTENSO = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho',
@@ -42,7 +45,7 @@ def programacao(request):
         por_dia.setdefault(item.data, []).append(item)
     itens_selecionado = list(
         ItemAgenda.objects.filter(usuario=request.conta, data=selecionado)
-        .prefetch_related(Prefetch('midias', queryset=MidiaItemAgenda.objects.defer('conteudo')))
+        .prefetch_related('midias')
     )
     for item in itens_selecionado:
         # A janela de edição recebe a lista de mídias do item para montar a galeria.
@@ -67,7 +70,8 @@ def programacao(request):
         'cores': CORES_LISTA,
         'cor_padrao': COR_PADRAO,
         'tipos_de_midia': ','.join(sorted(TIPOS_DE_MIDIA)),
-        'limite_midia_mb': LIMITE_MIDIA_MB,
+        'limite_imagem_mb': LIMITE_IMAGEM_MB,
+        'limite_video_mb': LIMITE_VIDEO_MB,
         'midias_por_item': MIDIAS_POR_ITEM,
         'formatos': ItemAgenda.FORMATOS,
         'tamanho_maximo_legenda': TAMANHO_MAXIMO_LEGENDA,
@@ -126,7 +130,9 @@ def editar_item(request, item_id):
 @login_required
 def midia_item(request, midia_id):
     midia = get_object_or_404(MidiaItemAgenda, id=midia_id, item__usuario=request.conta)
-    return responder_arquivo(request, bytes(midia.conteudo), midia.tipo)
+    if not midia.arquivo or not midia.arquivo.storage.exists(midia.arquivo.name):
+        raise Http404('Arquivo não encontrado')
+    return responder_arquivo_em_disco(request, midia.arquivo.path, midia.tipo)
 
 
 @require_POST
@@ -194,8 +200,9 @@ def _validar_midias(arquivos, ja_existentes):
     for arquivo in arquivos:
         if arquivo.content_type not in TIPOS_DE_MIDIA:
             return f'“{arquivo.name}” não é aceito. Envie imagens (JPG, PNG, GIF, WebP) ou vídeos (MP4, MOV, WebM).'
-        if arquivo.size > LIMITE_MIDIA_MB * 1024 * 1024:
-            return f'“{arquivo.name}” tem mais de {LIMITE_MIDIA_MB} MB. Envie uma versão menor.'
+        limite = LIMITE_VIDEO_MB if arquivo.content_type.startswith('video/') else LIMITE_IMAGEM_MB
+        if arquivo.size > limite * 1024 * 1024:
+            return f'“{arquivo.name}” tem mais de {limite} MB. Envie uma versão menor.'
     return None
 
 
@@ -205,7 +212,7 @@ def _salvar_midias(item, arquivos):
     for indice, arquivo in enumerate(arquivos):
         MidiaItemAgenda.objects.create(
             item=item, tipo=arquivo.content_type, nome=arquivo.name[:255], tamanho=arquivo.size,
-            posicao=proxima + indice, conteudo=b''.join(arquivo.chunks()),
+            posicao=proxima + indice, arquivo=arquivo,
         )
 
 

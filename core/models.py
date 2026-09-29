@@ -1,5 +1,10 @@
+import uuid
+from pathlib import Path
+
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 
 
 class InstagramConnection(models.Model):
@@ -126,14 +131,19 @@ class ArquivoCartao(models.Model):
     conteudo = models.BinaryField()
 
 
+def caminho_midia_agenda(instancia, nome_original):
+    # Nome aleatório no disco: o nome original fica só no banco (campo nome).
+    return f'agenda/{uuid.uuid4().hex}{Path(nome_original).suffix.lower()[:10]}'
+
+
 class MidiaItemAgenda(models.Model):
-    """Imagem ou vídeo de um item da programação; um item pode ter vários."""
+    """Imagem ou vídeo de um item da programação; um item pode ter vários. O arquivo fica em MEDIA_ROOT."""
     item = models.ForeignKey(ItemAgenda, on_delete=models.CASCADE, related_name='midias')
     tipo = models.CharField(max_length=50)
     nome = models.CharField(max_length=255, blank=True)
-    tamanho = models.PositiveIntegerField(default=0)
+    tamanho = models.PositiveBigIntegerField(default=0)
     posicao = models.PositiveIntegerField(default=0)
-    conteudo = models.BinaryField()
+    arquivo = models.FileField(upload_to=caminho_midia_agenda, max_length=200)
 
     class Meta:
         ordering = ['posicao', 'id']
@@ -141,6 +151,14 @@ class MidiaItemAgenda(models.Model):
     @property
     def e_video(self):
         return self.tipo.startswith('video/')
+
+
+@receiver(post_delete, sender=MidiaItemAgenda)
+def apagar_arquivo_da_midia(sender, instance, **kwargs):
+    # Apaga do disco só depois que a exclusão for confirmada no banco (vale também ao excluir o item).
+    if instance.arquivo:
+        armazenamento, nome = instance.arquivo.storage, instance.arquivo.name
+        transaction.on_commit(lambda: armazenamento.delete(nome))
 
 
 class Perfil(models.Model):

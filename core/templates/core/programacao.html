@@ -126,7 +126,7 @@
       {% if pode_editar %}
         <button type="button" class="board-add-btn galeria-add" id="itemAdicionarMidias">+ Adicionar imagens ou vídeos</button>
         <input type="file" id="itemMidias" class="visualmente-oculto" accept="{{ tipos_de_midia }}" multiple tabindex="-1" aria-hidden="true">
-        <p class="field-hint">Imagens (JPG, PNG, GIF, WebP) ou vídeos (MP4, MOV, WebM), até {{ limite_midia_mb }} MB cada e {{ midias_por_item }} por item. Opcional.</p>
+        <p class="field-hint">Imagens (JPG, PNG, GIF, WebP) até {{ limite_imagem_mb }} MB, ou vídeos (MP4, MOV, WebM) até {{ limite_video_mb }} MB; no máximo {{ midias_por_item }} por item. Opcional.</p>
       {% endif %}
 
       <span class="field-label">Cor</span>
@@ -166,7 +166,8 @@
   <script>
     (function () {
       var podeEditar = {{ pode_editar|yesno:'true,false' }};
-      var LIMITE_MB = {{ limite_midia_mb }};
+      var LIMITE_IMAGEM_MB = {{ limite_imagem_mb }};
+      var LIMITE_VIDEO_MB = {{ limite_video_mb }};
       var MAXIMO = {{ midias_por_item }};
       var TIPOS = '{{ tipos_de_midia }}'.split(',');
 
@@ -286,10 +287,11 @@
             var total = existentes.length - removidas.length + novas.length;
             var recusadas = [];
             Array.prototype.forEach.call(campoMidias.files, function (arquivo) {
+              var limite = arquivo.type.indexOf('video/') === 0 ? LIMITE_VIDEO_MB : LIMITE_IMAGEM_MB;
               if (TIPOS.indexOf(arquivo.type) === -1) {
                 recusadas.push('“' + arquivo.name + '” não é imagem ou vídeo aceito.');
-              } else if (arquivo.size > LIMITE_MB * 1024 * 1024) {
-                recusadas.push('“' + arquivo.name + '” tem mais de ' + LIMITE_MB + ' MB.');
+              } else if (arquivo.size > limite * 1024 * 1024) {
+                recusadas.push('“' + arquivo.name + '” tem mais de ' + limite + ' MB.');
               } else if (total >= MAXIMO) {
                 recusadas.push('Cada item aceita até ' + MAXIMO + ' imagens ou vídeos.');
               } else {
