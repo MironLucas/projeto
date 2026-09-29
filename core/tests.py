@@ -1232,3 +1232,39 @@ class PaginasDaMetaTests(TestCase):
         self.assertTrue(SolicitacaoExclusao.objects.filter(codigo=codigo, concluida_em__isnull=False).exists())
         self.assertContains(self.client.get('/exclusao-de-dados/', {'codigo': codigo}), 'concluída')
         self.assertContains(self.client.get('/exclusao-de-dados/', {'codigo': 'nao-existe'}), 'não encontrado')
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class PaineisSeparadosTests(TestCase):
+    def test_criar_painel_cria_admin_dono_da_propria_conta(self):
+        from django.contrib.auth.models import User
+        from django.core.management import call_command
+        with mock.patch('core.management.commands.criar_painel.getpass.getpass', return_value='Painel#Novo2026'):
+            call_command('criar_painel', 'mironlucas2', stdout=mock.Mock())
+        novo = User.objects.get(username='mironlucas2')
+        self.assertTrue(novo.check_password('Painel#Novo2026'))
+        self.assertEqual((novo.perfil.conta, novo.perfil.papel), (novo, 'admin'))
+
+    def test_um_painel_nao_ve_os_dados_do_outro(self):
+        from django.contrib.auth.models import User
+        from .models import ItemAgenda, ListaTarefas, Perfil
+        primeiro = User.objects.get(username='mironlucas')
+        segundo = User.objects.create_user('mironlucas2', password='x')
+        Perfil.objects.create(usuario=segundo, conta=segundo, papel=Perfil.ADMIN)
+        InstagramConnection.objects.create(user=primeiro, instagram_user_id='1', instagram_username='conta_um', access_token='t')
+        item = ItemAgenda.objects.create(usuario=primeiro, data=date(2026, 10, 1), titulo='Programação do painel 1')
+        self.client.force_login(primeiro)
+        self.client.get('/tarefas/')
+        lista = ListaTarefas.objects.filter(usuario=primeiro).first()
+
+        self.client.force_login(segundo)
+        self.assertContains(self.client.get('/dashboard/'), 'Conectar com Instagram')
+        self.assertNotContains(self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'}),
+                               'Programação do painel 1')
+        self.assertEqual(self.client.post(f'/programacao/itens/{item.id}/excluir/').status_code, 404)
+        self.assertEqual(self.client.post(f'/tarefas/listas/{lista.id}/excluir/').status_code, 404)
+        self.assertNotContains(self.client.get('/usuarios/'), '@mironlucas<')
+
+        # Quem o segundo painel cadastra em Usuários entra no segundo painel.
+        self.client.post('/usuarios/', {'nome': 'Bia', 'usuario': 'bia', 'senha': 'Senha#Forte2026', 'papel': 'editor'})
+        self.assertEqual(User.objects.get(username='bia').perfil.conta, segundo)
