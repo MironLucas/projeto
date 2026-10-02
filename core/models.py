@@ -171,10 +171,15 @@ class Perfil(models.Model):
         (VISUALIZADOR, 'Visualização'),
     ]
 
-    usuario = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfil')
-    # Dono dos dados que este usuário acessa: o Instagram, a programação e as tarefas são dessa conta.
+    # Um Perfil é o acesso de uma pessoa a uma conta; a mesma pessoa pode ter acesso a várias contas
+    # (as que ela adicionou e as que outros administradores compartilharam com ela).
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='perfis')
+    # Dono dos dados: o Instagram, a programação e as tarefas são dessa conta.
     conta = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='membros')
     papel = models.CharField(max_length=20, choices=PAPEIS, default=VISUALIZADOR)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['usuario', 'conta'], name='um_acesso_por_conta')]
 
     def __str__(self):
         return f'{self.usuario} ({self.get_papel_display()})'

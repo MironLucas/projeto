@@ -11,14 +11,24 @@ from urllib.parse import urlencode
 import requests
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 
 from .graficos import DIAS_SEMANA, intervalos_do_grafico, montar_grafico
 from .minigrafico import descrever_balde, dividir_em_baldes, montar_minigrafico
-from .models import InstagramConnection, SeguidoresDia
+from .models import InstagramConnection, Perfil, SeguidoresDia
+from .permissoes import abrir_conta
+
+User = get_user_model()
+PREFIXO_CONTA_ADICIONADA = 'conta-'
+ERRO_CONTA_JA_CONECTADA = (
+    'Esta conta já está conectada por um usuário. Entre em contato com o administrador da conta ou com o nosso suporte.'
+)
 
 INSTAGRAM_AUTH_URL = 'https://api.instagram.com/oauth/authorize'
 INSTAGRAM_TOKEN_URL = 'https://api.instagram.com/oauth/access_token'
@@ -185,8 +195,14 @@ def instagram_conectar(request):
         )
         return redirect('dashboard')
 
+    # "Adicionar conta" (?nova=1) cria uma conta nova; sem isso, conecta o Instagram na conta aberta.
+    nova = request.GET.get('nova') == '1'
+    if not nova and not request.perfil.pode_editar:
+        messages.error(request, 'Seu acesso é somente de visualização.')
+        return redirect('dashboard')
     state = secrets.token_urlsafe(24)
     request.session['instagram_oauth_state'] = state
+    request.session['instagram_oauth_nova'] = nova
 
     params = {
         'client_id': settings.INSTAGRAM_CLIENT_ID,
@@ -200,7 +216,8 @@ def instagram_conectar(request):
 
 @login_required
 def instagram_callback(request):
-    if not request.perfil.pode_editar:
+    nova = request.session.pop('instagram_oauth_nova', False)
+    if not nova and not request.perfil.pode_editar:
         messages.error(request, 'Seu acesso é somente de visualização.')
         return redirect('dashboard')
     erro = request.GET.get('error_description') or request.GET.get('error')
@@ -227,22 +244,68 @@ def instagram_callback(request):
         messages.error(request, 'O Instagram retornou uma resposta inesperada. Tente novamente.')
         return redirect('dashboard')
 
-    InstagramConnection.objects.update_or_create(
-        user=request.conta,
-        defaults={
-            'instagram_user_id': str(perfil.get('id', '')),
-            'instagram_conta_id': str(perfil.get('user_id', '')),
-            'instagram_username': perfil.get('username', ''),
-            'account_type': perfil.get('account_type', ''),
-            'access_token': token_longo['access_token'],
-            'token_expires_at': timezone.now() + timedelta(seconds=token_longo.get('expires_in', 5184000)),
-        },
-    )
+    dados = {
+        'instagram_user_id': str(perfil.get('id', '')),
+        'instagram_conta_id': str(perfil.get('user_id', '')),
+        'instagram_username': perfil.get('username', ''),
+        'account_type': perfil.get('account_type', ''),
+        'access_token': token_longo['access_token'],
+        'token_expires_at': timezone.now() + timedelta(seconds=token_longo.get('expires_in', 5184000)),
+    }
+
+    # Cada Instagram fica em uma conta só, com um administrador.
+    existente = _conexao_do_mesmo_instagram(dados)
+    if existente and existente.user_id != (None if nova else request.conta.id):
+        if Perfil.objects.filter(usuario=request.user, conta=existente.user).exists():
+            # Já está no painel desta pessoa: renova o acesso e só abre a conta.
+            InstagramConnection.objects.filter(pk=existente.pk).update(**dados)
+            abrir_conta(request, existente.user_id)
+            messages.info(request, f'@{dados["instagram_username"]} já está no seu painel.')
+            return redirect('dashboard')
+        messages.error(request, ERRO_CONTA_JA_CONECTADA)
+        return redirect('dashboard')
+
+    with transaction.atomic():
+        conta = _criar_conta_para(request.user, dados['instagram_username']) if nova else request.conta
+        InstagramConnection.objects.update_or_create(user=conta, defaults=dados)
+        # Contas adicionadas guardam o @ como nome, para aparecer no menu mesmo se forem desconectadas.
+        if e_conta_adicionada(conta) and conta.first_name != f'@{dados["instagram_username"]}':
+            conta.first_name = f'@{dados["instagram_username"]}'[:150]
+            conta.save(update_fields=['first_name'])
+    abrir_conta(request, conta.id)
     return redirect('dashboard')
+
+
+def e_conta_adicionada(conta):
+    return not conta.is_active and conta.username.startswith(PREFIXO_CONTA_ADICIONADA)
+
+
+def _conexao_do_mesmo_instagram(dados):
+    filtro = Q(instagram_user_id=dados['instagram_user_id'])
+    if dados['instagram_conta_id']:
+        filtro |= Q(instagram_conta_id=dados['instagram_conta_id'])
+    return InstagramConnection.objects.filter(filtro).first()
+
+
+def _criar_conta_para(pessoa, username):
+    """Conta nova (espaço com Instagram, programação, tarefas e usuários próprios) administrada por quem adicionou.
+
+    É um registro de usuário inativo, sem senha, que ninguém usa para entrar: só agrupa os dados da conta.
+    """
+    conta = User.objects.create(
+        username=f'{PREFIXO_CONTA_ADICIONADA}{secrets.token_hex(6)}', first_name=f'@{username}'[:150], is_active=False,
+    )
+    conta.set_unusable_password()
+    conta.save(update_fields=['password'])
+    Perfil.objects.create(usuario=pessoa, conta=conta, papel=Perfil.ADMIN)
+    return conta
 
 
 @login_required
 def instagram_desconectar(request):
+    if not request.perfil.e_admin:
+        messages.error(request, 'Só o administrador da conta pode desconectar o Instagram.')
+        return redirect('dashboard')
     InstagramConnection.objects.filter(user=request.conta).delete()
     messages.info(request, 'Conta do Instagram desconectada.')
     return redirect('dashboard')

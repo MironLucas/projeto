@@ -1033,8 +1033,8 @@ class UsuariosEPermissoesTests(TestCase):
         self.client.force_login(User.objects.get(username=usuario))
 
     def test_admin_inicial_tem_perfil_de_administrador(self):
-        self.assertEqual(self.admin.perfil.papel, 'admin')
-        self.assertEqual(self.admin.perfil.conta, self.admin)
+        self.assertEqual(self.admin.perfis.get().papel, 'admin')
+        self.assertEqual(self.admin.perfis.get().conta, self.admin)
         self.assertContains(self.client.get('/dashboard/'), 'href="/usuarios/"')
 
     def test_admin_cria_usuarios_na_propria_conta(self):
@@ -1042,7 +1042,7 @@ class UsuariosEPermissoesTests(TestCase):
         resp = self._criar('ana', 'editor')
         self.assertRedirects(resp, '/usuarios/', fetch_redirect_response=False)
         ana = User.objects.get(username='ana')
-        self.assertEqual((ana.perfil.papel, ana.perfil.conta), ('editor', self.admin))
+        self.assertEqual((ana.perfis.get().papel, ana.perfis.get().conta), ('editor', self.admin))
         self.assertTrue(ana.check_password('Nexora#2026x'))
         self.assertContains(self.client.get('/usuarios/'), '@ana')
 
@@ -1052,7 +1052,7 @@ class UsuariosEPermissoesTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.context['form'].errors['senha'])
         resp = self._criar('MironLucas', 'editor')
-        self.assertIn('Já existe um usuário com esse nome.', resp.context['form'].errors['usuario'])
+        self.assertIn('Essa pessoa já tem acesso a esta conta.', resp.context['form'].errors['usuario'])
         resp = self._criar('caio', 'admin')
         self.assertTrue(resp.context['form'].errors['papel'])
         self.assertFalse(User.objects.filter(username__in=['bia', 'caio']).exists())
@@ -1131,7 +1131,7 @@ class UsuariosEPermissoesTests(TestCase):
     def test_admin_nao_edita_a_si_mesmo_nem_membro_de_outra_conta(self):
         from django.contrib.auth.models import User
         from .models import Perfil
-        self.assertEqual(self.client.post(f'/usuarios/{self.admin.perfil.id}/excluir/').status_code, 404)
+        self.assertEqual(self.client.post(f'/usuarios/{self.admin.perfis.get().id}/excluir/').status_code, 404)
         outro_admin = User.objects.create_user('outro', password='x')
         estranho = User.objects.create_user('estranho', password='x')
         perfil_estranho = Perfil.objects.create(usuario=estranho, conta=outro_admin, papel='editor')
@@ -1142,11 +1142,11 @@ class UsuariosEPermissoesTests(TestCase):
         from django.contrib.auth.models import User
         self._criar('ana', 'editor')
         ana = User.objects.get(username='ana')
-        self.client.post(f'/usuarios/{ana.perfil.id}/editar/', {'nome': 'Ana Souza', 'papel': 'visualizador', 'senha': 'OutraSenha#99'})
+        self.client.post(f'/usuarios/{ana.perfis.get().id}/editar/', {'nome': 'Ana Souza', 'papel': 'visualizador', 'senha': 'OutraSenha#99'})
         ana.refresh_from_db()
-        self.assertEqual((ana.first_name, ana.perfil.papel), ('Ana Souza', 'visualizador'))
+        self.assertEqual((ana.first_name, ana.perfis.get().papel), ('Ana Souza', 'visualizador'))
         self.assertTrue(ana.check_password('OutraSenha#99'))
-        self.client.post(f'/usuarios/{ana.perfil.id}/excluir/')
+        self.client.post(f'/usuarios/{ana.perfis.get().id}/excluir/')
         self.assertFalse(User.objects.filter(username='ana').exists())
 
     def test_conectar_instagram_nao_mostra_mais_mensagem_de_sucesso(self):
@@ -1268,7 +1268,7 @@ class PaineisSeparadosTests(TestCase):
             call_command('criar_painel', 'mironlucas2', stdout=mock.Mock())
         novo = User.objects.get(username='mironlucas2')
         self.assertTrue(novo.check_password('Painel#Novo2026'))
-        self.assertEqual((novo.perfil.conta, novo.perfil.papel), (novo, 'admin'))
+        self.assertEqual((novo.perfis.get().conta, novo.perfis.get().papel), (novo, 'admin'))
 
     def test_um_painel_nao_ve_os_dados_do_outro(self):
         from django.contrib.auth.models import User
@@ -1292,7 +1292,167 @@ class PaineisSeparadosTests(TestCase):
 
         # Quem o segundo painel cadastra em Usuários entra no segundo painel.
         self.client.post('/usuarios/', {'nome': 'Bia', 'usuario': 'bia', 'senha': 'Senha#Forte2026', 'papel': 'editor'})
-        self.assertEqual(User.objects.get(username='bia').perfil.conta, segundo)
+        self.assertEqual(User.objects.get(username='bia').perfis.get().conta, segundo)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',
+                   INSTAGRAM_CLIENT_ID='app', INSTAGRAM_CLIENT_SECRET='segredo',
+                   INSTAGRAM_REDIRECT_URI='https://testserver/instagram/callback/')
+class VariasContasTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.pessoa = User.objects.get(username='mironlucas')
+        InstagramConnection.objects.create(user=self.pessoa, instagram_user_id='1', instagram_username='conta_um',
+                                           access_token='t')
+        self.client.force_login(self.pessoa)
+
+    def _adicionar(self, instagram_id, username, nova=True):
+        self.client.get('/instagram/conectar/', {'nova': '1'} if nova else {})
+        state = self.client.session['instagram_oauth_state']
+        with mock.patch('core.views._trocar_code_por_token_curto', return_value={'access_token': 'c'}), \
+                mock.patch('core.views._trocar_token_curto_por_longo', return_value={'access_token': 'novo', 'expires_in': 100}), \
+                mock.patch('core.views._buscar_perfil', return_value={'id': instagram_id, 'username': username}):
+            return self.client.get('/instagram/callback/', {'code': 'x', 'state': state})
+
+    def _outra_pessoa(self, usuario='outra'):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        outra = User.objects.create_user(usuario, password='x')
+        Perfil.objects.create(usuario=outra, conta=outra, papel=Perfil.ADMIN)
+        return outra
+
+    def test_adicionar_conta_cria_conta_nova_administrada_por_quem_adicionou_e_abre_ela(self):
+        from .models import Perfil
+        resp = self._adicionar('2', 'conta_dois')
+        self.assertRedirects(resp, '/dashboard/', fetch_redirect_response=False)
+        conexao = InstagramConnection.objects.get(instagram_user_id='2')
+        self.assertNotEqual(conexao.user, self.pessoa)
+        self.assertFalse(conexao.user.is_active)
+        self.assertFalse(conexao.user.has_usable_password())
+        self.assertEqual(Perfil.objects.get(usuario=self.pessoa, conta=conexao.user).papel, Perfil.ADMIN)
+        self.assertEqual(self.client.session['conta_atual'], conexao.user.id)
+        # A conta antiga continua igual, com os mesmos dados.
+        self.assertEqual(InstagramConnection.objects.get(user=self.pessoa).instagram_username, 'conta_um')
+
+        pagina = self.client.get('/programacao/')
+        self.assertContains(pagina, '<span class="account-handle">@conta_dois</span>', html=True)
+        self.assertContains(pagina, '@conta_um')
+        self.assertContains(pagina, 'Adicionar conta')
+
+    def test_dados_ficam_separados_por_conta_e_troca_pelo_menu(self):
+        from .models import ItemAgenda
+        ItemAgenda.objects.create(usuario=self.pessoa, data=date(2026, 10, 1), titulo='Post da conta um')
+        self._adicionar('2', 'conta_dois')
+        nova = InstagramConnection.objects.get(instagram_user_id='2').user
+        filtro = {'mes': '2026-10', 'dia': '2026-10-01'}
+        self.assertNotContains(self.client.get('/programacao/', filtro), 'Post da conta um')
+
+        resp = self.client.post(f'/contas/{self.pessoa.id}/usar/', HTTP_REFERER='http://testserver/programacao/')
+        self.assertRedirects(resp, 'http://testserver/programacao/', fetch_redirect_response=False)
+        self.assertContains(self.client.get('/programacao/', filtro), 'Post da conta um')
+        self.client.post(f'/contas/{nova.id}/usar/')
+        self.assertNotContains(self.client.get('/programacao/', filtro), 'Post da conta um')
+
+    def test_instagram_de_outro_administrador_retorna_erro(self):
+        outra = self._outra_pessoa()
+        InstagramConnection.objects.create(user=outra, instagram_user_id='9', instagram_username='da_outra',
+                                           access_token='deles')
+        resp = self._adicionar('9', 'da_outra')
+        self.assertRedirects(resp, '/dashboard/', fetch_redirect_response=False)
+        mensagens = [str(m) for m in resp.wsgi_request._messages]
+        self.assertIn('Esta conta já está conectada por um usuário. Entre em contato com o administrador da conta '
+                      'ou com o nosso suporte.', mensagens)
+        self.assertEqual(InstagramConnection.objects.get(instagram_user_id='9').access_token, 'deles')
+        self.assertEqual(InstagramConnection.objects.count(), 2)
+        # Nem conectando na conta aberta dá para tomar o Instagram de outra conta.
+        self._adicionar('9', 'da_outra', nova=False)
+        self.assertEqual(InstagramConnection.objects.get(user=self.pessoa).instagram_username, 'conta_um')
+
+    def test_instagram_que_ja_esta_no_painel_so_abre_a_conta(self):
+        self._adicionar('2', 'conta_dois')
+        self.client.post(f'/contas/{self.pessoa.id}/usar/')
+        resp = self._adicionar('2', 'conta_dois')
+        conexao = InstagramConnection.objects.get(instagram_user_id='2')
+        self.assertIn('@conta_dois já está no seu painel.', [str(m) for m in resp.wsgi_request._messages])
+        self.assertEqual(self.client.session['conta_atual'], conexao.user_id)
+        self.assertEqual(InstagramConnection.objects.count(), 2)
+
+    def test_nao_abre_nem_desconecta_conta_de_outra_pessoa(self):
+        outra = self._outra_pessoa()
+        InstagramConnection.objects.create(user=outra, instagram_user_id='9', instagram_username='da_outra', access_token='t')
+        self.assertEqual(self.client.post(f'/contas/{outra.id}/usar/').status_code, 404)
+        self.assertEqual(self.client.post(f'/contas/{outra.id}/desconectar/').status_code, 404)
+        self.assertTrue(InstagramConnection.objects.filter(user=outra).exists())
+        self.assertEqual(self.client.get(f'/contas/{self.pessoa.id}/usar/').status_code, 405)
+
+    def test_convidado_visualiza_troca_de_conta_e_adiciona_a_propria_mas_nao_desconecta(self):
+        from .models import Perfil
+        convidada = self._outra_pessoa('convidada')
+        Perfil.objects.create(usuario=convidada, conta=self.pessoa, papel=Perfil.VISUALIZADOR)
+        self.client.force_login(convidada)
+        self.client.post(f'/contas/{self.pessoa.id}/usar/')
+        self.assertEqual(self.client.session['conta_atual'], self.pessoa.id)
+        menu = self.client.get('/dashboard/')
+        self.assertContains(menu, 'Convidado')
+        self.assertNotContains(menu, f'/contas/{self.pessoa.id}/desconectar/')
+        self.assertEqual(self.client.post(f'/contas/{self.pessoa.id}/desconectar/').status_code, 404)
+        self.assertTrue(InstagramConnection.objects.filter(user=self.pessoa).exists())
+
+        # Só de visualização aqui, mas pode adicionar um Instagram dela, que vira uma conta que ela administra.
+        self._adicionar('5', 'dela')
+        nova = InstagramConnection.objects.get(instagram_user_id='5').user
+        self.assertEqual(Perfil.objects.get(usuario=convidada, conta=nova).papel, Perfil.ADMIN)
+        self.assertEqual(InstagramConnection.objects.get(user=self.pessoa).instagram_username, 'conta_um')
+
+    def test_desconectar_mantem_a_conta_e_os_dados_no_menu(self):
+        from .models import ItemAgenda
+        self._adicionar('2', 'conta_dois')
+        nova = InstagramConnection.objects.get(instagram_user_id='2').user
+        ItemAgenda.objects.create(usuario=nova, data=date(2026, 10, 1), titulo='Post da conta dois')
+        self.assertContains(self.client.get('/dashboard/'), f'/contas/{nova.id}/desconectar/')
+        self.client.post(f'/contas/{nova.id}/desconectar/')
+        self.assertFalse(InstagramConnection.objects.filter(user=nova).exists())
+        self.assertTrue(ItemAgenda.objects.filter(usuario=nova).exists())
+        pagina = self.client.get('/dashboard/')
+        self.assertContains(pagina, '@conta_dois')
+        self.assertContains(pagina, 'desconectada')
+
+        # Reconectar o mesmo Instagram pelo botão da conta aberta volta para a mesma conta.
+        self._adicionar('2', 'conta_dois', nova=False)
+        self.assertEqual(InstagramConnection.objects.get(instagram_user_id='2').user, nova)
+
+    def test_convidar_quem_ja_tem_login_e_proteger_a_senha_dele(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        outra = self._outra_pessoa('mironlucas2')
+        resp = self.client.post('/usuarios/', {'nome': '', 'usuario': 'mironlucas2', 'senha': '', 'papel': 'visualizador'})
+        self.assertRedirects(resp, '/usuarios/', fetch_redirect_response=False)
+        acesso = Perfil.objects.get(usuario=outra, conta=self.pessoa)
+        self.assertEqual(acesso.papel, 'visualizador')
+        self.assertTrue(outra.check_password('x'))
+        self.assertContains(self.client.get('/usuarios/'), 'data-compartilhado="1"')
+
+        # Quem a convidou muda o acesso, mas não a senha nem o nome (ela tem outra conta).
+        self.client.post(f'/usuarios/{acesso.id}/editar/', {'nome': 'Trocado', 'papel': 'editor', 'senha': 'Invasao#2026x'})
+        outra.refresh_from_db()
+        acesso.refresh_from_db()
+        self.assertEqual(acesso.papel, 'editor')
+        self.assertTrue(outra.check_password('x'))
+        self.assertEqual(outra.first_name, '')
+
+        # Remover tira só o acesso a esta conta; o login dela continua.
+        self.client.post(f'/usuarios/{acesso.id}/excluir/')
+        self.assertFalse(Perfil.objects.filter(usuario=outra, conta=self.pessoa).exists())
+        self.assertTrue(User.objects.filter(username='mironlucas2').exists())
+
+        resp = self.client.post('/usuarios/', {'usuario': 'mironlucas', 'senha': '', 'papel': 'editor'})
+        self.assertIn('Essa pessoa já tem acesso a esta conta.', resp.context['form'].errors['usuario'])
+        conta_oculta = InstagramConnection.objects.get(user=self.pessoa)  # contas adicionadas não são logins
+        self._adicionar('2', 'conta_dois')
+        oculta = InstagramConnection.objects.get(instagram_user_id='2').user.username
+        self.client.post(f'/contas/{conta_oculta.user_id}/usar/')
+        resp = self.client.post('/usuarios/', {'usuario': oculta, 'senha': '', 'papel': 'editor'})
+        self.assertIn('Esse nome de usuário não está disponível.', resp.context['form'].errors['usuario'])
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')

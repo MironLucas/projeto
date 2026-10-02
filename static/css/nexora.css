@@ -857,21 +857,157 @@ img.brand-mark {
   margin: 0;
 }
 
-.account-menu button {
+.status-dot--off {
+  background: var(--text-faint);
+  box-shadow: 0 0 0 3px rgba(92, 98, 136, 0.18);
+}
+
+/* Lista de contas da pessoa: trocar, desconectar e adicionar. */
+.contas-menu {
+  width: 290px;
+  max-width: calc(100vw - 32px);
+}
+
+.contas-menu-titulo {
+  margin: 4px 8px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.contas-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: min(320px, 60vh);
+  overflow-y: auto;
+}
+
+.conta-linha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+}
+
+.conta-linha:hover,
+.conta-linha.is-atual {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.conta-trocar {
+  flex: 1;
+  min-width: 0;
+}
+
+.conta-trocar button {
   width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: left;
   background: none;
   border: none;
-  color: var(--text-dim);
-  font-size: 13px;
-  padding: 9px 10px;
-  border-radius: 8px;
+  color: var(--text);
+  padding: 8px;
+  border-radius: 10px;
   cursor: pointer;
+  font: inherit;
 }
 
-.account-menu button:hover {
-  background: rgba(255, 60, 60, 0.1);
+.conta-linha.is-atual .conta-trocar button {
+  cursor: default;
+}
+
+.conta-trocar .account-avatar {
+  width: 32px;
+  height: 32px;
+}
+
+.conta-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.conta-nome {
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conta-papel {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.conta-check {
+  width: 15px;
+  height: 15px;
+  color: var(--cyan);
+  flex-shrink: 0;
+}
+
+.conta-desconectar {
+  flex-shrink: 0;
+  margin-right: 4px !important;
+}
+
+.conta-desconectar button {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-faint);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.conta-desconectar button:hover,
+.conta-desconectar button:focus-visible {
+  background: rgba(255, 60, 60, 0.12);
   color: #ff6b6b;
+}
+
+.conta-desconectar svg {
+  width: 15px;
+  height: 15px;
+}
+
+.conta-adicionar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 8px 8px;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+
+.conta-adicionar:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.conta-adicionar svg {
+  width: 32px;
+  height: 16px;
+  color: var(--cyan);
 }
 
 /* ---------- Dashboard ---------- */

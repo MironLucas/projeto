@@ -1,29 +1,51 @@
-  {% if instagram %}
-    <details class="popover account-chip{% if not pode_editar %} account-chip--estatico{% endif %}">
-      <summary>
-        {% if foto_perfil %}
-          <span class="account-avatar"><img src="{{ foto_perfil }}" alt="" referrerpolicy="no-referrer"></span>
-        {% else %}
-          <span class="account-avatar account-avatar--fallback">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
-              <circle cx="12" cy="12" r="4.2"></circle>
-            </svg>
-          </span>
-        {% endif %}
+{% if contas_da_pessoa %}
+  <details class="popover account-chip">
+    <summary aria-label="Trocar de conta">
+      {% for conta in contas_da_pessoa %}{% if conta.atual %}
+        {% include 'core/_avatar_conta.html' %}
         <span class="account-meta">
-          <span class="account-handle">@{{ instagram.instagram_username }}</span>
-          <span class="account-status"><span class="status-dot"></span>Conectado</span>
+          <span class="account-handle">{{ conta.nome }}</span>
+          <span class="account-status">
+            {% if conta.conectada %}<span class="status-dot"></span>Conectado{% else %}<span class="status-dot status-dot--off"></span>Instagram desconectado{% endif %}
+          </span>
         </span>
-        {% if pode_editar %}<svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>{% endif %}
-      </summary>
-      {% if pode_editar %}
-      <div class="account-menu">
-        <form method="post" action="{% url 'instagram_desconectar' %}">
-          {% csrf_token %}
-          <button type="submit">Desconectar conta</button>
-        </form>
-      </div>
-      {% endif %}
-    </details>
-  {% endif %}
+      {% endif %}{% endfor %}
+      <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </summary>
+
+    <div class="account-menu contas-menu">
+      <p class="contas-menu-titulo">Suas contas</p>
+      <ul class="contas-lista">
+        {% for conta in contas_da_pessoa %}
+          <li class="conta-linha{% if conta.atual %} is-atual{% endif %}">
+            <form method="post" action="{% url 'usar_conta' conta.id %}" class="conta-trocar">
+              {% csrf_token %}
+              <button type="submit"{% if conta.atual %} aria-current="true"{% endif %} title="{% if conta.atual %}Conta aberta{% else %}Abrir {{ conta.nome }}{% endif %}">
+                {% include 'core/_avatar_conta.html' %}
+                <span class="conta-texto">
+                  <span class="conta-nome">{{ conta.nome }}</span>
+                  <span class="conta-papel">{% if conta.e_admin %}Administrador{% else %}Convidado{% endif %}{% if not conta.conectada %} · desconectada{% endif %}</span>
+                </span>
+                {% if conta.atual %}
+                  <svg class="conta-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>
+                {% endif %}
+              </button>
+            </form>
+            {% if conta.e_admin and conta.conectada %}
+              <form method="post" action="{% url 'desconectar_conta' conta.id %}" class="conta-desconectar js-confirmar-desconexao" data-nome="{{ conta.nome }}">
+                {% csrf_token %}
+                <button type="submit" title="Desconectar {{ conta.nome }}" aria-label="Desconectar {{ conta.nome }}">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"></path><path d="M8 2v3M2 8h3M16 22v-3M22 16h-3"></path></svg>
+                </button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      <a class="conta-adicionar" href="{% url 'instagram_conectar' %}?nova=1">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+        Adicionar conta
+      </a>
+    </div>
+  </details>
+{% endif %}

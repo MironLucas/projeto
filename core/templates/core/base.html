@@ -117,7 +117,7 @@
           <h1>{% block page_heading %}{% endblock %}</h1>
           <p>{% block page_subheading %}{% endblock %}</p>
         </div>
-        {% block topbar_right %}{% endblock %}
+        {% block topbar_right %}{% include 'core/_conta_instagram.html' %}{% endblock %}
       </div>
 
       <div class="content">
@@ -144,6 +144,15 @@
         });
       }
       document.addEventListener('click', function (evento) { fecharMenus(evento.target); });
+      // Desconectar uma conta pede confirmação.
+      document.querySelectorAll('.js-confirmar-desconexao').forEach(function (form) {
+        form.addEventListener('submit', function (evento) {
+          if (!window.confirm('Desconectar ' + form.dataset.nome + '? Os relatórios dela param de atualizar até você conectar de novo.')) {
+            evento.preventDefault();
+          }
+        });
+      });
+
       document.addEventListener('keydown', function (evento) {
         if (evento.key === 'Escape') {
           fecharMenus(null);

@@ -1,0 +1,10 @@
+{% if conta.foto %}
+  <span class="account-avatar"><img src="{{ conta.foto }}" alt="" referrerpolicy="no-referrer"></span>
+{% else %}
+  <span class="account-avatar account-avatar--fallback">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5.5"></rect>
+      <circle cx="12" cy="12" r="4.2"></circle>
+    </svg>
+  </span>
+{% endif %}

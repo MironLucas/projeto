@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, meta, publico, quadro, usuarios, views
+from . import agenda, contas, meta, publico, quadro, usuarios, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
@@ -36,6 +36,10 @@ urlpatterns = [
     path('instagram/conectar/', views.instagram_conectar, name='instagram_conectar'),
     path('instagram/callback/', views.instagram_callback, name='instagram_callback'),
     path('instagram/desconectar/', views.instagram_desconectar, name='instagram_desconectar'),
+
+    # Várias contas por pessoa: trocar a conta aberta e desconectar o Instagram de uma delas.
+    path('contas/<int:conta_id>/usar/', contas.usar_conta, name='usar_conta'),
+    path('contas/<int:conta_id>/desconectar/', contas.desconectar_conta, name='desconectar_conta'),
 
     # Landing page da empresa.
     path('plataforma/', meta.apresentacao, name='apresentacao'),
