@@ -1620,7 +1620,8 @@ class NovidadeTests(TestCase):
         self.client.force_login(User.objects.get(username='mironlucas'))
         for pagina in ('/dashboard/', '/publico/', '/tarefas/'):
             resp = self.client.get(pagina)
-            self.assertContains(resp, 'data-chave="nextsora:novidade:programacao-2026-10"')
+            self.assertContains(resp, 'data-chave="nextsora:novidade:programacao-2026-10-v2"')
+            self.assertNotContains(resp, 'Depois eu vejo')
             self.assertContains(resp, 'A Programação tá de cara nova (e agora tem chat 💬)')
             self.assertContains(resp, 'href="/programacao/" class="btn-primary btn-sm novidade-ir"')
             self.assertContains(resp, 'img/novidade-programacao.webp')

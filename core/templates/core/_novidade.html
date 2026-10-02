@@ -1,6 +1,6 @@
 {% load static %}
-{# Aviso de novidade: aparece uma vez por navegador. Para anunciar outra novidade, troque data-chave. #}
-<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:programacao-2026-10" aria-labelledby="novidadeTitulo">
+{# Aviso de novidade: aparece uma vez por navegador. Para anunciar outra novidade (ou mostrar de novo), troque data-chave. #}
+<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:programacao-2026-10-v2" aria-labelledby="novidadeTitulo">
   <div class="novidade-imagem">
     <img src="{% static 'img/novidade-programacao.webp' %}" alt="Prévia da nova Programação: cards de posts na cor de cada um, com o botão Finalizado, ao lado do chat de comentários do post" width="1200" height="829">
   </div>
@@ -9,7 +9,6 @@
     <h2 id="novidadeTitulo" tabindex="-1" autofocus>A Programação tá de cara nova (e agora tem chat 💬)</h2>
     <p>Cada post ganhou a cor dele, abre com um clique em qualquer lugar e tem o botão Finalizado pra dar aquele check. E o melhor: agora rola um chat dentro de cada post pra galera pedir ajuste ali mesmo, sem se perder no WhatsApp.</p>
     <div class="novidade-acoes">
-      <button type="button" class="btn-ghost js-fechar-novidade">Depois eu vejo</button>
       <a href="{% url 'programacao' %}" class="btn-primary btn-sm novidade-ir">Bora conferir →</a>
     </div>
   </div>
@@ -36,15 +35,14 @@
     if (jaViu()) {
       return;
     }
-    // Fechar de qualquer jeito (botões, Esc, clique fora ou indo para a tela) conta como visto.
+    // Só fecha pelo X: clique fora e Esc não fecham. Fechar ou ir para a tela conta como visto.
     novidade.addEventListener('close', marcarVisto);
     novidade.querySelector('.novidade-ir').addEventListener('click', marcarVisto);
-    novidade.querySelectorAll('.js-fechar-novidade').forEach(function (botao) {
-      botao.addEventListener('click', function () { novidade.close(); });
-    });
-    novidade.addEventListener('click', function (evento) {
-      if (evento.target === novidade) {
-        novidade.close();
+    novidade.querySelector('.js-fechar-novidade').addEventListener('click', function () { novidade.close(); });
+    novidade.addEventListener('cancel', function (evento) { evento.preventDefault(); });
+    novidade.addEventListener('keydown', function (evento) {
+      if (evento.key === 'Escape') {
+        evento.preventDefault();
       }
     });
     setTimeout(function () { novidade.showModal(); }, 400);

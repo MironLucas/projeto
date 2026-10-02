@@ -4932,6 +4932,12 @@ button.day-item-body {
   animation: novidade-entrar 0.35s ease;
 }
 
+/* Clicar fora não fecha o aviso; também não deve deixar contorno de foco na janela. */
+.novidade:focus,
+.novidade:focus-visible {
+  outline: none;
+}
+
 @keyframes novidade-entrar {
   from { opacity: 0; transform: translateY(14px) scale(0.98); }
   to { opacity: 1; transform: none; }
