@@ -161,6 +161,13 @@
     <button type="button" class="lightbox-fechar" aria-label="Fechar tela cheia">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
     </button>
+    <button type="button" class="lightbox-nav lightbox-nav--anterior" id="telaCheiaAnterior" aria-label="Mídia anterior">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+    </button>
+    <button type="button" class="lightbox-nav lightbox-nav--proxima" id="telaCheiaProxima" aria-label="Próxima mídia">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+    </button>
+    <span class="lightbox-contador" id="telaCheiaContador" aria-live="polite"></span>
   </dialog>
 
   <script>
@@ -171,28 +178,81 @@
       var MAXIMO = {{ midias_por_item }};
       var TIPOS = '{{ tipos_de_midia }}'.split(',');
 
-      // ---------- Tela cheia (imagem ou vídeo) ----------
+      // ---------- Tela cheia: galeria com setas entre as mídias do item ----------
       var telaCheia = document.getElementById('telaCheia');
       var imagemGrande = document.getElementById('telaCheiaImagem');
       var videoGrande = document.getElementById('telaCheiaVideo');
+      var contador = document.getElementById('telaCheiaContador');
+      var setaAnterior = document.getElementById('telaCheiaAnterior');
+      var setaProxima = document.getElementById('telaCheiaProxima');
+      var midiasDaTela = [];
+      var posicao = 0;
 
-      function abrirTelaCheia(url, video) {
-        imagemGrande.hidden = video;
-        videoGrande.hidden = !video;
-        if (video) {
-          videoGrande.src = url;
+      function mostrarMidia() {
+        var midia = midiasDaTela[posicao];
+        videoGrande.pause();
+        imagemGrande.hidden = midia.video;
+        videoGrande.hidden = !midia.video;
+        if (midia.video) {
+          videoGrande.src = midia.url;
+          imagemGrande.removeAttribute('src');
         } else {
-          imagemGrande.src = url;
+          imagemGrande.src = midia.url;
+          videoGrande.removeAttribute('src');
         }
+        var varias = midiasDaTela.length > 1;
+        setaAnterior.hidden = setaProxima.hidden = contador.hidden = !varias;
+        contador.textContent = (posicao + 1) + ' / ' + midiasDaTela.length;
+      }
+
+      function abrirTelaCheia(midias, indice) {
+        midiasDaTela = midias;
+        posicao = indice;
+        mostrarMidia();
         telaCheia.showModal();
       }
+
+      function navegar(passo) {
+        if (midiasDaTela.length > 1) {
+          posicao = (posicao + passo + midiasDaTela.length) % midiasDaTela.length;
+          mostrarMidia();
+        }
+      }
+
+      setaAnterior.addEventListener('click', function () { navegar(-1); });
+      setaProxima.addEventListener('click', function () { navegar(1); });
+      telaCheia.querySelector('.lightbox-fechar').addEventListener('click', function () { telaCheia.close(); });
+      telaCheia.addEventListener('keydown', function (evento) {
+        if (evento.key === 'ArrowLeft') {
+          navegar(-1);
+        } else if (evento.key === 'ArrowRight') {
+          navegar(1);
+        }
+      });
+      // No celular, deslizar o dedo para o lado também troca de mídia.
+      var toqueInicial = null;
+      telaCheia.addEventListener('touchstart', function (evento) {
+        toqueInicial = evento.touches.length === 1 ? evento.touches[0] : null;
+      }, { passive: true });
+      telaCheia.addEventListener('touchend', function (evento) {
+        if (!toqueInicial) {
+          return;
+        }
+        var toque = evento.changedTouches[0];
+        var dx = toque.clientX - toqueInicial.clientX;
+        var dy = toque.clientY - toqueInicial.clientY;
+        toqueInicial = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+          navegar(dx < 0 ? 1 : -1);
+        }
+      });
       telaCheia.addEventListener('close', function () {
         videoGrande.pause();
         videoGrande.removeAttribute('src');
       });
-      // Fecha ao clicar fora da mídia (no vídeo, o clique fica para os controles).
+      // Fecha ao clicar no fundo escuro (fora da mídia e dos botões).
       telaCheia.addEventListener('click', function (evento) {
-        if (evento.target !== videoGrande) {
+        if (evento.target === telaCheia) {
           telaCheia.close();
         }
       });
@@ -229,7 +289,7 @@
                 novas.splice(novas.indexOf(m), 1);
               } };
             }));
-          visiveis.forEach(function (midia) {
+          visiveis.forEach(function (midia, indice) {
             var bloco = document.createElement('div');
             bloco.className = 'galeria-item';
             var abrir = document.createElement('button');
@@ -247,7 +307,7 @@
               previa.alt = '';
             }
             abrir.prepend(previa);
-            abrir.addEventListener('click', function () { abrirTelaCheia(midia.url, midia.video); });
+            abrir.addEventListener('click', function () { abrirTelaCheia(visiveis, indice); });
             var lixeira = document.createElement('button');
             lixeira.type = 'button';
             lixeira.className = 'galeria-lixeira';

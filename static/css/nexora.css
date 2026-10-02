@@ -3402,7 +3402,6 @@ button.day-item-body {
   padding: 0;
   border: none;
   background: rgba(3, 5, 12, 0.94);
-  cursor: zoom-out;
 }
 
 .lightbox[open] {
@@ -4840,4 +4839,80 @@ button.day-item-body {
 
 .novidade h2:focus {
   outline: none;
+}
+
+/* Setas e contador da tela cheia: navegar entre as mídias do item sem fechar. */
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin-top: -24px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 12, 20, 0.7);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.lightbox-nav[hidden] {
+  display: none;
+}
+
+.lightbox-nav:hover,
+.lightbox-nav:focus-visible {
+  background: rgba(124, 92, 255, 0.55);
+}
+
+.lightbox-nav:active {
+  transform: scale(0.94);
+}
+
+.lightbox-nav svg {
+  width: 22px;
+  height: 22px;
+}
+
+.lightbox-nav--anterior {
+  left: 20px;
+}
+
+.lightbox-nav--proxima {
+  right: 20px;
+}
+
+.lightbox-contador {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(10, 12, 20, 0.7);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .lightbox-nav {
+    width: 40px;
+    height: 40px;
+    margin-top: -20px;
+  }
+
+  .lightbox-nav--anterior {
+    left: 8px;
+  }
+
+  .lightbox-nav--proxima {
+    right: 8px;
+  }
 }
