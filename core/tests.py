@@ -1276,6 +1276,8 @@ class LandingTests(TestCase):
         resp = self.client.get('/plataforma/')
         self.assertEqual(resp.status_code, 200)
         whatsapp = 'https://wa.me/556293676291?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20a%20plataforma'
-        self.assertContains(resp, f'href="{whatsapp}"', count=3)  # topo, contato e botão flutuante
-        self.assertContains(resp, '<a href="/" class="lp-btn lp-btn--contorno lp-btn--pequeno">', count=1)
+        self.assertContains(resp, f'href="{whatsapp}"', count=3)  # menu Contato, apresentação e botão flutuante
+        self.assertContains(resp, '<a href="/" class="lp-btn lp-btn--neon lp-btn--pequeno">', count=1)
+        self.assertContains(resp, 'Para quem vive de Rede social')
+        self.assertNotContains(resp, 'Quer ver o Nextsora funcionando')
         self.assertContains(resp, 'href="/privacidade/"')

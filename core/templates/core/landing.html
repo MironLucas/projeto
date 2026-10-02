@@ -26,9 +26,9 @@
       <nav class="lp-menu" aria-label="Seções">
         <a href="#recursos">Recursos</a>
         <a href="#como-funciona">Como funciona</a>
-        <a href="#contato">Contato</a>
+        <a href="{{ whatsapp }}" target="_blank" rel="noopener">Contato</a>
       </nav>
-      <a href="{% url 'login' %}" class="lp-btn lp-btn--contorno lp-btn--pequeno">
+      <a href="{% url 'login' %}" class="lp-btn lp-btn--neon lp-btn--pequeno">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
         Entrar
       </a>
@@ -39,7 +39,7 @@
     <section class="lp-hero" id="inicio">
       <div class="lp-container lp-hero-grade">
         <div class="lp-hero-texto">
-          <span class="lp-selo">Para quem vive de Instagram</span>
+          <span class="lp-selo">Para quem vive de Rede social</span>
           <h1>Resultados do Instagram e produção de conteúdo <span class="lp-degrade">no mesmo lugar</span></h1>
           <p class="lp-lead">
             O Nextsora mostra como a conta está crescendo, quem é o seu público e o que está funcionando,
@@ -184,19 +184,6 @@
           <li>Permissões por pessoa: edição ou só visualização</li>
           <li>Em conformidade com a LGPD</li>
         </ul>
-      </div>
-    </section>
-
-    <section class="lp-contato" id="contato">
-      <div class="lp-container">
-        <div class="lp-contato-caixa">
-          <h2>Quer ver o Nextsora funcionando na sua conta?</h2>
-          <p>Fale com a gente no WhatsApp e tire suas dúvidas sobre a plataforma.</p>
-          <a href="{{ whatsapp }}" class="lp-btn lp-btn--whatsapp lp-btn--grande" target="_blank" rel="noopener">
-            {% include 'core/_icone_whatsapp.html' %}
-            Falar no WhatsApp
-          </a>
-        </div>
       </div>
     </section>
   </main>
