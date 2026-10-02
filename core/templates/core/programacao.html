@@ -64,7 +64,8 @@
               <button type="button" class="day-item-body js-abrir-item" title="{% if pode_editar %}Editar{% else %}Ver detalhes{% endif %}"
                       {% if pode_editar %}data-editar="{% url 'agenda_editar' item.id %}" data-excluir="{% url 'agenda_excluir' item.id %}"{% endif %}
                       data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}"
-                      data-legenda="{{ item.legenda }}" data-formato="{{ item.formato }}" data-midias="{{ item.midias_json }}">
+                      data-legenda="{{ item.legenda }}" data-formato="{{ item.formato }}" data-midias="{{ item.midias_json }}"
+                      data-comentarios="{% url 'agenda_comentarios' item.id %}">
                 {% include 'core/_item_agenda_conteudo.html' %}
                 {% if pode_editar %}
                   <svg class="day-item-lapis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
@@ -88,8 +89,9 @@
     </aside>
   </div>
 
-  <dialog class="modal modal--largo" id="dialogItem" aria-labelledby="dialogItemTitulo">
-    <form method="post" enctype="multipart/form-data" class="modal-body" id="formItem">
+  <dialog class="modal modal--largo modal--duplo" id="dialogItem" aria-labelledby="dialogItemTitulo">
+    <div class="modal-duplo">
+    <form method="post" enctype="multipart/form-data" class="modal-body modal-painel" id="formItem">
       {% csrf_token %}
       <header class="modal-head">
         <h2 id="dialogItemTitulo">Editar item</h2>
@@ -153,6 +155,26 @@
         </footer>
       {% endif %}
     </form>
+
+    <section class="modal-painel chat" id="itemChat" aria-labelledby="itemChatTitulo" hidden>
+      <header class="chat-head">
+        <h2 id="itemChatTitulo">Comentários</h2>
+        <p>Ajustes e recados sobre este post</p>
+      </header>
+      <div class="chat-lista" id="chatLista" aria-live="polite"></div>
+      <form class="chat-form" id="chatForm">
+        <div class="form-errors chat-erro" id="chatErro" role="alert" hidden></div>
+        <div class="chat-escrever">
+          <textarea id="chatTexto" name="texto" class="field" rows="1" maxlength="2000"
+                    placeholder="Escreva um comentário…" aria-label="Comentário"></textarea>
+          <button type="submit" class="chat-enviar" id="chatEnviar" aria-label="Enviar comentário" title="Enviar (Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg>
+          </button>
+        </div>
+        <p class="field-hint">Enter envia · Shift + Enter quebra a linha</p>
+      </form>
+    </section>
+    </div>
   </dialog>
 
   <dialog class="lightbox" id="telaCheia" aria-label="Mídia em tela cheia">
@@ -366,7 +388,7 @@
         }
 
         // A mesma janela serve para criar (dados.criar) e para editar (dados.editar) um item.
-        function abrirItem(dados) {
+        function abrirItem(dados, botaoQueAbriu) {
           form.reset();
           mostrarErro('');
           novas.forEach(function (m) { URL.revokeObjectURL(m.url); });
@@ -391,14 +413,208 @@
             opcao.checked = opcao.value === dados.formato;
           });
           desenharGaleria();
+          abrirChat(dados.comentarios, dados.comentarios ? botaoQueAbriu : null);
           dialogo.showModal();
           if (podeEditar) {
             document.getElementById('itemTitulo').focus();
           }
         }
 
+        // ---------- Comentários: painel ao lado da janela, para combinar ajustes no post ----------
+        var chat = document.getElementById('itemChat');
+        var chatLista = document.getElementById('chatLista');
+        var chatForm = document.getElementById('chatForm');
+        var chatTexto = document.getElementById('chatTexto');
+        var chatEnviar = document.getElementById('chatEnviar');
+        var chatErro = document.getElementById('chatErro');
+        var tokenCsrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+        var urlComentarios = '';
+        var cartaoAberto = null;
+        var assinaturaComentarios = null;
+        var atualizacaoChat = null;
+
+        function mostrarErroChat(texto) {
+          chatErro.textContent = texto;
+          chatErro.hidden = !texto;
+        }
+
+        function pedirChat(url, corpo) {
+          return fetch(url, {
+            method: corpo ? 'POST' : 'GET',
+            body: corpo,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': tokenCsrf },
+          }).then(function (resposta) {
+            return resposta.json().catch(function () { return {}; }).then(function (json) {
+              if (!resposta.ok) {
+                throw new Error(json.erro || 'Não foi possível concluir. Tente de novo.');
+              }
+              return json;
+            });
+          });
+        }
+
+        function desenharComentarios(lista, rolarParaFim) {
+          var assinatura = lista.map(function (c) { return c.id; }).join(',');
+          if (assinatura === assinaturaComentarios) {
+            return;
+          }
+          var estavaNoFim = chatLista.scrollHeight - chatLista.scrollTop - chatLista.clientHeight < 60;
+          assinaturaComentarios = assinatura;
+          atualizarContagem(lista.length);
+          chatLista.innerHTML = '';
+          if (!lista.length) {
+            chatLista.innerHTML = '<div class="chat-vazio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>' +
+              '<p>Nenhum comentário ainda.</p><span>Escreva aqui o que precisa mudar na imagem ou na legenda.</span></div>';
+            return;
+          }
+          lista.forEach(function (comentario) {
+            var linha = document.createElement('div');
+            linha.className = 'chat-msg' + (comentario.meu ? ' is-minha' : '');
+            var avatar = document.createElement('span');
+            avatar.className = 'chat-avatar';
+            avatar.setAttribute('aria-hidden', 'true');
+            avatar.textContent = comentario.inicial;
+            var bolha = document.createElement('div');
+            bolha.className = 'chat-bolha';
+            var meta = document.createElement('div');
+            meta.className = 'chat-meta';
+            var autor = document.createElement('strong');
+            autor.textContent = comentario.meu ? 'Você' : comentario.autor;
+            var quando = document.createElement('span');
+            quando.textContent = comentario.quando;
+            meta.append(autor, quando);
+            if (comentario.excluir) {
+              var apagar = document.createElement('button');
+              apagar.type = 'button';
+              apagar.className = 'chat-apagar';
+              apagar.title = 'Apagar comentário';
+              apagar.setAttribute('aria-label', 'Apagar comentário');
+              apagar.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>';
+              apagar.addEventListener('click', function () {
+                if (!window.confirm('Apagar este comentário?')) {
+                  return;
+                }
+                pedirChat(comentario.excluir, new FormData())
+                  .then(function () { carregarComentarios(false); })
+                  .catch(function (falha) { mostrarErroChat(falha.message); });
+              });
+              meta.appendChild(apagar);
+            }
+            var texto = document.createElement('p');
+            texto.className = 'chat-texto';
+            texto.textContent = comentario.texto;
+            bolha.append(meta, texto);
+            linha.append(avatar, bolha);
+            chatLista.appendChild(linha);
+          });
+          if (rolarParaFim || estavaNoFim) {
+            chatLista.scrollTop = chatLista.scrollHeight;
+          }
+        }
+
+        // O card do dia mostra quantos comentários o item tem; acompanha a conversa sem recarregar a página.
+        function atualizarContagem(total) {
+          if (!cartaoAberto) {
+            return;
+          }
+          var marca = cartaoAberto.querySelector('.day-item-comentarios');
+          if (!total) {
+            if (marca) {
+              marca.remove();
+            }
+            return;
+          }
+          if (!marca) {
+            marca = document.createElement('span');
+            marca.className = 'day-item-comentarios';
+            cartaoAberto.querySelector('.day-item-text').appendChild(marca);
+          }
+          var rotulo = total + (total === 1 ? ' comentário' : ' comentários');
+          marca.title = rotulo;
+          marca.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>';
+          marca.appendChild(document.createTextNode(' ' + rotulo));
+        }
+
+        function carregarComentarios(rolarParaFim) {
+          var url = urlComentarios;
+          if (!url) {
+            return;
+          }
+          pedirChat(url).then(function (json) {
+            if (url === urlComentarios) {
+              desenharComentarios(json.comentarios || [], rolarParaFim);
+            }
+          }).catch(function () {
+            if (assinaturaComentarios === null) {
+              chatLista.innerHTML = '<div class="chat-vazio"><p>Não foi possível carregar os comentários.</p></div>';
+            }
+          });
+        }
+
+        function abrirChat(url, cartao) {
+          urlComentarios = url || '';
+          cartaoAberto = cartao || null;
+          assinaturaComentarios = null;
+          chat.hidden = !urlComentarios;
+          dialogo.classList.toggle('tem-chat', Boolean(urlComentarios));
+          mostrarErroChat('');
+          chatTexto.value = '';
+          chatTexto.style.height = '';
+          clearInterval(atualizacaoChat);
+          if (!urlComentarios) {
+            return;
+          }
+          chatLista.innerHTML = '<div class="chat-vazio"><p>Carregando comentários…</p></div>';
+          carregarComentarios(true);
+          // Enquanto a janela está aberta, os comentários de outras pessoas aparecem sozinhos.
+          atualizacaoChat = setInterval(function () {
+            if (!document.hidden) {
+              carregarComentarios(false);
+            }
+          }, 15000);
+        }
+
+        dialogo.addEventListener('close', function () {
+          clearInterval(atualizacaoChat);
+          urlComentarios = '';
+        });
+
+        chatTexto.addEventListener('input', function () {
+          chatTexto.style.height = 'auto';
+          chatTexto.style.height = Math.min(chatTexto.scrollHeight, 140) + 'px';
+        });
+        chatTexto.addEventListener('keydown', function (evento) {
+          if (evento.key === 'Enter' && !evento.shiftKey && !evento.isComposing) {
+            evento.preventDefault();
+            chatForm.requestSubmit();
+          }
+        });
+
+        chatForm.addEventListener('submit', function (evento) {
+          evento.preventDefault();
+          var texto = chatTexto.value.trim();
+          if (!texto || chatEnviar.disabled) {
+            return;
+          }
+          var corpo = new FormData();
+          corpo.append('texto', texto);
+          chatEnviar.disabled = true;
+          mostrarErroChat('');
+          pedirChat(urlComentarios, corpo).then(function () {
+            chatTexto.value = '';
+            chatTexto.style.height = '';
+            carregarComentarios(true);
+          }).catch(function (falha) {
+            mostrarErroChat(falha.message === 'Failed to fetch' ? 'Sem conexão com o servidor. Tente de novo.' : falha.message);
+          }).finally(function () {
+            chatEnviar.disabled = false;
+            chatTexto.focus();
+          });
+        });
+
         document.querySelectorAll('.js-abrir-item').forEach(function (botao) {
-          botao.addEventListener('click', function () { abrirItem(botao.dataset); });
+          botao.addEventListener('click', function () { abrirItem(botao.dataset, botao); });
         });
 
         if (podeEditar) {
@@ -482,7 +698,8 @@
           botao.addEventListener('click', function () { dialogo.close(); });
         });
         dialogo.addEventListener('click', function (evento) {
-          if (evento.target === dialogo && !enviando) {
+          var foraDosPaineis = evento.target === dialogo || evento.target.classList.contains('modal-duplo');
+          if (foraDosPaineis && !enviando) {
             dialogo.close();
           }
         });

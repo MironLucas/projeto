@@ -5,7 +5,7 @@ from datetime import date, datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Max
+from django.db.models import Count, Max
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -45,7 +45,7 @@ def programacao(request):
         por_dia.setdefault(item.data, []).append(item)
     itens_selecionado = list(
         ItemAgenda.objects.filter(usuario=request.conta, data=selecionado)
-        .prefetch_related('midias')
+        .annotate(total_comentarios=Count('comentarios')).prefetch_related('midias')
     )
     for item in itens_selecionado:
         # A janela de edição recebe a lista de mídias do item para montar a galeria.

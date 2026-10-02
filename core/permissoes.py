@@ -15,8 +15,9 @@ logger = logging.getLogger(__name__)
 METODOS_DE_LEITURA = {'GET', 'HEAD', 'OPTIONS'}
 CHAVE_CONTA_ATUAL = 'conta_atual'
 # Trocar de conta e desconectar valem mesmo para quem só visualiza a conta aberta: a própria view
-# confere o acesso à conta de destino.
-LIBERADAS_PARA_QUEM_VISUALIZA = {'login', 'logout', 'usar_conta', 'desconectar_conta'}
+# confere o acesso à conta de destino. Comentar nos itens da programação também: é como o cliente pede ajustes.
+LIBERADAS_PARA_QUEM_VISUALIZA = {'login', 'logout', 'usar_conta', 'desconectar_conta',
+                                 'agenda_comentarios', 'agenda_excluir_comentario'}
 
 
 class PerfilMiddleware:

@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, contas, meta, publico, quadro, usuarios, views
+from . import agenda, comentarios, contas, meta, publico, quadro, usuarios, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
@@ -17,6 +17,9 @@ urlpatterns = [
     path('programacao/midias/<int:midia_id>/', agenda.midia_item, name='agenda_midia'),
     path('programacao/itens/<int:item_id>/concluir/', agenda.alternar_item, name='agenda_alternar'),
     path('programacao/itens/<int:item_id>/excluir/', agenda.excluir_item, name='agenda_excluir'),
+    path('programacao/itens/<int:item_id>/comentarios/', comentarios.comentarios_item, name='agenda_comentarios'),
+    path('programacao/comentarios/<int:comentario_id>/excluir/', comentarios.excluir_comentario,
+         name='agenda_excluir_comentario'),
 
     path('tarefas/', quadro.tarefas, name='tarefas'),
     path('tarefas/listas/', quadro.criar_lista, name='quadro_criar_lista'),

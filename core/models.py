@@ -94,6 +94,23 @@ class ItemAgenda(models.Model):
         return f'{self.data} {self.titulo}'
 
 
+class ComentarioItemAgenda(models.Model):
+    """Conversa dentro de um item da programação: quem cria o post e quem revisa trocam recados ali."""
+    item = models.ForeignKey(ItemAgenda, on_delete=models.CASCADE, related_name='comentarios')
+    # O nome fica guardado para o comentário continuar identificado mesmo se o usuário for removido.
+    autor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+                              related_name='comentarios_agenda')
+    autor_nome = models.CharField(max_length=150)
+    texto = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['criado_em', 'id']
+
+    def __str__(self):
+        return f'{self.autor_nome}: {self.texto[:40]}'
+
+
 class ListaTarefas(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listas_tarefas')
     titulo = models.CharField(max_length=80)

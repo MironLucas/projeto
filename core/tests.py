@@ -1503,6 +1503,90 @@ class VariasContasTests(TestCase):
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class ComentariosItemTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from .models import ItemAgenda, Perfil
+        self.admin = User.objects.get(username='mironlucas')
+        self.admin.first_name = 'Miron'
+        self.admin.save()
+        self.cliente = User.objects.create_user('cliente', password='x', first_name='Cliente')
+        Perfil.objects.create(usuario=self.cliente, conta=self.admin, papel=Perfil.VISUALIZADOR)
+        self.item = ItemAgenda.objects.create(usuario=self.admin, data=date(2026, 10, 1), titulo='Post de outubro',
+                                              formato='reels')
+        self.url = f'/programacao/itens/{self.item.id}/comentarios/'
+        self.client.force_login(self.admin)
+
+    def test_quem_cria_e_quem_so_visualiza_conversam_no_item(self):
+        resp = self.client.post(self.url, {'texto': '  Subi a arte e a legenda.  '})
+        self.assertEqual(resp.status_code, 201)
+        self.assertEqual(resp.json()['comentario']['texto'], 'Subi a arte e a legenda.')
+
+        self.client.force_login(self.cliente)
+        self.client.get('/dashboard/')
+        resp = self.client.post(self.url, {'texto': 'Troca a cor do título\npor favor'})
+        self.assertEqual(resp.status_code, 201)
+
+        comentarios = self.client.get(self.url).json()['comentarios']
+        self.assertEqual([(c['autor'], c['texto'], c['meu']) for c in comentarios], [
+            ('Miron', 'Subi a arte e a legenda.', False),
+            ('Cliente', 'Troca a cor do título\npor favor', True),
+        ])
+        self.assertRegex(comentarios[0]['quando'], r'^(Hoje|Ontem|\d\d/\d\d(/\d{4})?) às \d\d:\d\d$')
+        self.assertEqual(comentarios[0]['excluir'], '')
+        self.assertTrue(comentarios[1]['excluir'])
+        # Quem só visualiza continua sem poder editar o item.
+        self.client.post(f'/programacao/itens/{self.item.id}/editar/', {'titulo': 'x', 'formato': 'reels'})
+        self.item.refresh_from_db()
+        self.assertEqual(self.item.titulo, 'Post de outubro')
+
+    def test_comentario_vazio_ou_longo_e_recusado(self):
+        self.assertEqual(self.client.post(self.url, {'texto': '   '}).status_code, 400)
+        self.assertEqual(self.client.post(self.url, {'texto': 'a' * 2001}).status_code, 400)
+        self.assertFalse(self.item.comentarios.exists())
+
+    def test_cada_pessoa_apaga_so_o_proprio_comentario(self):
+        from .models import ComentarioItemAgenda
+        do_admin = ComentarioItemAgenda.objects.create(item=self.item, autor=self.admin, autor_nome='Miron', texto='a')
+        self.client.force_login(self.cliente)
+        self.client.get('/dashboard/')
+        self.assertEqual(self.client.post(f'/programacao/comentarios/{do_admin.id}/excluir/').status_code, 404)
+        meu = self.client.post(self.url, {'texto': 'b'}).json()['comentario']
+        self.assertEqual(self.client.post(meu['excluir']).status_code, 200)
+        self.assertEqual(list(self.item.comentarios.values_list('texto', flat=True)), ['a'])
+
+    def test_outra_conta_nao_ve_nem_comenta(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        estranho = User.objects.create_user('estranho', password='x')
+        Perfil.objects.create(usuario=estranho, conta=estranho, papel=Perfil.ADMIN)
+        self.client.post(self.url, {'texto': 'interno'})
+        self.client.force_login(estranho)
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+        self.assertEqual(self.client.post(self.url, {'texto': 'oi'}).status_code, 404)
+        self.assertEqual(self.item.comentarios.count(), 1)
+
+    def test_nome_fica_no_comentario_se_o_usuario_for_removido(self):
+        self.client.force_login(self.cliente)
+        self.client.post(self.url, {'texto': 'Ficou ótimo'})
+        self.cliente.delete()
+        self.client.force_login(self.admin)
+        comentario = self.client.get(self.url).json()['comentarios'][0]
+        self.assertEqual((comentario['autor'], comentario['meu']), ('Cliente', False))
+
+    def test_janela_tem_os_comentarios_e_o_item_mostra_quantos(self):
+        self.client.post(self.url, {'texto': 'um'})
+        self.client.post(self.url, {'texto': 'dois'})
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
+        self.assertContains(pagina, f'data-comentarios="{self.url}"')
+        self.assertContains(pagina, 'id="itemChat"')
+        self.assertContains(pagina, '2 comentários')
+        self.item.delete()
+        from .models import ComentarioItemAgenda
+        self.assertFalse(ComentarioItemAgenda.objects.exists())
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class LandingTests(TestCase):
     def test_landing_abre_sem_login_com_whatsapp_e_entrar(self):
         resp = self.client.get('/plataforma/')

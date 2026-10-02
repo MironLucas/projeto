@@ -21,4 +21,10 @@
   {% endif %}
   <span class="day-item-title">{{ item.titulo }}</span>
   {% if item.legenda %}<span class="day-item-caption">{{ item.legenda }}</span>{% endif %}
+  {% if item.total_comentarios %}
+    <span class="day-item-comentarios" title="{{ item.total_comentarios }} comentário{{ item.total_comentarios|pluralize }}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      {{ item.total_comentarios }} comentário{{ item.total_comentarios|pluralize }}
+    </span>
+  {% endif %}
 </span>
