@@ -5571,6 +5571,141 @@ html:has(dialog[open]) {
   border: none;
 }
 
+/* Botão flutuante e "voltar" do chat: só existem no celular. */
+.chat-flutuante,
+.chat-voltar {
+  display: none;
+}
+
+.chat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.chat-head > div {
+  min-width: 0;
+}
+
+#dialogItemTitulo:focus {
+  outline: none;
+}
+
+/* Tela estreita: o chat abre por um botão flutuante, numa tela por cima da janela do post. */
+@media (max-width: 900px) {
+  .modal--duplo .chat {
+    display: none;
+  }
+
+  .modal--duplo.tem-chat .chat-flutuante {
+    position: fixed;
+    right: 18px;
+    bottom: calc(96px + env(safe-area-inset-bottom));
+    z-index: 5;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--gradient);
+    color: #fff;
+    box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.7), 0 0 0 4px rgba(124, 92, 255, 0.18);
+    cursor: pointer;
+    animation: chat-flutuante-entrar 0.3s ease-out 0.15s both;
+  }
+
+  .chat-flutuante svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .chat-flutuante-total {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    border: 2px solid var(--panel-solid);
+    background: #f5426f;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+  }
+
+  .chat-flutuante-total[hidden] {
+    display: none;
+  }
+
+  .modal--duplo.chat-aberto .chat-flutuante {
+    display: none;
+  }
+
+  /* Espaço no fim do formulário para o botão flutuante não ficar em cima das cores. */
+  .modal--duplo.tem-chat .item-cor {
+    margin-bottom: 64px;
+  }
+
+  .modal--duplo.chat-aberto .chat {
+    position: fixed;
+    inset: 0;
+    z-index: 6;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
+    border: none;
+    border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: chat-celular-entrar 0.25s ease-out;
+  }
+
+  .modal--duplo.chat-aberto .chat-lista {
+    flex: 1 1 0;
+    max-height: none;
+  }
+
+  .chat-voltar {
+    display: flex;
+    flex-shrink: 0;
+  }
+
+  .chat-head p {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* No celular quem abre o teclado é a pessoa; o atalho do Enter não se aplica. */
+  .chat-form .field-hint {
+    display: none;
+  }
+}
+
+@keyframes chat-flutuante-entrar {
+  from { opacity: 0; transform: scale(0.6) translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes chat-celular-entrar {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal--duplo.tem-chat .chat-flutuante,
+  .modal--duplo.chat-aberto .chat {
+    animation: none;
+  }
+}
+
 /* Tela estreita: os comentários ficam embaixo do item, e a janela inteira rola. */
 @media (max-width: 900px) {
   .modal--duplo {

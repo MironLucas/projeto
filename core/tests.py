@@ -1594,6 +1594,8 @@ class ComentariosItemTests(TestCase):
         pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
         self.assertContains(pagina, f'data-comentarios="{self.url}"')
         self.assertContains(pagina, 'id="itemChat"')
+        self.assertContains(pagina, 'id="chatFlutuante"')
+        self.assertContains(pagina, '<h2 id="dialogItemTitulo" tabindex="-1" autofocus>')
         self.assertContains(pagina, '2 comentários')
         self.item.delete()
         from .models import ComentarioItemAgenda

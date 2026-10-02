@@ -99,7 +99,7 @@
     <form method="post" enctype="multipart/form-data" class="modal-body modal-painel" id="formItem">
       {% csrf_token %}
       <header class="modal-head item-topo">
-        <h2 id="dialogItemTitulo">Editar item</h2>
+        <h2 id="dialogItemTitulo" tabindex="-1" autofocus>Editar item</h2>
         <label class="item-dia" title="Dia do post">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
           <input type="date" id="itemData" name="data" aria-label="Dia" required{% if not pode_editar %} readonly{% endif %}>
@@ -177,8 +177,13 @@
 
     <section class="modal-painel chat" id="itemChat" aria-labelledby="itemChatTitulo" hidden>
       <header class="chat-head">
-        <h2 id="itemChatTitulo">Comentários</h2>
-        <p>Ajustes e recados sobre este post</p>
+        <div>
+          <h2 id="itemChatTitulo">Comentários</h2>
+          <p id="chatSubtitulo">Ajustes e recados sobre este post</p>
+        </div>
+        <button type="button" class="icon-btn icon-btn--neutral chat-voltar" id="chatVoltar" aria-label="Fechar comentários e voltar ao post">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+        </button>
       </header>
       <div class="chat-lista" id="chatLista" aria-live="polite"></div>
       <form class="chat-form" id="chatForm">
@@ -194,6 +199,12 @@
       </form>
     </section>
     </div>
+
+    {# Só no celular: o chat do post abre por este botão flutuante, por cima da janela. #}
+    <button type="button" class="chat-flutuante" id="chatFlutuante" aria-label="Abrir comentários deste post">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+      <span class="chat-flutuante-total" id="chatFlutuanteTotal" hidden></span>
+    </button>
   </dialog>
 
   <dialog class="lightbox" id="telaCheia" aria-label="Mídia em tela cheia">
@@ -440,7 +451,8 @@
           desenharGaleria();
           abrirChat(dados.comentarios, dados.comentarios ? botaoQueAbriu : null);
           dialogo.showModal();
-          if (podeEditar) {
+          // No celular o foco fica no topo da janela: focar um campo faria o teclado subir sozinho.
+          if (podeEditar && !telaDeCelular.matches) {
             document.getElementById('itemTitulo').focus();
           }
         }
@@ -452,6 +464,10 @@
         var chatTexto = document.getElementById('chatTexto');
         var chatEnviar = document.getElementById('chatEnviar');
         var chatErro = document.getElementById('chatErro');
+        var chatFlutuante = document.getElementById('chatFlutuante');
+        var chatFlutuanteTotal = document.getElementById('chatFlutuanteTotal');
+        var chatVoltar = document.getElementById('chatVoltar');
+        var telaDeCelular = window.matchMedia('(max-width: 900px)');
         var tokenCsrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
         var urlComentarios = '';
         var cartaoAberto = null;
@@ -540,6 +556,9 @@
 
         // O card do dia mostra quantos comentários o item tem; acompanha a conversa sem recarregar a página.
         function atualizarContagem(total) {
+          chatFlutuanteTotal.textContent = total > 99 ? '99+' : total;
+          chatFlutuanteTotal.hidden = !total;
+          chatFlutuante.setAttribute('aria-label', 'Abrir comentários deste post' + (total ? ' (' + total + ')' : ''));
           if (!cartaoAberto) {
             return;
           }
@@ -583,6 +602,8 @@
           assinaturaComentarios = null;
           chat.hidden = !urlComentarios;
           dialogo.classList.toggle('tem-chat', Boolean(urlComentarios));
+          fecharChatNoCelular();
+          chatFlutuanteTotal.hidden = true;
           mostrarErroChat('');
           chatTexto.value = '';
           chatTexto.style.height = '';
@@ -603,14 +624,37 @@
         dialogo.addEventListener('close', function () {
           clearInterval(atualizacaoChat);
           urlComentarios = '';
+          fecharChatNoCelular();
         });
+
+        // No celular o chat vira uma tela por cima da janela do post, aberta pelo botão flutuante.
+        function abrirChatNoCelular() {
+          dialogo.classList.add('chat-aberto');
+          document.getElementById('chatSubtitulo').textContent = document.getElementById('itemTitulo').value || 'Ajustes e recados sobre este post';
+          chatLista.scrollTop = chatLista.scrollHeight;
+          chatVoltar.focus();
+        }
+
+        function fecharChatNoCelular() {
+          if (dialogo.classList.contains('chat-aberto')) {
+            dialogo.classList.remove('chat-aberto');
+            document.getElementById('chatSubtitulo').textContent = 'Ajustes e recados sobre este post';
+            if (dialogo.open) {
+              chatFlutuante.focus();
+            }
+          }
+        }
+
+        chatFlutuante.addEventListener('click', abrirChatNoCelular);
+        chatVoltar.addEventListener('click', fecharChatNoCelular);
 
         chatTexto.addEventListener('input', function () {
           chatTexto.style.height = 'auto';
           chatTexto.style.height = Math.min(chatTexto.scrollHeight, 140) + 'px';
         });
         chatTexto.addEventListener('keydown', function (evento) {
-          if (evento.key === 'Enter' && !evento.shiftKey && !evento.isComposing) {
+          // No computador Enter envia; no celular o Enter quebra a linha e envia-se pelo botão.
+          if (evento.key === 'Enter' && !evento.shiftKey && !evento.isComposing && !telaDeCelular.matches) {
             evento.preventDefault();
             chatForm.requestSubmit();
           }
@@ -798,6 +842,10 @@
         dialogo.addEventListener('cancel', function (evento) {
           if (enviando) {
             evento.preventDefault();
+          } else if (dialogo.classList.contains('chat-aberto')) {
+            // Com o chat aberto no celular, voltar fecha só o chat.
+            evento.preventDefault();
+            fecharChatNoCelular();
           }
         });
         dialogo.querySelectorAll('.js-fechar').forEach(function (botao) {
