@@ -93,8 +93,12 @@
     <div class="modal-duplo">
     <form method="post" enctype="multipart/form-data" class="modal-body modal-painel" id="formItem">
       {% csrf_token %}
-      <header class="modal-head">
+      <header class="modal-head item-topo">
         <h2 id="dialogItemTitulo">Editar item</h2>
+        <label class="item-dia" title="Dia do post">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+          <input type="date" id="itemData" name="data" aria-label="Dia" required{% if not pode_editar %} readonly{% endif %}>
+        </label>
         <button type="button" class="icon-btn icon-btn--neutral js-fechar" aria-label="Fechar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
         </button>
@@ -113,28 +117,35 @@
         {% endfor %}
       </div>
 
-      <label class="field-label" for="itemData">Dia</label>
-      <input type="date" id="itemData" name="data" class="field" required{% if not pode_editar %} readonly{% endif %}>
-
       <label class="field-label" for="itemLegenda">Legenda</label>
       {% if pode_editar %}
-        <textarea id="itemLegenda" name="legenda" class="field" rows="4" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Opcional"></textarea>
+        <textarea id="itemLegenda" name="legenda" class="field" rows="3" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Opcional"></textarea>
       {% else %}
-        <textarea id="itemLegenda" name="legenda" class="field" rows="4" placeholder="Sem legenda" readonly></textarea>
+        <textarea id="itemLegenda" name="legenda" class="field" rows="3" placeholder="Sem legenda" readonly></textarea>
       {% endif %}
 
-      <span class="field-label" id="itemMidiasRotulo">Imagens e vídeos</span>
+      <div class="item-rotulo-linha" id="itemMidiasRotulo">
+        <span class="field-label">Imagens e vídeos</span>
+        {% if pode_editar %}
+          <span class="field-hint" title="Imagens (JPG, PNG, GIF, WebP) até {{ limite_imagem_mb }} MB, ou vídeos (MP4, MOV, WebM) até {{ limite_video_mb }} MB">Até {{ midias_por_item }} · imagens {{ limite_imagem_mb }} MB · vídeos {{ limite_video_mb }} MB</span>
+        {% endif %}
+      </div>
       <div class="galeria-edicao" id="itemGaleria"></div>
       {% if pode_editar %}
-        <button type="button" class="board-add-btn galeria-add" id="itemAdicionarMidias">+ Adicionar imagens ou vídeos</button>
+        <button type="button" class="galeria-add-tile" id="itemAdicionarMidias" aria-label="Adicionar imagens ou vídeos" title="Adicionar imagens ou vídeos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
+          <span>Adicionar</span>
+        </button>
         <input type="file" id="itemMidias" class="visualmente-oculto" accept="{{ tipos_de_midia }}" multiple tabindex="-1" aria-hidden="true">
-        <p class="field-hint">Imagens (JPG, PNG, GIF, WebP) até {{ limite_imagem_mb }} MB, ou vídeos (MP4, MOV, WebM) até {{ limite_video_mb }} MB; no máximo {{ midias_por_item }} por item. Opcional.</p>
       {% endif %}
 
-      <span class="field-label">Cor</span>
-      {% include 'core/_cores.html' with desativado=pode_editar|yesno:',1' %}
+      <div class="item-cor">
+        <span class="field-label">Cor</span>
+        {% include 'core/_cores.html' with desativado=pode_editar|yesno:',1' %}
+      </div>
 
       {% if pode_editar %}
+        <div class="item-rodape">
         <div class="form-errors" id="itemErro" role="alert" hidden></div>
         <div class="envio-progresso" id="itemProgresso" hidden><span></span></div>
 
@@ -148,11 +159,14 @@
             </button>
           </div>
         </footer>
+        </div>
       {% else %}
+        <div class="item-rodape">
         <footer class="modal-foot">
           <span class="field-hint">Seu acesso é somente de visualização.</span>
           <button type="button" class="btn-ghost js-fechar">Fechar</button>
         </footer>
+        </div>
       {% endif %}
     </form>
 
@@ -283,6 +297,8 @@
         var form = document.getElementById('formItem');
         var excluir = document.getElementById('itemExcluir');
         var galeria = document.getElementById('itemGaleria');
+        // Guardado aqui: ao redesenhar a galeria o botão sai do documento e volta como último quadrinho.
+        var botaoAdicionar = document.getElementById('itemAdicionarMidias');
         var campoMidias = document.getElementById('itemMidias');
         var erro = document.getElementById('itemErro');
         var progresso = document.getElementById('itemProgresso');
@@ -346,7 +362,11 @@
             }
             galeria.appendChild(bloco);
           });
-          galeria.hidden = visiveis.length === 0;
+          // O "+" fica dentro da galeria, como mais um quadrinho, enquanto couber mídia no item.
+          if (botaoAdicionar && visiveis.length < MAXIMO) {
+            galeria.appendChild(botaoAdicionar);
+          }
+          galeria.hidden = !galeria.children.length;
           document.getElementById('itemMidiasRotulo').hidden = !podeEditar && visiveis.length === 0;
         }
 
@@ -361,7 +381,7 @@
             }
           });
 
-          document.getElementById('itemAdicionarMidias').addEventListener('click', function () {
+          botaoAdicionar.addEventListener('click', function () {
             campoMidias.click();
           });
 

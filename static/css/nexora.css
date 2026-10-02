@@ -5078,7 +5078,7 @@ button.day-item-body {
 }
 
 .tem-chat .modal-duplo {
-  height: min(800px, calc(100vh - 48px));
+  max-height: min(800px, calc(100vh - 48px));
 }
 
 .modal-painel {
@@ -5097,6 +5097,7 @@ button.day-item-body {
 
 .chat {
   flex: 0 0 360px;
+  min-height: min(520px, calc(100vh - 48px));
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -5322,6 +5323,165 @@ button.day-item-body {
   }
 }
 
+/* Janela aberta: a página de trás não rola. */
+html:has(dialog[open]) {
+  overflow: hidden;
+}
+
+/* Janela do item compacta: título e dia no topo, botões sempre à vista embaixo. */
+.modal--duplo .modal-body {
+  padding-top: 0;
+  padding-bottom: 0;
+  gap: 6px;
+}
+
+.item-topo {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  gap: 10px;
+  margin: 0;
+  padding: 18px 0 8px;
+  background: var(--panel-solid);
+}
+
+.item-topo h2 {
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+.item-dia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.item-dia:focus-within {
+  border-color: var(--violet);
+}
+
+.item-dia svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.item-dia input {
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color-scheme: dark;
+  outline: none;
+  cursor: pointer;
+}
+
+.item-dia input[readonly] {
+  pointer-events: none;
+}
+
+.item-rotulo-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 10px;
+}
+
+.item-rotulo-linha .field-label {
+  white-space: nowrap;
+}
+
+.item-rotulo-linha[hidden] {
+  display: none;
+}
+
+.modal--duplo .galeria-edicao {
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+}
+
+.galeria-add-tile {
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 11.5px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.galeria-add-tile:hover,
+.galeria-add-tile:focus-visible {
+  border-color: var(--violet);
+  color: var(--text);
+  background: var(--gradient-soft);
+}
+
+.galeria-add-tile svg {
+  width: 20px;
+  height: 20px;
+  color: var(--cyan);
+}
+
+.item-cor {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 6px;
+}
+
+.item-cor .field-label {
+  margin: 0;
+}
+
+.item-cor .swatch span {
+  width: 24px;
+  height: 24px;
+}
+
+.item-rodape {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px 0 16px;
+  border-top: 1px solid var(--border);
+  background: var(--panel-solid);
+}
+
+.item-rodape .form-errors {
+  margin: 0;
+}
+
+.item-rodape .modal-foot {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
 /* Tela estreita: os comentários ficam embaixo do item, e a janela inteira rola. */
 @media (max-width: 900px) {
   .modal--duplo {
@@ -5331,7 +5491,7 @@ button.day-item-body {
   .modal-duplo,
   .tem-chat .modal-duplo {
     flex-direction: column;
-    height: auto;
+    max-height: none;
   }
 
   .modal--duplo .modal-body {
@@ -5340,8 +5500,18 @@ button.day-item-body {
     overflow: visible;
   }
 
+  /* A janela inteira rola: o topo do item não gruda, mas os botões continuam à vista enquanto o item aparece. */
+  .item-topo {
+    position: static;
+  }
+
+  .item-topo h2 {
+    font-size: 15px;
+  }
+
   .chat {
     flex: none;
+    min-height: 0;
   }
 
   .chat-lista {
