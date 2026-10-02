@@ -4390,7 +4390,10 @@ button.day-item-body {
   position: relative;
   overflow: hidden;
   min-width: 0;
-  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--panel-solid);
@@ -4405,19 +4408,17 @@ button.day-item-body {
   height: 170px;
   border-radius: 50%;
   background: var(--cor);
-  opacity: 0.1;
+  opacity: 0.05;
   filter: blur(32px);
   pointer-events: none;
 }
 
 .destaque-card--feminino {
   --cor: #f5426f;
-  border-color: rgba(245, 66, 111, 0.35);
 }
 
 .destaque-card--masculino {
   --cor: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.4);
 }
 
 .destaque-card--idade {
@@ -4436,8 +4437,9 @@ button.day-item-body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
   border-radius: 9px;
   background: color-mix(in srgb, var(--cor) 16%, transparent);
   color: var(--cor);
@@ -4448,17 +4450,21 @@ button.day-item-body {
   height: 16px;
 }
 
+.destaque-texto {
+  min-width: 0;
+}
+
 .destaque-rotulo {
-  margin: 12px 0 4px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--text-dim);
+  margin: 0 0 2px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-faint);
 }
 
 .destaque-valor {
   margin: 0;
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 600;
   letter-spacing: -0.3px;
   line-height: 1.2;
   color: var(--text);
@@ -4477,25 +4483,14 @@ button.day-item-body {
 
 .destaque-rank {
   display: inline-block;
-  margin-right: 4px;
-  padding: 1px 8px;
+  margin-right: 3px;
+  padding: 0 7px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--cor) 18%, transparent);
+  background: color-mix(in srgb, var(--cor) 16%, transparent);
   color: var(--cor);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 700;
-  vertical-align: 4px;
-}
-
-.destaque-detalhe {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  color: var(--text-faint);
-}
-
-.destaque-detalhe strong {
-  color: var(--text-dim);
-  font-weight: 600;
+  vertical-align: 2px;
 }
 
 /* ---------- Público: cards de gênero, idade e localização mais compactos ---------- */
@@ -4681,25 +4676,11 @@ button.day-item-body {
   }
 
   .destaque-card {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    column-gap: 14px;
-    align-items: center;
-    padding: 14px 16px;
-  }
-
-  .destaque-icone {
-    grid-row: span 3;
-    width: 40px;
-    height: 40px;
-  }
-
-  .destaque-rotulo {
-    margin-top: 0;
+    padding: 12px 14px;
   }
 
   .destaque-valor {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .linha-plot {

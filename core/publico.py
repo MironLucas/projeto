@@ -92,18 +92,16 @@ def _destaques(blocos):
     genero = max(generos, key=lambda g: g['valor']) if generos else None
     idades = blocos['idades'].get('dados', [])
     idade = max(idades, key=lambda i: i['valor']) if idades and any(i['valor'] for i in idades) else None
-    local, regiao = None, ''
+    local = None
     if blocos['cidades'].get('dados'):
         local = blocos['cidades']['dados'][0]
-        nome, _, regiao = local['nome'].partition(', ')
-        local = {**local, 'nome': nome}
-        regiao = regiao.replace(' (state)', '')
+        local = {**local, 'nome': local['nome'].partition(', ')[0]}
     elif blocos['paises'].get('dados'):
         local = blocos['paises']['dados'][0]
     return {
         'genero': genero and {**genero, 'chave': 'feminino' if genero['codigo'] == 'F' else 'masculino'},
         'idade': idade and {**idade, 'nome': _descrever_faixa(idade['nome'])},
-        'local': local and {**local, 'regiao': regiao},
+        'local': local,
     }
 
 

@@ -13,13 +13,6 @@
     <div class="dash">
       {% include 'core/_perfil_topo.html' %}
 
-      <div class="dash-head">
-        <div class="dash-head-title">
-          <h2 class="section-title">Seu público</h2>
-        </div>
-        <span class="dash-head-hint">Retrato atual informado pelo Instagram</span>
-      </div>
-
       <div class="carregavel" data-carregar="{% url 'publico_dados' %}" aria-busy="true">
         {% include 'core/_publico_carregando.html' %}
       </div>

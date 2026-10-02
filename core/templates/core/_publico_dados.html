@@ -13,14 +13,14 @@
       <span class="destaque-icone" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg>
       </span>
-      <h3 class="destaque-rotulo">Público favorito</h3>
-      {% if genero %}
-        <p class="destaque-valor">{{ genero.nome }}</p>
-        <p class="destaque-detalhe"><strong>{{ genero.percentual|floatformat:1 }}%</strong> dos seguidores</p>
-      {% else %}
-        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
-        <p class="destaque-detalhe">Sem dados de gênero ainda</p>
-      {% endif %}
+      <div class="destaque-texto">
+        <h3 class="destaque-rotulo">Público favorito</h3>
+        {% if genero %}
+          <p class="destaque-valor">{{ genero.nome }}</p>
+        {% else %}
+          <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        {% endif %}
+      </div>
     </section>
   {% endwith %}
 
@@ -29,14 +29,14 @@
       <span class="destaque-icone" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
       </span>
-      <h3 class="destaque-rotulo">Faixa etária do seu público</h3>
-      {% if idade %}
-        <p class="destaque-valor">{{ idade.nome }}</p>
-        <p class="destaque-detalhe"><strong>{{ idade.percentual|floatformat:1 }}%</strong> dos seguidores</p>
-      {% else %}
-        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
-        <p class="destaque-detalhe">Sem dados de idade ainda</p>
-      {% endif %}
+      <div class="destaque-texto">
+        <h3 class="destaque-rotulo">Faixa etária do seu público</h3>
+        {% if idade %}
+          <p class="destaque-valor">{{ idade.nome }}</p>
+        {% else %}
+          <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        {% endif %}
+      </div>
     </section>
   {% endwith %}
 
@@ -45,14 +45,14 @@
       <span class="destaque-icone" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
       </span>
-      <h3 class="destaque-rotulo">Localização do maior público</h3>
-      {% if local %}
-        <p class="destaque-valor"><span class="destaque-rank">1º</span> {{ local.nome }}</p>
-        <p class="destaque-detalhe">{% if local.regiao %}{{ local.regiao }} · {% endif %}<strong>{{ local.percentual|floatformat:1 }}%</strong> dos seguidores</p>
-      {% else %}
-        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
-        <p class="destaque-detalhe">Sem dados de localização ainda</p>
-      {% endif %}
+      <div class="destaque-texto">
+        <h3 class="destaque-rotulo">Localização do maior público</h3>
+        {% if local %}
+          <p class="destaque-valor"><span class="destaque-rank">1º</span> {{ local.nome }}</p>
+        {% else %}
+          <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        {% endif %}
+      </div>
     </section>
   {% endwith %}
 </div>

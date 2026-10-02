@@ -869,7 +869,8 @@ class PublicoTests(TestCase):
         destaques = resp.context['destaques']
         self.assertEqual((destaques['genero']['nome'], destaques['genero']['chave']), ('Feminino', 'feminino'))
         self.assertEqual(destaques['idade']['nome'], '25 a 34 anos')
-        self.assertEqual((destaques['local']['nome'], destaques['local']['regiao']), ('São Paulo', 'São Paulo'))
+        self.assertEqual(destaques['local']['nome'], 'São Paulo')
+        self.assertNotContains(resp, 'dos seguidores</p>')
         self.assertContains(resp, 'destaque-card destaque-card--feminino')
         self.assertContains(resp, '<p class="destaque-valor"><span class="destaque-rank">1º</span> São Paulo</p>', html=True)
         self.assertContains(resp, 'data-substitui="perfilTopo"')
@@ -890,7 +891,8 @@ class PublicoTests(TestCase):
         self.assertEqual(resp.context['destaques']['genero']['chave'], 'masculino')
         pagina = self.client.get('/publico/')
         self.assertContains(pagina, 'id="perfilTopo"')
-        self.assertContains(pagina, 'Seu público')
+        self.assertNotContains(pagina, 'Seu público')
+        self.assertNotContains(pagina, 'Retrato atual informado pelo Instagram')
 
 
 class HorariosAtivosTests(SimpleTestCase):
