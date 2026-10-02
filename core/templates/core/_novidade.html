@@ -1,0 +1,57 @@
+{% load static %}
+{# Aviso de novidade: aparece uma vez por navegador. Para anunciar outra novidade, troque data-chave. #}
+<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:publico-2026-10" aria-labelledby="novidadeTitulo">
+  <div class="novidade-imagem">
+    <img src="{% static 'img/novidade-publico.webp' %}" alt="Prévia da nova tela de Público: quadros de público favorito, faixa etária e cidade, cards de gênero, idade e localização e gráfico de horários de atividade" width="1200" height="829">
+  </div>
+  <div class="novidade-corpo">
+    <span class="novidade-selo">✨ Novidade</span>
+    <h2 id="novidadeTitulo" tabindex="-1" autofocus>Uma nova tela de Público para você entender o seu público</h2>
+    <p>A aba Público foi refeita para você saber, de cara, quem acompanha a sua conta, sem precisar analisar gráfico por gráfico.</p>
+    <ul class="novidade-lista">
+      <li><strong>Destaques prontos:</strong> o público favorito, a faixa etária e a cidade com mais seguidores.</li>
+      <li><strong>Gênero, idade e localização</strong> em cards mais leves e fáceis de comparar.</li>
+      <li><strong>Horários de atividade</strong> num gráfico de linha, com o pico marcado, para escolher a melhor hora de postar.</li>
+    </ul>
+    <div class="novidade-acoes">
+      <button type="button" class="btn-ghost js-fechar-novidade">Agora não</button>
+      <a href="{% url 'publico' %}" class="btn-primary btn-sm novidade-ir">Ver a nova tela de Público →</a>
+    </div>
+  </div>
+  <button type="button" class="novidade-fechar js-fechar-novidade" aria-label="Fechar novidade">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+  </button>
+</dialog>
+<script>
+  (function () {
+    var novidade = document.getElementById('novidade');
+    var chave = novidade.dataset.chave;
+    function jaViu() {
+      try {
+        return localStorage.getItem(chave) === 'visto';
+      } catch (erro) {
+        return true;  // sem acesso ao armazenamento, melhor não insistir com o aviso
+      }
+    }
+    function marcarVisto() {
+      try {
+        localStorage.setItem(chave, 'visto');
+      } catch (erro) {}
+    }
+    if (jaViu()) {
+      return;
+    }
+    // Fechar de qualquer jeito (botões, Esc, clique fora ou indo para a tela) conta como visto.
+    novidade.addEventListener('close', marcarVisto);
+    novidade.querySelector('.novidade-ir').addEventListener('click', marcarVisto);
+    novidade.querySelectorAll('.js-fechar-novidade').forEach(function (botao) {
+      botao.addEventListener('click', function () { novidade.close(); });
+    });
+    novidade.addEventListener('click', function (evento) {
+      if (evento.target === novidade) {
+        novidade.close();
+      }
+    });
+    setTimeout(function () { novidade.showModal(); }, 400);
+  })();
+</script>

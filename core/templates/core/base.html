@@ -219,5 +219,9 @@
       });
     })();
   </script>
+
+  {% if active_menu != 'publico' %}
+    {% include 'core/_novidade.html' %}
+  {% endif %}
 </body>
 </html>
