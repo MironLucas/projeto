@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 ATUALIZADO_EM = '25 de setembro de 2026'
 
 
+WHATSAPP_CONTATO = (
+    'https://wa.me/556293676291?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20a%20plataforma'
+)
+
+
+def apresentacao(request):
+    """Landing page da empresa (por enquanto em /plataforma/; depois da análise da Meta vira a página inicial)."""
+    return render(request, 'core/landing.html', {'whatsapp': WHATSAPP_CONTATO})
+
+
 def privacidade(request):
     return _pagina(request, 'core/privacidade.html', 'Política de Privacidade')
 

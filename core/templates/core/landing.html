@@ -1,0 +1,220 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nextsora · Relatórios e produção de conteúdo para Instagram</title>
+  <meta name="description" content="Acompanhe o crescimento do Instagram, conheça o seu público e organize a produção de conteúdo da equipe em uma só plataforma.">
+  <meta property="og:title" content="Nextsora · Relatórios e produção de conteúdo para Instagram">
+  <meta property="og:description" content="Resultados do Instagram, público e produção de conteúdo da equipe em uma só plataforma.">
+  <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{% static 'img/icone-app-1024.png' %}">
+  <meta name="theme-color" content="#0a0c14">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
+</head>
+<body class="lp">
+  <header class="lp-topo">
+    <div class="lp-container lp-topo-linha">
+      <a href="#inicio" class="lp-marca">
+        <img src="{% static 'img/logo.png' %}" alt="">
+        <span>NEXTSORA</span>
+      </a>
+      <nav class="lp-menu" aria-label="Seções">
+        <a href="#recursos">Recursos</a>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#contato">Contato</a>
+      </nav>
+      <a href="{% url 'login' %}" class="lp-btn lp-btn--contorno lp-btn--pequeno">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><path d="M10 17l5-5-5-5"></path><path d="M15 12H3"></path></svg>
+        Entrar
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <section class="lp-hero" id="inicio">
+      <div class="lp-container lp-hero-grade">
+        <div class="lp-hero-texto">
+          <span class="lp-selo">Para quem vive de Instagram</span>
+          <h1>Resultados do Instagram e produção de conteúdo <span class="lp-degrade">no mesmo lugar</span></h1>
+          <p class="lp-lead">
+            O Nextsora mostra como a conta está crescendo, quem é o seu público e o que está funcionando,
+            e ainda organiza a programação e a produção de conteúdo da equipe. Sem planilhas, sem prints, sem perder tempo.
+          </p>
+          <div class="lp-acoes">
+            <a href="{{ whatsapp }}" class="lp-btn lp-btn--whatsapp" target="_blank" rel="noopener">
+              {% include 'core/_icone_whatsapp.html' %}
+              Falar no WhatsApp
+            </a>
+            <a href="#recursos" class="lp-btn lp-btn--contorno">Ver recursos</a>
+          </div>
+          <ul class="lp-garantias">
+            <li>Conexão oficial com a Meta</li>
+            <li>Acesso somente leitura</li>
+            <li>Funciona no celular</li>
+          </ul>
+        </div>
+
+        <div class="lp-tela" aria-hidden="true">
+          <div class="lp-tela-barra"><span></span><span></span><span></span></div>
+          <div class="lp-tela-corpo">
+            <div class="lp-perfil">
+              <span class="lp-perfil-foto"><img src="{% static 'img/logo.png' %}" alt=""></span>
+              <div>
+                <strong>Sua marca</strong>
+                <small>@suamarca</small>
+                <div class="lp-perfil-numeros"><span><b>48,2 mil</b> seguidores</span><span><b>364</b> posts</span></div>
+              </div>
+            </div>
+            <div class="lp-cards">
+              <div class="lp-card" style="--cor: #7c5cff">
+                <small>Novos seguidores</small><b class="lp-positivo">+1.793</b>
+                <svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0 26 C 15 24, 22 18, 35 19 S 55 10, 68 12 S 88 4, 100 5"></path></svg>
+              </div>
+              <div class="lp-card" style="--cor: #f5a524">
+                <small>Visualizações</small><b>1,2 mi</b>
+                <svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0 22 C 12 14, 22 24, 34 16 S 56 20, 66 9 S 86 14, 100 6"></path></svg>
+              </div>
+              <div class="lp-card" style="--cor: #f5426f">
+                <small>Curtidas</small><b>74,8 mil</b>
+                <svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0 24 C 14 22, 24 25, 36 20 S 54 6, 64 12 S 84 18, 100 8"></path></svg>
+              </div>
+              <div class="lp-card" style="--cor: #00d4ff">
+                <small>Comentários</small><b>5.283</b>
+                <svg viewBox="0 0 100 32" preserveAspectRatio="none"><path d="M0 25 C 16 25, 24 12, 36 14 S 52 22, 66 10 S 88 12, 100 9"></path></svg>
+              </div>
+            </div>
+            <div class="lp-barras">
+              <small>Novos seguidores por mês</small>
+              <div>{% for altura in '3457689' %}<span style="height: {{ altura }}0%"></span>{% endfor %}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-secao" id="recursos">
+      <div class="lp-container">
+        <header class="lp-cabecalho">
+          <span class="lp-selo">Recursos</span>
+          <h2>Tudo o que a gestão do Instagram precisa</h2>
+          <p>Dos números da conta ao post pronto para publicar, cada etapa tem o seu lugar.</p>
+        </header>
+
+        <div class="lp-recursos">
+          <article class="lp-recurso" style="--cor: #7c5cff">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"></rect><rect x="14" y="3" width="7" height="5" rx="1.5"></rect><rect x="14" y="12" width="7" height="9" rx="1.5"></rect><rect x="3" y="16" width="7" height="5" rx="1.5"></rect></svg></span>
+            <h3>Dashboard com comparativos</h3>
+            <p>Novos seguidores, visualizações, curtidas e comentários de hoje, da semana, do mês ou do período que você escolher, sempre comparados com o período anterior.</p>
+          </article>
+          <article class="lp-recurso" style="--cor: #f5a524">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l4-4 3 3 5-6"></path></svg></span>
+            <h3>Gráficos de crescimento</h3>
+            <p>Veja a evolução da conta mês a mês e descubra quais publicações mais engajam, com ranking por curtidas e por visualizações.</p>
+          </article>
+          <article class="lp-recurso" style="--cor: #00d4ff">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+            <h3>Conheça o seu público</h3>
+            <p>Gênero, faixa etária, cidades e países dos seguidores, e os horários em que eles estão mais ativos para você postar na hora certa.</p>
+          </article>
+          <article class="lp-recurso" style="--cor: #f5426f">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg></span>
+            <h3>Programação de conteúdo</h3>
+            <p>Calendário com cada post do mês: formato (carrossel, reels, stories), legenda, imagens e vídeos, cores e marcação do que já foi publicado.</p>
+          </article>
+          <article class="lp-recurso" style="--cor: #3ddc84">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+            <h3>Esteira de produção</h3>
+            <p>Quadro no estilo kanban para acompanhar cada conteúdo do roteiro à publicação, com prioridade urgente, médio ou normal.</p>
+          </article>
+          <article class="lp-recurso" style="--cor: #ff7a45">
+            <span class="lp-recurso-icone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg></span>
+            <h3>Equipe e clientes</h3>
+            <p>Convide a equipe com acesso de edição ou só de visualização, e mantenha um painel separado para cada cliente ou marca.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="lp-secao lp-secao--faixa" id="como-funciona">
+      <div class="lp-container">
+        <header class="lp-cabecalho">
+          <span class="lp-selo">Como funciona</span>
+          <h2>Comece em poucos minutos</h2>
+        </header>
+        <ol class="lp-passos">
+          <li>
+            <span class="lp-passo-numero">1</span>
+            <h3>Conecte o Instagram</h3>
+            <p>Pelo login oficial do Instagram, em poucos cliques. A conta precisa ser profissional (empresa ou criador).</p>
+          </li>
+          <li>
+            <span class="lp-passo-numero">2</span>
+            <h3>Acompanhe os resultados</h3>
+            <p>Os números da conta aparecem no Dashboard e o perfil do público na aba Público, atualizados direto do Instagram.</p>
+          </li>
+          <li>
+            <span class="lp-passo-numero">3</span>
+            <h3>Planeje e produza</h3>
+            <p>Monte a programação do mês, organize a produção no quadro e convide a equipe para trabalhar junto.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="lp-secao">
+      <div class="lp-container lp-seguranca">
+        <div>
+          <span class="lp-selo">Segurança</span>
+          <h2>Seus dados protegidos</h2>
+          <p>
+            A conexão usa a API oficial da Meta e o acesso é <strong>somente leitura</strong>: o Nextsora não publica,
+            não comenta e não envia mensagens pela sua conta. Os dados não são vendidos nem compartilhados,
+            e você pode desconectar quando quiser.
+          </p>
+          <a href="{% url 'privacidade' %}" class="lp-link">Ler a política de privacidade →</a>
+        </div>
+        <ul class="lp-lista-check">
+          <li>Login oficial do Instagram, sem pedir sua senha</li>
+          <li>Conexão criptografada (HTTPS)</li>
+          <li>Permissões por pessoa: edição ou só visualização</li>
+          <li>Em conformidade com a LGPD</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="lp-contato" id="contato">
+      <div class="lp-container">
+        <div class="lp-contato-caixa">
+          <h2>Quer ver o Nextsora funcionando na sua conta?</h2>
+          <p>Fale com a gente no WhatsApp e tire suas dúvidas sobre a plataforma.</p>
+          <a href="{{ whatsapp }}" class="lp-btn lp-btn--whatsapp lp-btn--grande" target="_blank" rel="noopener">
+            {% include 'core/_icone_whatsapp.html' %}
+            Falar no WhatsApp
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="lp-rodape">
+    <div class="lp-container lp-rodape-linha">
+      <span>Nextsora &copy; {% now "Y" %}</span>
+      <nav aria-label="Links legais">
+        <a href="{% url 'privacidade' %}">Privacidade</a>
+        <a href="{% url 'termos' %}">Termos de uso</a>
+        <a href="{% url 'exclusao_de_dados' %}">Exclusão de dados</a>
+        <a href="{% url 'login' %}">Entrar</a>
+      </nav>
+    </div>
+  </footer>
+
+  <a href="{{ whatsapp }}" class="lp-whatsapp-flutuante" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    {% include 'core/_icone_whatsapp.html' %}
+  </a>
+</body>
+</html>

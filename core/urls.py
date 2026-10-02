@@ -37,6 +37,9 @@ urlpatterns = [
     path('instagram/callback/', views.instagram_callback, name='instagram_callback'),
     path('instagram/desconectar/', views.instagram_desconectar, name='instagram_desconectar'),
 
+    # Landing page da empresa.
+    path('plataforma/', meta.apresentacao, name='apresentacao'),
+
     # Públicas, exigidas pela Meta para a análise do app.
     path('privacidade/', meta.privacidade, name='privacidade'),
     path('termos/', meta.termos, name='termos'),

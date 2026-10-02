@@ -1268,3 +1268,14 @@ class PaineisSeparadosTests(TestCase):
         # Quem o segundo painel cadastra em Usuários entra no segundo painel.
         self.client.post('/usuarios/', {'nome': 'Bia', 'usuario': 'bia', 'senha': 'Senha#Forte2026', 'papel': 'editor'})
         self.assertEqual(User.objects.get(username='bia').perfil.conta, segundo)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class LandingTests(TestCase):
+    def test_landing_abre_sem_login_com_whatsapp_e_entrar(self):
+        resp = self.client.get('/plataforma/')
+        self.assertEqual(resp.status_code, 200)
+        whatsapp = 'https://wa.me/556293676291?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20a%20plataforma'
+        self.assertContains(resp, f'href="{whatsapp}"', count=3)  # topo, contato e botão flutuante
+        self.assertContains(resp, '<a href="/" class="lp-btn lp-btn--contorno lp-btn--pequeno">', count=1)
+        self.assertContains(resp, 'href="/privacidade/"')
