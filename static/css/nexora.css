@@ -1843,7 +1843,7 @@ img.brand-mark {
 }
 
 .gender-seg--m {
-  background: var(--violet);
+  background: #3b82f6;
 }
 
 .gender-seg--u {
@@ -4374,5 +4374,341 @@ button.day-item-body {
 @media (prefers-reduced-motion: reduce) {
   .lp {
     scroll-behavior: auto;
+  }
+}
+
+/* ---------- Público: três destaques no topo ---------- */
+.destaque-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.destaque-card {
+  --cor: var(--violet);
+  position: relative;
+  overflow: hidden;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--panel-solid);
+}
+
+.destaque-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: var(--cor);
+  opacity: 0.1;
+  filter: blur(32px);
+  pointer-events: none;
+}
+
+.destaque-card--feminino {
+  --cor: #f5426f;
+  border-color: rgba(245, 66, 111, 0.35);
+}
+
+.destaque-card--masculino {
+  --cor: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+.destaque-card--idade {
+  --cor: #f5a524;
+}
+
+.destaque-card--local {
+  --cor: var(--cyan);
+}
+
+.destaque-card--vazio {
+  --cor: var(--text-faint);
+}
+
+.destaque-icone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--cor) 16%, transparent);
+  color: var(--cor);
+}
+
+.destaque-icone svg {
+  width: 16px;
+  height: 16px;
+}
+
+.destaque-rotulo {
+  margin: 12px 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.destaque-valor {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* No gênero a cor diz quem é o público: rosa feminino, azul masculino. */
+.destaque-card--feminino .destaque-valor,
+.destaque-card--masculino .destaque-valor {
+  color: var(--cor);
+}
+
+.destaque-valor--vazio {
+  color: var(--text-faint);
+}
+
+.destaque-rank {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--cor) 18%, transparent);
+  color: var(--cor);
+  font-size: 13px;
+  font-weight: 700;
+  vertical-align: 4px;
+}
+
+.destaque-detalhe {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.destaque-detalhe strong {
+  color: var(--text-dim);
+  font-weight: 600;
+}
+
+/* ---------- Público: cards de gênero, idade e localização mais compactos ---------- */
+.aud-card {
+  padding: 16px 18px;
+}
+
+.aud-title {
+  min-height: 24px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.aud-head {
+  margin-bottom: 10px;
+}
+
+.hbar-list {
+  gap: 8px;
+}
+
+.hbar-label {
+  margin-bottom: 4px;
+  font-size: 12.5px;
+}
+
+.hbar-track {
+  height: 5px;
+}
+
+.aud-card--idade .hbar-fill {
+  background: #f5a524;
+}
+
+.aud-card--local .hbar-fill {
+  background: var(--cyan);
+}
+
+.gender-bar {
+  height: 10px;
+  margin-bottom: 14px;
+}
+
+.gender-legend {
+  gap: 8px;
+}
+
+.gender-legend li {
+  font-size: 12.5px;
+}
+
+/* ---------- Gráfico de linha (horários de atividade) ---------- */
+.linha-plot {
+  height: 220px;
+}
+
+.linha-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.linha-traco {
+  fill: none;
+  stroke: var(--violet);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.linha-slots {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+
+.linha-slot {
+  height: 100%;
+  cursor: crosshair;
+  outline: none;
+}
+
+.linha-mira {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  display: none;
+  background: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+}
+
+.linha-ponto,
+.linha-pico {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--violet);
+  box-shadow: 0 0 0 2px var(--panel-solid);
+  pointer-events: none;
+}
+
+.linha-ponto {
+  display: none;
+}
+
+.linha-pico {
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  box-shadow: 0 0 0 2px var(--panel-solid), 0 0 12px var(--violet);
+}
+
+.linha-pico-rotulo {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 10px));
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #1b2036;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.linha-tip {
+  top: auto;
+  bottom: auto;
+  transform: translate(-50%, calc(-100% - 12px));
+}
+
+.linha-tip--esquerda {
+  transform: translate(-12px, calc(-100% - 12px));
+}
+
+.linha-tip--direita {
+  transform: translate(calc(-100% + 12px), calc(-100% - 12px));
+}
+
+.linha-slot:hover .linha-mira,
+.linha-slot:focus-visible .linha-mira,
+.linha-slot:hover .linha-ponto,
+.linha-slot:focus-visible .linha-ponto {
+  display: block;
+}
+
+.linha-slot:hover .linha-tip,
+.linha-slot:focus-visible .linha-tip {
+  display: flex;
+}
+
+.linha:has(.linha-slot:hover) .linha-pico-rotulo,
+.linha:has(.linha-slot:focus-visible) .linha-pico-rotulo {
+  opacity: 0;
+}
+
+.linha-eixo {
+  position: relative;
+  height: 14px;
+  margin: 8px 0 0 40px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.linha-eixo span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .destaque-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .destaque-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+  }
+
+  .destaque-icone {
+    grid-row: span 3;
+    width: 40px;
+    height: 40px;
+  }
+
+  .destaque-rotulo {
+    margin-top: 0;
+  }
+
+  .destaque-valor {
+    font-size: 20px;
+  }
+
+  .linha-plot {
+    height: 180px;
+  }
+}
+
+@media (max-width: 640px) {
+  .linha-eixo span.so-desktop {
+    display: none;
   }
 }

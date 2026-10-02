@@ -11,10 +11,11 @@
 {% block content %}
   {% if instagram %}
     <div class="dash">
+      {% include 'core/_perfil_topo.html' %}
+
       <div class="dash-head">
         <div class="dash-head-title">
-          <h2 class="section-title">Seus seguidores</h2>
-          {% include 'core/_publico_seguidores.html' %}
+          <h2 class="section-title">Seu público</h2>
         </div>
         <span class="dash-head-hint">Retrato atual informado pelo Instagram</span>
       </div>

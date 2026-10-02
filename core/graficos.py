@@ -3,6 +3,8 @@ import math
 from dataclasses import dataclass
 from datetime import date, timedelta
 
+from .minigrafico import curvas_monotonas
+
 DIAS_SEMANA = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 MAX_ROTULOS_EIXO_X = 12
@@ -115,4 +117,54 @@ def montar_grafico(subtitulo, intervalos, valores, parciais=None):
         'barras': barras,
         'base': round(base, 2),
         'marcas': [{'valor': m, 'posicao': round((m - inferior) / faixa * 100, 2)} for m in marcas],
+    }
+
+
+def escala_ajustada(minimo, maximo, marcas=4):
+    """Como escala(), mas sem forçar o zero: para linhas, o eixo acompanha a faixa dos dados."""
+    if minimo == maximo:
+        minimo, maximo = minimo - 1, maximo + 1
+    bruto = (maximo - minimo) / marcas
+    magnitude = 10 ** math.floor(math.log10(bruto))
+    passo = next(m * magnitude for m in (1, 2, 5, 10) if bruto <= m * magnitude)
+    passo = max(1, int(round(passo)))
+    inferior = math.floor(minimo / passo) * passo
+    superior = math.ceil(maximo / passo) * passo
+    return list(range(inferior, superior + passo, passo))
+
+
+def montar_grafico_linha(subtitulo, rotulos, descricoes, valores, rotulos_visiveis=3):
+    """Gráfico de linha suave com área: caminhos SVG (viewBox 100×100) e um ponto por valor para o hover."""
+    if not valores or all(valor is None for valor in valores):
+        return {'subtitulo': subtitulo, 'vazio': True}
+
+    marcas = escala_ajustada(min(valores), max(valores))
+    inferior, superior = marcas[0], marcas[-1]
+    quantidade = len(valores)
+    xs = [100 * i / (quantidade - 1) if quantidade > 1 else 50 for i in range(quantidade)]
+    ys = [100 - (valor - inferior) / (superior - inferior) * 100 for valor in valores]
+    curvas = curvas_monotonas(xs, ys)
+    linha = ' '.join([f'M{xs[0]:.2f},{ys[0]:.2f}'] + curvas)
+    pico = max(range(quantidade), key=lambda i: valores[i])
+    meio_passo = 100 / (quantidade - 1) / 2 if quantidade > 1 else 50
+
+    return {
+        'subtitulo': subtitulo,
+        'vazio': False,
+        'linha': linha,
+        'area': f'{linha} L{xs[-1]:.2f},100 L{xs[0]:.2f},100 Z',
+        'marcas': [{'valor': m, 'posicao': round((m - inferior) / (superior - inferior) * 100, 2)} for m in marcas],
+        'pico': {'x': round(xs[pico], 2), 'y': round(ys[pico], 2), 'rotulo': rotulos[pico], 'valor': valores[pico]},
+        'pontos': [{
+            'rotulo': rotulo,
+            'descricao': descricao,
+            'valor': valor,
+            'x': round(x, 2),
+            'y': round(y, 2),
+            'largura': round(min(100, x + meio_passo) - max(0, x - meio_passo), 4),
+            'mostrar_rotulo': indice % rotulos_visiveis == 0,
+            'rotulo_no_celular': indice % (rotulos_visiveis * 2) == 0,
+            # Dica alinhada para dentro do gráfico nas pontas, para não ser cortada.
+            'lado': 'esquerda' if x < 12 else ('direita' if x > 88 else 'centro'),
+        } for indice, (rotulo, descricao, valor, x, y) in enumerate(zip(rotulos, descricoes, valores, xs, ys))],
     }

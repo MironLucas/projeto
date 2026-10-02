@@ -859,8 +859,20 @@ class PublicoTests(TestCase):
         self.assertContains(resp, 'id="loc-paises" hidden')
         self.assertNotContains(resp, 'Principais cidades')
         horarios = resp.context['horarios']['dados']
-        self.assertEqual(len(horarios['barras']), 24)
+        self.assertEqual(len(horarios['pontos']), 24)
+        self.assertEqual(horarios['pico']['valor'], 50)
+        self.assertTrue(horarios['linha'].startswith('M0.00,'))
         self.assertIn('Pico às', horarios['subtitulo'])
+        self.assertContains(resp, 'class="linha-slot"', count=24)
+
+        # Os três destaques do topo já dizem o que mais aparece.
+        destaques = resp.context['destaques']
+        self.assertEqual((destaques['genero']['nome'], destaques['genero']['chave']), ('Feminino', 'feminino'))
+        self.assertEqual(destaques['idade']['nome'], '25 a 34 anos')
+        self.assertEqual((destaques['local']['nome'], destaques['local']['regiao']), ('São Paulo', 'São Paulo'))
+        self.assertContains(resp, 'destaque-card destaque-card--feminino')
+        self.assertContains(resp, '<p class="destaque-valor"><span class="destaque-rank">1º</span> São Paulo</p>', html=True)
+        self.assertContains(resp, 'data-substitui="perfilTopo"')
 
     def test_conta_pequena_mostra_motivo_em_cada_bloco(self):
         self._conectar()
@@ -868,6 +880,17 @@ class PublicoTests(TestCase):
         resp = self._get({'city': recusa, 'country': recusa, 'age': recusa, 'gender': recusa, 'online_followers': recusa})
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'pelo menos 100 seguidores', count=5)
+        self.assertEqual(resp.context['destaques'], {'genero': None, 'idade': None, 'local': None})
+        self.assertContains(resp, 'destaque-card--vazio')
+
+    def test_masculino_em_azul_e_pagina_abre_com_o_topo_do_perfil(self):
+        self._conectar()
+        resp = self._get({'gender': (True, self._demografia([('F', 100), ('M', 300), ('U', 900)]))})
+        # "Não informado" não conta para o público favorito.
+        self.assertEqual(resp.context['destaques']['genero']['chave'], 'masculino')
+        pagina = self.client.get('/publico/')
+        self.assertContains(pagina, 'id="perfilTopo"')
+        self.assertContains(pagina, 'Seu público')
 
 
 class HorariosAtivosTests(SimpleTestCase):

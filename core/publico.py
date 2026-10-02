@@ -9,9 +9,12 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils import timezone
 
-from .graficos import Intervalo, montar_grafico
+from .graficos import montar_grafico_linha
 from .models import InstagramConnection
-from .views import INSTAGRAM_GRAPH_URL, _buscar_dados_perfil, _guardar_perfil, _renovar_token_se_necessario
+from .views import (
+    INSTAGRAM_GRAPH_URL, _buscar_dados_perfil, _contexto_do_perfil, _guardar_perfil, _perfil_salvo,
+    _renovar_token_se_necessario,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +44,8 @@ def publico(request):
     instagram = InstagramConnection.objects.filter(user=request.conta).first()
     contexto = {'active_menu': 'publico', 'instagram': instagram}
     if instagram:
-        # Abre na hora com o último total de seguidores salvo; os gráficos chegam por publico_dados.
-        contexto.update({'foto_perfil': instagram.perfil_foto, 'seguidores_total': instagram.perfil_seguidores})
+        # Abre na hora com o perfil salvo (mesmo topo do dashboard); os gráficos chegam por publico_dados.
+        contexto.update(_contexto_do_perfil(_perfil_salvo(instagram)))
     return render(request, 'core/publico.html', contexto)
 
 
@@ -73,15 +76,39 @@ def _dados_do_publico(instagram):
     perfil = perfil.result()
     _guardar_perfil(instagram, perfil)
     seguidores_total = perfil['seguidores']
-    return {
-        'foto_perfil': perfil['foto'],
-        'seguidores_total': seguidores_total,
+    blocos = {
         'cidades': _bloco(cidades.result(), lambda itens: _ranking(itens, seguidores_total)),
         'paises': _bloco(paises.result(), lambda itens: _ranking(itens, seguidores_total, PAISES.get)),
         'idades': _bloco(idades.result(), _faixas_etarias),
         'generos': _bloco(generos.result(), _generos),
         'horarios': _bloco(horarios.result(), _grafico_horarios),
     }
+    return {**_contexto_do_perfil(perfil), **blocos, 'destaques': _destaques(blocos)}
+
+
+def _destaques(blocos):
+    """Os três quadros do topo: o que mais aparece em gênero, idade e localização, já pronto para ler."""
+    generos = [g for g in blocos['generos'].get('dados', []) if g['codigo'] in ('F', 'M')]
+    genero = max(generos, key=lambda g: g['valor']) if generos else None
+    idades = blocos['idades'].get('dados', [])
+    idade = max(idades, key=lambda i: i['valor']) if idades and any(i['valor'] for i in idades) else None
+    local, regiao = None, ''
+    if blocos['cidades'].get('dados'):
+        local = blocos['cidades']['dados'][0]
+        nome, _, regiao = local['nome'].partition(', ')
+        local = {**local, 'nome': nome}
+        regiao = regiao.replace(' (state)', '')
+    elif blocos['paises'].get('dados'):
+        local = blocos['paises']['dados'][0]
+    return {
+        'genero': genero and {**genero, 'chave': 'feminino' if genero['codigo'] == 'F' else 'masculino'},
+        'idade': idade and {**idade, 'nome': _descrever_faixa(idade['nome'])},
+        'local': local and {**local, 'regiao': regiao},
+    }
+
+
+def _descrever_faixa(faixa):
+    return '65 anos ou mais' if faixa == '65+' else f"{faixa.replace('-', ' a ')} anos"
 
 
 def _bloco(resultado, montar):
@@ -128,9 +155,13 @@ def _generos(itens):
 
 def _grafico_horarios(medias):
     pico = max(range(24), key=lambda hora: medias[hora])
-    intervalos = [Intervalo(f'{hora}h', f'{hora:02d}:00 às {hora:02d}:59', None, None) for hora in range(24)]
     subtitulo = f'Pico às {pico}h · média de 30 dias, horário de Brasília'
-    return montar_grafico(subtitulo, intervalos, [round(valor) for valor in medias])
+    return montar_grafico_linha(
+        subtitulo,
+        [f'{hora}h' for hora in range(24)],
+        [f'{hora:02d}:00 às {hora:02d}:59' for hora in range(24)],
+        [round(valor) for valor in medias],
+    )
 
 
 def _buscar_demografia(instagram, breakdown):

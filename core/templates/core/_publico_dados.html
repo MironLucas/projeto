@@ -5,7 +5,57 @@
     <p>O Instagram devolveu uma resposta que o Nextsora não esperava. Recarregue a página; se continuar, desconecte a conta pelo menu na sua foto e conecte de novo.</p>
   </div>
 {% else %}
-<template data-substitui="publicoSeguidores">{% include 'core/_publico_seguidores.html' %}</template>
+<template data-substitui="perfilTopo">{% include 'core/_perfil_topo.html' %}</template>
+
+<div class="destaque-grid">
+  {% with genero=destaques.genero %}
+    <section class="destaque-card destaque-card--{{ genero.chave|default:'vazio' }}">
+      <span class="destaque-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-1a7 7 0 0 1 14 0v1"></path></svg>
+      </span>
+      <h3 class="destaque-rotulo">Público favorito</h3>
+      {% if genero %}
+        <p class="destaque-valor">{{ genero.nome }}</p>
+        <p class="destaque-detalhe"><strong>{{ genero.percentual|floatformat:1 }}%</strong> dos seguidores</p>
+      {% else %}
+        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        <p class="destaque-detalhe">Sem dados de gênero ainda</p>
+      {% endif %}
+    </section>
+  {% endwith %}
+
+  {% with idade=destaques.idade %}
+    <section class="destaque-card destaque-card--idade">
+      <span class="destaque-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+      </span>
+      <h3 class="destaque-rotulo">Faixa etária do seu público</h3>
+      {% if idade %}
+        <p class="destaque-valor">{{ idade.nome }}</p>
+        <p class="destaque-detalhe"><strong>{{ idade.percentual|floatformat:1 }}%</strong> dos seguidores</p>
+      {% else %}
+        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        <p class="destaque-detalhe">Sem dados de idade ainda</p>
+      {% endif %}
+    </section>
+  {% endwith %}
+
+  {% with local=destaques.local %}
+    <section class="destaque-card destaque-card--local">
+      <span class="destaque-icone" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12z"></path><circle cx="12" cy="10" r="2.5"></circle></svg>
+      </span>
+      <h3 class="destaque-rotulo">Localização do maior público</h3>
+      {% if local %}
+        <p class="destaque-valor"><span class="destaque-rank">1º</span> {{ local.nome }}</p>
+        <p class="destaque-detalhe">{% if local.regiao %}{{ local.regiao }} · {% endif %}<strong>{{ local.percentual|floatformat:1 }}%</strong> dos seguidores</p>
+      {% else %}
+        <p class="destaque-valor destaque-valor--vazio">&mdash;</p>
+        <p class="destaque-detalhe">Sem dados de localização ainda</p>
+      {% endif %}
+    </section>
+  {% endwith %}
+</div>
 
 <div class="aud-grid">
   <section class="aud-card">
@@ -31,12 +81,12 @@
     {% endif %}
   </section>
 
-  <section class="aud-card">
+  <section class="aud-card aud-card--idade">
     <h3 class="aud-title">Faixa etária</h3>
     {% include 'core/_barras_publico.html' with bloco=idades %}
   </section>
 
-  <section class="aud-card" id="localizacao">
+  <section class="aud-card aud-card--local" id="localizacao">
     <header class="aud-head">
       <h3 class="aud-title">Localização</h3>
       <div class="segmented" role="group" aria-label="Ver por">
@@ -61,6 +111,6 @@
     <p class="chart-empty">{{ horarios.motivo }}</p>
   </section>
 {% else %}
-  {% include 'core/_grafico.html' with grafico=horarios.dados tipo='horarios' titulo='Horários de atividade' unidade='seguidores online em média' mensagem_vazio='O Instagram ainda não tem dados de horários de atividade.' %}
+  {% include 'core/_grafico_linha.html' with grafico=horarios.dados titulo='Horários de atividade' unidade='seguidores online em média' %}
 {% endif %}
 {% endif %}

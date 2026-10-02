@@ -41,7 +41,7 @@ def montar_minigrafico(anteriores, atuais):
     menor, maior = min(valores), max(valores)
     xs = [LARGURA * i / (quantidade - 1) if quantidade > 1 else LARGURA for i in range(quantidade)]
     ys = [_altura(valor, menor, maior) for valor in valores]
-    curvas = _curvas_monotonas(xs, ys)
+    curvas = curvas_monotonas(xs, ys)
 
     # A linha apagada vai até o primeiro ponto do período atual; dali em diante é a cor do card.
     # Com um ponto só no período atual (ex.: Hoje), a cor começa no último ponto do anterior.
@@ -78,7 +78,7 @@ def _altura(valor, menor, maior):
     return ALTURA - MARGEM - (valor - menor) / (maior - menor) * (ALTURA - 2 * MARGEM)
 
 
-def _curvas_monotonas(xs, ys):
+def curvas_monotonas(xs, ys):
     """Segmentos cúbicos que passam por todos os pontos sem inventar picos (Fritsch–Carlson)."""
     quantidade = len(xs)
     if quantidade < 2:

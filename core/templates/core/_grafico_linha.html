@@ -1,0 +1,52 @@
+{% load humanize l10n %}
+<section class="chart-card chart-card--linha">
+  <header class="chart-head">
+    <h3 class="chart-title">{{ titulo }}</h3>
+    <span class="chart-sub">{{ grafico.subtitulo }}</span>
+  </header>
+
+  {% if grafico.vazio %}
+    <p class="chart-empty">O Instagram ainda não tem dados para este gráfico.</p>
+  {% else %}
+    <div class="chart linha" role="img" aria-label="{{ titulo }}: {{ grafico.subtitulo }}">
+      <div class="chart-plot linha-plot">
+        {% for marca in grafico.marcas %}
+          <div class="chart-gridline" style="bottom: {{ marca.posicao|unlocalize }}%">
+            <span class="chart-tick">{{ marca.valor|intcomma }}</span>
+          </div>
+        {% endfor %}
+
+        <svg class="linha-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="linha-area" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" style="stop-color: var(--violet); stop-opacity: 0.34"></stop>
+              <stop offset="1" style="stop-color: var(--violet); stop-opacity: 0"></stop>
+            </linearGradient>
+          </defs>
+          <path class="linha-area" d="{{ grafico.area }}" fill="url(#linha-area)"></path>
+          <path class="linha-traco" d="{{ grafico.linha }}"></path>
+        </svg>
+
+        <span class="linha-pico" style="left: {{ grafico.pico.x|unlocalize }}%; top: {{ grafico.pico.y|unlocalize }}%" aria-hidden="true"></span>
+        <span class="linha-pico-rotulo" style="left: {{ grafico.pico.x|unlocalize }}%; top: {{ grafico.pico.y|unlocalize }}%" aria-hidden="true">Pico · {{ grafico.pico.rotulo }}</span>
+
+        <div class="linha-slots">
+          {% for ponto in grafico.pontos %}
+            <span class="linha-slot" tabindex="0" style="width: {{ ponto.largura|unlocalize }}%"
+                  aria-label="{{ ponto.descricao }}: {{ ponto.valor|intcomma }} {{ unidade }}">
+              <span class="linha-mira" style="left: {{ ponto.x|unlocalize }}%" aria-hidden="true"></span>
+              <span class="linha-ponto" style="left: {{ ponto.x|unlocalize }}%; top: {{ ponto.y|unlocalize }}%" aria-hidden="true"></span>
+              <span class="chart-tip linha-tip linha-tip--{{ ponto.lado }}" style="left: {{ ponto.x|unlocalize }}%; top: {{ ponto.y|unlocalize }}%" aria-hidden="true">
+                <span class="chart-tip-title">{{ ponto.descricao }}</span>
+                <span><strong>{{ ponto.valor|intcomma }}</strong> {{ unidade }}</span>
+              </span>
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="linha-eixo" aria-hidden="true">
+        {% for ponto in grafico.pontos %}{% if ponto.mostrar_rotulo %}<span{% if not ponto.rotulo_no_celular %} class="so-desktop"{% endif %} style="left: {{ ponto.x|unlocalize }}%">{{ ponto.rotulo }}</span>{% endif %}{% endfor %}
+      </div>
+    </div>
+  {% endif %}
+</section>
