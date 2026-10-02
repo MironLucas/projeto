@@ -1,16 +1,16 @@
 {% load static %}
 {# Aviso de novidade: aparece uma vez por navegador. Para anunciar outra novidade, troque data-chave. #}
-<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:publico-2026-10" aria-labelledby="novidadeTitulo">
+<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:programacao-2026-10" aria-labelledby="novidadeTitulo">
   <div class="novidade-imagem">
-    <img src="{% static 'img/novidade-publico.webp' %}" alt="Prévia da nova tela de Público: quadros de público favorito, faixa etária e cidade, cards de gênero, idade e localização e gráfico de horários de atividade" width="1200" height="829">
+    <img src="{% static 'img/novidade-programacao.webp' %}" alt="Prévia da nova Programação: cards de posts na cor de cada um, com o botão Finalizado, ao lado do chat de comentários do post" width="1200" height="829">
   </div>
   <div class="novidade-corpo">
     <span class="novidade-selo">✨ Novidade</span>
-    <h2 id="novidadeTitulo" tabindex="-1" autofocus>A aba Público está de cara nova</h2>
-    <p>Agora você vê na hora quem mais acompanha a sua conta: gênero, idade e cidade em destaque, e o melhor horário para postar num gráfico de linha.</p>
+    <h2 id="novidadeTitulo" tabindex="-1" autofocus>A Programação tá de cara nova (e agora tem chat 💬)</h2>
+    <p>Cada post ganhou a cor dele, abre com um clique em qualquer lugar e tem o botão Finalizado pra dar aquele check. E o melhor: agora rola um chat dentro de cada post pra galera pedir ajuste ali mesmo, sem se perder no WhatsApp.</p>
     <div class="novidade-acoes">
-      <button type="button" class="btn-ghost js-fechar-novidade">Agora não</button>
-      <a href="{% url 'publico' %}" class="btn-primary btn-sm novidade-ir">Conhecer agora →</a>
+      <button type="button" class="btn-ghost js-fechar-novidade">Depois eu vejo</button>
+      <a href="{% url 'programacao' %}" class="btn-primary btn-sm novidade-ir">Bora conferir →</a>
     </div>
   </div>
   <button type="button" class="novidade-fechar js-fechar-novidade" aria-label="Fechar novidade">

@@ -1615,14 +1615,15 @@ class LandingTests(TestCase):
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class NovidadeTests(TestCase):
-    def test_aviso_da_nova_tela_de_publico_aparece_fora_da_propria_tela(self):
+    def test_aviso_da_nova_programacao_aparece_fora_da_propria_tela(self):
         from django.contrib.auth.models import User
         self.client.force_login(User.objects.get(username='mironlucas'))
-        for pagina in ('/dashboard/', '/programacao/', '/tarefas/'):
+        for pagina in ('/dashboard/', '/publico/', '/tarefas/'):
             resp = self.client.get(pagina)
-            self.assertContains(resp, 'data-chave="nextsora:novidade:publico-2026-10"')
-            self.assertContains(resp, 'A aba Público está de cara nova')
-            self.assertContains(resp, 'href="/publico/" class="btn-primary btn-sm novidade-ir"')
-        self.assertNotContains(self.client.get('/publico/'), 'id="novidade"')
+            self.assertContains(resp, 'data-chave="nextsora:novidade:programacao-2026-10"')
+            self.assertContains(resp, 'A Programação tá de cara nova (e agora tem chat 💬)')
+            self.assertContains(resp, 'href="/programacao/" class="btn-primary btn-sm novidade-ir"')
+            self.assertContains(resp, 'img/novidade-programacao.webp')
+        self.assertNotContains(self.client.get('/programacao/'), 'id="novidade"')
         self.client.logout()
         self.assertNotContains(self.client.get('/'), 'id="novidade"')  # tela de login
