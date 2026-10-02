@@ -1316,7 +1316,7 @@ class NovidadeTests(TestCase):
         for pagina in ('/dashboard/', '/programacao/', '/tarefas/'):
             resp = self.client.get(pagina)
             self.assertContains(resp, 'data-chave="nextsora:novidade:publico-2026-10"')
-            self.assertContains(resp, 'Uma nova tela de Público para você entender o seu público')
+            self.assertContains(resp, 'A aba Público está de cara nova')
             self.assertContains(resp, 'href="/publico/" class="btn-primary btn-sm novidade-ir"')
         self.assertNotContains(self.client.get('/publico/'), 'id="novidade"')
         self.client.logout()
