@@ -49,18 +49,6 @@
         <ul class="day-list">
           {% for item in itens_selecionado %}
             <li class="day-item{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}">
-              {% if pode_editar %}
-                <form method="post" action="{% url 'agenda_alternar' item.id %}">
-                  {% csrf_token %}
-                  <button type="submit" class="check" aria-label="{% if item.concluido %}Marcar como não feito{% else %}Marcar como feito{% endif %}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
-                  </button>
-                </form>
-              {% else %}
-                <span class="check check--estatico" role="img" aria-label="{% if item.concluido %}Feito{% else %}Pendente{% endif %}">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
-                </span>
-              {% endif %}
               <button type="button" class="day-item-body js-abrir-item" title="{% if pode_editar %}Editar{% else %}Ver detalhes{% endif %}"
                       {% if pode_editar %}data-editar="{% url 'agenda_editar' item.id %}" data-excluir="{% url 'agenda_excluir' item.id %}"{% endif %}
                       data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}"
@@ -73,6 +61,23 @@
                   <svg class="day-item-lapis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 {% endif %}
               </button>
+              {% if pode_editar or item.concluido %}
+                <div class="day-item-rodape">
+                  {% if pode_editar %}
+                    <form method="post" action="{% url 'agenda_alternar' item.id %}">
+                      {% csrf_token %}
+                      <button type="submit" class="finalizar-btn{% if item.concluido %} is-ativo{% endif %}"
+                              aria-pressed="{{ item.concluido|yesno:'true,false' }}"
+                              title="{% if item.concluido %}Clique para desmarcar{% else %}Marcar como finalizado{% endif %}">
+                        {% include 'core/_icone_finalizado.html' with feito=item.concluido %}
+                        Finalizado
+                      </button>
+                    </form>
+                  {% else %}
+                    <span class="finalizar-btn is-ativo is-estatico">{% include 'core/_icone_finalizado.html' with feito=True %} Finalizado</span>
+                  {% endif %}
+                </div>
+              {% endif %}
             </li>
           {% endfor %}
         </ul>
@@ -630,6 +635,15 @@
           }).finally(function () {
             chatEnviar.disabled = false;
             chatTexto.focus();
+          });
+        });
+
+        // O card inteiro abre a janela, menos o botão "Finalizado".
+        document.querySelectorAll('.day-item').forEach(function (cartao) {
+          cartao.addEventListener('click', function (evento) {
+            if (!evento.target.closest('.js-abrir-item, .finalizar-btn')) {
+              cartao.querySelector('.js-abrir-item').click();
+            }
           });
         });
 

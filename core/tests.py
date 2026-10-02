@@ -1574,6 +1574,19 @@ class ComentariosItemTests(TestCase):
         comentario = self.client.get(self.url).json()['comentarios'][0]
         self.assertEqual((comentario['autor'], comentario['meu']), ('Cliente', False))
 
+    def test_card_tem_botao_finalizado_e_quem_visualiza_so_ve_o_selo(self):
+        filtro = {'mes': '2026-10', 'dia': '2026-10-01'}
+        pagina = self.client.get('/programacao/', filtro)
+        self.assertContains(pagina, f'action="/programacao/itens/{self.item.id}/concluir/"')
+        self.assertContains(pagina, 'aria-pressed="false"')
+        self.client.post(f'/programacao/itens/{self.item.id}/concluir/')
+        self.assertContains(self.client.get('/programacao/', filtro), 'class="finalizar-btn is-ativo"')
+
+        self.client.force_login(self.cliente)
+        pagina = self.client.get('/programacao/', filtro)
+        self.assertNotContains(pagina, '/concluir/')
+        self.assertContains(pagina, 'class="finalizar-btn is-ativo is-estatico"')
+
     def test_janela_tem_os_comentarios_e_o_item_mostra_quantos(self):
         self.client.post(self.url, {'texto': 'um'})
         self.client.post(self.url, {'texto': 'dois'})
