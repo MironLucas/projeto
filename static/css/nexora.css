@@ -2401,12 +2401,14 @@ img.brand-mark {
 
 /* Cada item é um card inteiro na cor escolhida, clicável em qualquer lugar. */
 .day-item {
+  position: relative;
+  overflow: hidden;
   padding: 12px;
   border: 1px solid var(--cor, #7c5cff);
   border-radius: 12px;
   background: color-mix(in srgb, var(--cor, #7c5cff) 7%, var(--panel-solid));
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition: background 0.3s, box-shadow 0.15s, border-color 0.3s;
 }
 
 @media (hover: hover) {
@@ -2436,31 +2438,92 @@ img.brand-mark {
 }
 
 .day-item-rodape {
-  display: flex;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--cor, #7c5cff) 22%, transparent);
+  margin-top: 12px;
+}
+
+.day-item-rodape form {
+  display: block;
 }
 
 .finalizar-btn {
-  display: inline-flex;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 11px 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid color-mix(in srgb, var(--cor, #7c5cff) 35%, var(--border));
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
   color: var(--text-dim);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  transition: border-color 0.25s, color 0.25s, background 0.25s;
 }
 
-.finalizar-btn svg {
-  width: 15px;
-  height: 15px;
+.finalizar-icone {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.finalizar-icone circle {
+  transition: fill 0.25s;
+}
+
+/* O ✓ se desenha quando marca e some quando desmarca. */
+.finalizar-check {
+  stroke-dasharray: 14;
+  stroke-dashoffset: 14;
+  transition: stroke-dashoffset 0.35s ease 0.05s;
+}
+
+.finalizar-btn.is-ativo .finalizar-check {
+  stroke-dashoffset: 0;
+}
+
+.finalizar-btn.is-ativo .finalizar-icone circle {
+  fill: rgba(61, 220, 132, 0.18);
+}
+
+.finalizar-btn.is-animando {
+  animation: finalizar-pulo 0.4s ease-out;
+}
+
+@keyframes finalizar-pulo {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.96); }
+  70% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+/* Onda verde que sai do botão e cobre o card ao finalizar. */
+.finalizar-onda {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(61, 220, 132, 0.34) 0%, rgba(61, 220, 132, 0.18) 55%, rgba(61, 220, 132, 0) 72%);
+  pointer-events: none;
+  animation: finalizar-onda 0.7s ease-out forwards;
+}
+
+@keyframes finalizar-onda {
+  0% { transform: scale(0); opacity: 1; }
+  60% { opacity: 1; }
+  100% { transform: scale(var(--escala, 30)); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finalizar-check,
+  .finalizar-btn {
+    transition: none;
+  }
 }
 
 .finalizar-btn:hover,
@@ -3835,6 +3898,11 @@ button.day-item-body {
 
 .day-item.is-done .day-item-galeria {
   position: relative;
+}
+
+.day-item-midia img,
+.day-item-midia video {
+  transition: filter 0.4s ease;
 }
 
 .day-item.is-done .day-item-midia img,
@@ -5533,4 +5601,14 @@ html:has(dialog[open]) {
     flex: none;
     max-height: 55vh;
   }
+}
+
+/* Selo "Finalizado" sobre as mídias aparece com um leve zoom quando acabou de marcar. */
+.day-item.is-done.recem-finalizado .day-item-galeria::after {
+  animation: finalizado-selo 0.4s ease-out 0.12s both;
+}
+
+@keyframes finalizado-selo {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }

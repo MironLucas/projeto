@@ -32,7 +32,7 @@
                {% if dia.selecionado %}aria-current="date"{% endif %}>
               <span class="cal-num">{{ dia.numero }}</span>
               {% for item in dia.itens %}
-                <span class="cal-chip{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}">{{ item.titulo }}</span>
+                <span class="cal-chip{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}" data-item="{{ item.id }}">{{ item.titulo }}</span>
               {% endfor %}
               {% if dia.restantes %}<span class="cal-more">+{{ dia.restantes }} mais</span>{% endif %}
               {% if dia.total %}<span class="cal-dot" style="--cor: {{ dia.itens.0.cor }}"></span>{% endif %}
@@ -48,7 +48,7 @@
       {% if itens_selecionado %}
         <ul class="day-list">
           {% for item in itens_selecionado %}
-            <li class="day-item{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}">
+            <li class="day-item{% if item.concluido %} is-done{% endif %}" style="--cor: {{ item.cor }}" data-item="{{ item.id }}">
               <button type="button" class="day-item-body js-abrir-item" title="{% if pode_editar %}Editar{% else %}Ver detalhes{% endif %}"
                       {% if pode_editar %}data-editar="{% url 'agenda_editar' item.id %}" data-excluir="{% url 'agenda_excluir' item.id %}"{% endif %}
                       data-titulo="{{ item.titulo }}" data-data="{{ item.data|date:'Y-m-d' }}" data-cor="{{ item.cor }}"
@@ -64,17 +64,17 @@
               {% if pode_editar or item.concluido %}
                 <div class="day-item-rodape">
                   {% if pode_editar %}
-                    <form method="post" action="{% url 'agenda_alternar' item.id %}">
+                    <form method="post" action="{% url 'agenda_alternar' item.id %}" class="js-finalizar">
                       {% csrf_token %}
                       <button type="submit" class="finalizar-btn{% if item.concluido %} is-ativo{% endif %}"
                               aria-pressed="{{ item.concluido|yesno:'true,false' }}"
                               title="{% if item.concluido %}Clique para desmarcar{% else %}Marcar como finalizado{% endif %}">
-                        {% include 'core/_icone_finalizado.html' with feito=item.concluido %}
-                        Finalizado
+                        {% include 'core/_icone_finalizado.html' %}
+                        <span>Finalizado</span>
                       </button>
                     </form>
                   {% else %}
-                    <span class="finalizar-btn is-ativo is-estatico">{% include 'core/_icone_finalizado.html' with feito=True %} Finalizado</span>
+                    <span class="finalizar-btn is-ativo is-estatico">{% include 'core/_icone_finalizado.html' %}<span>Finalizado</span></span>
                   {% endif %}
                 </div>
               {% endif %}
@@ -635,6 +635,78 @@
           }).finally(function () {
             chatEnviar.disabled = false;
             chatTexto.focus();
+          });
+        });
+
+        // ---------- Finalizado: marca na hora, com a onda verde, e confirma no servidor por trás ----------
+        var semAnimacao = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        function marcarFinalizado(cartao, feito, animar) {
+          var botao = cartao.querySelector('.finalizar-btn');
+          cartao.classList.toggle('is-done', feito);
+          botao.classList.toggle('is-ativo', feito);
+          botao.setAttribute('aria-pressed', feito ? 'true' : 'false');
+          botao.title = feito ? 'Clique para desmarcar' : 'Marcar como finalizado';
+          var chip = document.querySelector('.cal-chip[data-item="' + cartao.dataset.item + '"]');
+          if (chip) {
+            chip.classList.toggle('is-done', feito);
+          }
+          if (!animar || semAnimacao) {
+            return;
+          }
+          cartao.classList.toggle('recem-finalizado', feito);
+          botao.classList.remove('is-animando');
+          void botao.offsetWidth;
+          botao.classList.add('is-animando');
+          if (!feito) {
+            return;
+          }
+          // O verde sai do botão e se espalha pelo card.
+          var caixa = cartao.getBoundingClientRect();
+          var origem = botao.getBoundingClientRect();
+          var x = origem.left + origem.width / 2 - caixa.left;
+          var y = origem.top + origem.height / 2 - caixa.top;
+          var raio = Math.hypot(Math.max(x, caixa.width - x), Math.max(y, caixa.height - y));
+          var onda = document.createElement('span');
+          onda.className = 'finalizar-onda';
+          onda.style.left = x + 'px';
+          onda.style.top = y + 'px';
+          onda.style.setProperty('--escala', (raio / 10).toFixed(2));
+          onda.addEventListener('animationend', function () { onda.remove(); });
+          cartao.appendChild(onda);
+        }
+
+        document.querySelectorAll('.js-finalizar').forEach(function (formulario) {
+          var cartao = formulario.closest('.day-item');
+          var pendente = false;
+          formulario.addEventListener('submit', function (evento) {
+            evento.preventDefault();
+            if (pendente) {
+              return;
+            }
+            pendente = true;
+            var antes = cartao.classList.contains('is-done');
+            marcarFinalizado(cartao, !antes, true);
+            fetch(formulario.action, {
+              method: 'POST',
+              body: new FormData(formulario),
+              credentials: 'same-origin',
+              headers: { 'X-Requested-With': 'fetch' },
+            }).then(function (resposta) {
+              if (!resposta.ok) {
+                throw new Error('HTTP ' + resposta.status);
+              }
+              return resposta.json();
+            }).then(function (json) {
+              if (json.concluido !== !antes) {
+                marcarFinalizado(cartao, json.concluido, false);
+              }
+            }).catch(function () {
+              marcarFinalizado(cartao, antes, false);
+              window.alert('Não foi possível salvar. Confira a internet e tente de novo.');
+            }).finally(function () {
+              pendente = false;
+            });
           });
         });
 

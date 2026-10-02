@@ -141,6 +141,9 @@ def alternar_item(request, item_id):
     item = get_object_or_404(ItemAgenda, id=item_id, usuario=request.conta)
     item.concluido = not item.concluido
     item.save(update_fields=['concluido'])
+    # O botão "Finalizado" marca na hora, sem recarregar a página (nem voltar para o topo).
+    if request.headers.get('X-Requested-With') == 'fetch':
+        return JsonResponse({'ok': True, 'concluido': item.concluido})
     return _voltar_para(item.data)
 
 

@@ -1579,7 +1579,8 @@ class ComentariosItemTests(TestCase):
         pagina = self.client.get('/programacao/', filtro)
         self.assertContains(pagina, f'action="/programacao/itens/{self.item.id}/concluir/"')
         self.assertContains(pagina, 'aria-pressed="false"')
-        self.client.post(f'/programacao/itens/{self.item.id}/concluir/')
+        resp = self.client.post(f'/programacao/itens/{self.item.id}/concluir/', HTTP_X_REQUESTED_WITH='fetch')
+        self.assertEqual(resp.json(), {'ok': True, 'concluido': True})
         self.assertContains(self.client.get('/programacao/', filtro), 'class="finalizar-btn is-ativo"')
 
         self.client.force_login(self.cliente)
