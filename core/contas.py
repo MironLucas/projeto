@@ -24,8 +24,8 @@ def desconectar_conta(request, conta_id):
     perfil = get_object_or_404(Perfil, usuario=request.user, conta_id=conta_id, papel=Perfil.ADMIN)
     conexao = InstagramConnection.objects.filter(user=perfil.conta).first()
     if conexao:
-        conexao.delete()
-        messages.info(request, f'@{conexao.instagram_username} foi desconectada.')
+        conexao.desconectar()
+        messages.info(request, f'@{conexao.instagram_username} foi desconectada e saiu da sua lista de contas.')
     return _voltar(request)
 
 

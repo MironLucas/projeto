@@ -32,6 +32,25 @@ class InstagramConnection(models.Model):
     def __str__(self):
         return f'@{self.instagram_username}' if self.instagram_username else f'Conexão de {self.user}'
 
+    def desconectar(self):
+        """Apaga o acesso, mas lembra qual Instagram era: se a pessoa adicionar de novo, a conta volta com os dados."""
+        with transaction.atomic():
+            InstagramAnterior.objects.update_or_create(conta_id=self.user_id, defaults={
+                'instagram_user_id': self.instagram_user_id,
+                'instagram_conta_id': self.instagram_conta_id,
+                'instagram_username': self.instagram_username,
+            })
+            self.delete()
+
+
+class InstagramAnterior(models.Model):
+    """Instagram de uma conta desconectada. A conta some do menu, mas a programação e as tarefas ficam guardadas."""
+    conta = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='instagram_anterior')
+    instagram_user_id = models.CharField(max_length=64, blank=True)
+    instagram_conta_id = models.CharField(max_length=64, blank=True)
+    instagram_username = models.CharField(max_length=150, blank=True)
+    desconectado_em = models.DateTimeField(auto_now=True)
+
 
 class SeguidoresDia(models.Model):
     # Ligado ao id da conta do Instagram (e não à conexão) para o histórico sobreviver a reconexões.

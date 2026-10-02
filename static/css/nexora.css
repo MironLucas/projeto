@@ -999,6 +999,12 @@ img.brand-mark {
   transition: color 0.15s, background 0.15s;
 }
 
+.conta-adicionar--so {
+  margin-top: 0;
+  border-top: none;
+  border-radius: 8px;
+}
+
 .conta-adicionar:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.04);

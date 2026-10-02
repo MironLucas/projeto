@@ -30,9 +30,12 @@ class PerfilMiddleware:
         request.perfil = None
         request.conta = None
         request.perfis = []
+        request.conexoes = {}
         if request.user.is_authenticated:
             request.perfis = perfis_de(request.user)
-            request.perfil = _conta_aberta(request, request.perfis)
+            request.conexoes = {c.user_id: c for c in
+                                InstagramConnection.objects.filter(user__in=[p.conta_id for p in request.perfis])}
+            request.perfil = _conta_aberta(request, request.perfis, request.conexoes)
             request.conta = request.perfil.conta
             if request.method not in METODOS_DE_LEITURA and not request.perfil.pode_editar \
                     and _nome_da_rota(request) not in LIBERADAS_PARA_QUEM_VISUALIZA:
@@ -54,9 +57,13 @@ def abrir_conta(request, conta_id):
     request.session[CHAVE_CONTA_ATUAL] = conta_id
 
 
-def _conta_aberta(request, perfis):
+def _conta_aberta(request, perfis, conexoes):
     escolhida = request.session.get(CHAVE_CONTA_ATUAL)
-    return next((perfil for perfil in perfis if perfil.conta_id == escolhida), perfis[0])
+    perfil = next((perfil for perfil in perfis if perfil.conta_id == escolhida), None)
+    if perfil and (perfil.conta_id in conexoes or not conexoes):
+        return perfil
+    # Sem escolha, ou a conta escolhida foi desconectada: abre a primeira que tem Instagram.
+    return next((perfil for perfil in perfis if perfil.conta_id in conexoes), perfil or perfis[0])
 
 
 def _nome_da_rota(request):
@@ -81,34 +88,30 @@ def contexto_de_permissoes(request):
         'perfil_atual': perfil,
         'pode_editar': bool(perfil and perfil.pode_editar),
         'e_admin': bool(perfil and perfil.e_admin),
-        'contas_da_pessoa': _contas_para_o_menu(request),
+        'conta_atual_menu': _conta_para_o_menu(request, perfil) if perfil else None,
+        # Contas desconectadas saem da lista; os dados delas ficam guardados para quando voltarem.
+        'contas_da_pessoa': [_conta_para_o_menu(request, p) for p in getattr(request, 'perfis', [])
+                             if p.conta_id in getattr(request, 'conexoes', {})],
     }
 
 
-def _contas_para_o_menu(request):
-    """Contas do menu da foto, para trocar entre elas: nome, foto salva e se a pessoa administra."""
-    perfis = getattr(request, 'perfis', [])
-    if not perfis:
-        return []
-    conexoes = {c.user_id: c for c in InstagramConnection.objects.filter(user__in=[p.conta_id for p in perfis])}
-    contas = []
-    for perfil in perfis:
-        conexao = conexoes.get(perfil.conta_id)
-        if conexao and conexao.instagram_username:
-            nome = f'@{conexao.instagram_username}'
-        elif perfil.conta.first_name.startswith('@'):
-            nome = perfil.conta.first_name  # conta adicionada que foi desconectada
-        else:
-            nome = 'Sem Instagram conectado'
-        contas.append({
-            'id': perfil.conta_id,
-            'nome': nome,
-            'foto': conexao.perfil_foto if conexao else '',
-            'conectada': conexao is not None,
-            'atual': perfil.conta_id == request.conta.id,
-            'e_admin': perfil.e_admin,
-        })
-    return contas
+def _conta_para_o_menu(request, perfil):
+    """Uma conta no menu da foto: nome, foto salva e se a pessoa administra."""
+    conexao = request.conexoes.get(perfil.conta_id)
+    if conexao and conexao.instagram_username:
+        nome = f'@{conexao.instagram_username}'
+    elif perfil.conta.first_name.startswith('@'):
+        nome = perfil.conta.first_name  # conta adicionada que foi desconectada
+    else:
+        nome = 'Sem Instagram conectado'
+    return {
+        'id': perfil.conta_id,
+        'nome': nome,
+        'foto': conexao.perfil_foto if conexao else '',
+        'conectada': conexao is not None,
+        'atual': perfil.conta_id == request.conta.id,
+        'e_admin': perfil.e_admin,
+    }
 
 
 def falha_csrf(request, reason=''):

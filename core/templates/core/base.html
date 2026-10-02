@@ -147,7 +147,7 @@
       // Desconectar uma conta pede confirmação.
       document.querySelectorAll('.js-confirmar-desconexao').forEach(function (form) {
         form.addEventListener('submit', function (evento) {
-          if (!window.confirm('Desconectar ' + form.dataset.nome + '? Os relatórios dela param de atualizar até você conectar de novo.')) {
+          if (!window.confirm('Desconectar ' + form.dataset.nome + '? Ela sai da sua lista de contas. A programação e as tarefas ficam guardadas e voltam se você adicionar essa conta de novo.')) {
             evento.preventDefault();
           }
         });

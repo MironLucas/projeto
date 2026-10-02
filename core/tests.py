@@ -1404,22 +1404,69 @@ class VariasContasTests(TestCase):
         self.assertEqual(Perfil.objects.get(usuario=convidada, conta=nova).papel, Perfil.ADMIN)
         self.assertEqual(InstagramConnection.objects.get(user=self.pessoa).instagram_username, 'conta_um')
 
-    def test_desconectar_mantem_a_conta_e_os_dados_no_menu(self):
+    def test_desconectar_tira_a_conta_da_lista_e_adicionar_de_novo_traz_os_dados(self):
         from .models import ItemAgenda
         self._adicionar('2', 'conta_dois')
         nova = InstagramConnection.objects.get(instagram_user_id='2').user
         ItemAgenda.objects.create(usuario=nova, data=date(2026, 10, 1), titulo='Post da conta dois')
         self.assertContains(self.client.get('/dashboard/'), f'/contas/{nova.id}/desconectar/')
+
         self.client.post(f'/contas/{nova.id}/desconectar/')
         self.assertFalse(InstagramConnection.objects.filter(user=nova).exists())
         self.assertTrue(ItemAgenda.objects.filter(usuario=nova).exists())
-        pagina = self.client.get('/dashboard/')
-        self.assertContains(pagina, '@conta_dois')
-        self.assertContains(pagina, 'desconectada')
+        self.assertContains(self.client.get('/dashboard/'), 'foi desconectada e saiu da sua lista de contas')
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
+        self.assertNotContains(pagina, 'conta_dois')
+        self.assertNotContains(pagina, 'Post da conta dois')
+        # A conta aberta passa a ser uma que ainda tem Instagram.
+        self.assertContains(pagina, '<span class="account-handle">@conta_um</span>', html=True)
+        self.assertEqual(self.client.post(f'/contas/{nova.id}/desconectar/').status_code, 302)
 
-        # Reconectar o mesmo Instagram pelo botão da conta aberta volta para a mesma conta.
-        self._adicionar('2', 'conta_dois', nova=False)
+        resp = self._adicionar('2', 'conta_dois')
         self.assertEqual(InstagramConnection.objects.get(instagram_user_id='2').user, nova)
+        self.assertIn('@conta_dois voltou para a sua lista de contas, com a programação e as tarefas de antes.',
+                      [str(m) for m in resp.wsgi_request._messages])
+        self.assertContains(self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'}), 'Post da conta dois')
+
+    def test_desconectar_a_conta_principal_e_adicionar_de_novo_volta_para_ela(self):
+        from .models import ItemAgenda
+        ItemAgenda.objects.create(usuario=self.pessoa, data=date(2026, 10, 1), titulo='Post da conta um')
+        self._adicionar('2', 'conta_dois')
+        self.client.post(f'/contas/{self.pessoa.id}/desconectar/', follow=True)
+        self.assertNotContains(self.client.get('/dashboard/'), 'conta_um')
+        self._adicionar('1', 'conta_um')
+        self.assertEqual(InstagramConnection.objects.get(instagram_user_id='1').user, self.pessoa)
+        self.assertContains(self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'}), 'Post da conta um')
+
+    def test_so_a_ultima_conta_desconectada_continua_aberta_para_conectar_de_novo(self):
+        self.client.post(f'/contas/{self.pessoa.id}/desconectar/')
+        pagina = self.client.get('/dashboard/')
+        self.assertContains(pagina, 'Instagram desconectado')
+        self.assertContains(pagina, 'Conectar com Instagram')
+        self.assertNotContains(pagina, 'Suas contas')
+        self.assertContains(pagina, 'Adicionar conta')
+        # Conectar de novo pelo botão do dashboard volta para a mesma conta.
+        self._adicionar('1', 'conta_um', nova=False)
+        self.assertEqual(InstagramConnection.objects.get(instagram_user_id='1').user, self.pessoa)
+
+    def test_primeiro_instagram_vai_para_a_propria_conta_e_outro_nunca_substitui(self):
+        outra = self._outra_pessoa()
+        self.client.force_login(outra)
+        self._adicionar('7', 'primeiro')
+        self.assertEqual(InstagramConnection.objects.get(instagram_user_id='7').user, outra)
+        # Pelo botão sem "nova", um Instagram diferente também vira conta nova em vez de trocar o atual.
+        self._adicionar('8', 'segundo', nova=False)
+        self.assertEqual(InstagramConnection.objects.get(user=outra).instagram_user_id, '7')
+        self.assertNotEqual(InstagramConnection.objects.get(instagram_user_id='8').user, outra)
+
+    def test_exclusao_pela_meta_esquece_o_instagram_desconectado(self):
+        from .models import InstagramAnterior
+        self.client.post(f'/contas/{self.pessoa.id}/desconectar/')
+        self.assertTrue(InstagramAnterior.objects.filter(conta=self.pessoa, instagram_user_id='1').exists())
+        from . import meta
+        with mock.patch.object(meta, '_ler_signed_request', return_value={'user_id': '1'}):
+            self.client.post('/instagram/exclusao/', {'signed_request': 'x.y'})
+        self.assertFalse(InstagramAnterior.objects.exists())
 
     def test_convidar_quem_ja_tem_login_e_proteger_a_senha_dele(self):
         from django.contrib.auth.models import User

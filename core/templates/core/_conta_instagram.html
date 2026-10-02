@@ -1,7 +1,7 @@
-{% if contas_da_pessoa %}
+{% if conta_atual_menu %}
   <details class="popover account-chip">
     <summary aria-label="Trocar de conta">
-      {% for conta in contas_da_pessoa %}{% if conta.atual %}
+      {% with conta=conta_atual_menu %}
         {% include 'core/_avatar_conta.html' %}
         <span class="account-meta">
           <span class="account-handle">{{ conta.nome }}</span>
@@ -9,11 +9,12 @@
             {% if conta.conectada %}<span class="status-dot"></span>Conectado{% else %}<span class="status-dot status-dot--off"></span>Instagram desconectado{% endif %}
           </span>
         </span>
-      {% endif %}{% endfor %}
+      {% endwith %}
       <svg class="account-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
     </summary>
 
     <div class="account-menu contas-menu">
+      {% if contas_da_pessoa %}
       <p class="contas-menu-titulo">Suas contas</p>
       <ul class="contas-lista">
         {% for conta in contas_da_pessoa %}
@@ -24,14 +25,14 @@
                 {% include 'core/_avatar_conta.html' %}
                 <span class="conta-texto">
                   <span class="conta-nome">{{ conta.nome }}</span>
-                  <span class="conta-papel">{% if conta.e_admin %}Administrador{% else %}Convidado{% endif %}{% if not conta.conectada %} · desconectada{% endif %}</span>
+                  <span class="conta-papel">{% if conta.e_admin %}Administrador{% else %}Convidado{% endif %}</span>
                 </span>
                 {% if conta.atual %}
                   <svg class="conta-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>
                 {% endif %}
               </button>
             </form>
-            {% if conta.e_admin and conta.conectada %}
+            {% if conta.e_admin %}
               <form method="post" action="{% url 'desconectar_conta' conta.id %}" class="conta-desconectar js-confirmar-desconexao" data-nome="{{ conta.nome }}">
                 {% csrf_token %}
                 <button type="submit" title="Desconectar {{ conta.nome }}" aria-label="Desconectar {{ conta.nome }}">
@@ -42,7 +43,8 @@
           </li>
         {% endfor %}
       </ul>
-      <a class="conta-adicionar" href="{% url 'instagram_conectar' %}?nova=1">
+      {% endif %}
+      <a class="conta-adicionar{% if not contas_da_pessoa %} conta-adicionar--so{% endif %}" href="{% url 'instagram_conectar' %}?nova=1">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
         Adicionar conta
       </a>

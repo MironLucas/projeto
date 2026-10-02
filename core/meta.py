@@ -15,7 +15,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
-from .models import InstagramConnection, SeguidoresDia, SolicitacaoExclusao
+from .models import InstagramAnterior, InstagramConnection, SeguidoresDia, SolicitacaoExclusao
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +57,10 @@ def instagram_desautorizar(request):
     if dados is None:
         return HttpResponseBadRequest('signed_request inválido')
     user_id = str(dados.get('user_id', ''))
-    apagadas, _ = _conexoes_do_instagram(user_id).delete()
-    logger.info('Instagram %s removeu o app; %s conexão(ões) apagada(s)', user_id, apagadas)
+    conexoes = list(_conexoes_do_instagram(user_id))
+    for conexao in conexoes:
+        conexao.desconectar()
+    logger.info('Instagram %s removeu o app; %s conexão(ões) apagada(s)', user_id, len(conexoes))
     return HttpResponse('ok')
 
 
@@ -75,6 +77,7 @@ def instagram_exclusao(request):
     ids = {user_id} | set(conexoes.values_list('instagram_user_id', flat=True))
     conexoes.delete()
     SeguidoresDia.objects.filter(instagram_user_id__in=ids).delete()
+    InstagramAnterior.objects.filter(Q(instagram_user_id__in=ids) | Q(instagram_conta_id__in=ids)).delete()
 
     solicitacao = SolicitacaoExclusao.objects.create(
         codigo=secrets.token_hex(8),

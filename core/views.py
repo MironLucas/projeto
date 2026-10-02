@@ -21,7 +21,7 @@ from django.utils import timezone
 
 from .graficos import DIAS_SEMANA, intervalos_do_grafico, montar_grafico
 from .minigrafico import descrever_balde, dividir_em_baldes, montar_minigrafico
-from .models import InstagramConnection, Perfil, SeguidoresDia
+from .models import InstagramAnterior, InstagramConnection, Perfil, SeguidoresDia
 from .permissoes import abrir_conta
 
 User = get_user_model()
@@ -253,6 +253,10 @@ def instagram_callback(request):
         'token_expires_at': timezone.now() + timedelta(seconds=token_longo.get('expires_in', 5184000)),
     }
 
+    # Uma conta com Instagram nunca troca para outro: um Instagram diferente vira uma conta nova.
+    if not nova and InstagramConnection.objects.filter(user=request.conta).exclude(_mesmo_instagram(dados)).exists():
+        nova = True
+
     # Cada Instagram fica em uma conta só, com um administrador.
     existente = _conexao_do_mesmo_instagram(dados)
     if existente and existente.user_id != (None if nova else request.conta.id):
@@ -266,8 +270,19 @@ def instagram_callback(request):
         return redirect('dashboard')
 
     with transaction.atomic():
-        conta = _criar_conta_para(request.user, dados['instagram_username']) if nova else request.conta
+        conta = request.conta
+        if nova:
+            # Instagram que esta pessoa desconectou antes: a conta antiga volta, com programação e tarefas.
+            conta = _conta_desconectada_da_pessoa(request.user, dados)
+            if conta:
+                messages.info(request, f'@{dados["instagram_username"]} voltou para a sua lista de contas, '
+                                       'com a programação e as tarefas de antes.')
+            elif _conta_propria_sem_instagram(request.user):
+                conta = request.user  # o primeiro Instagram de quem ainda não tinha nenhum vai para a própria conta
+            else:
+                conta = _criar_conta_para(request.user, dados['instagram_username'])
         InstagramConnection.objects.update_or_create(user=conta, defaults=dados)
+        InstagramAnterior.objects.filter(conta=conta).delete()
         # Contas adicionadas guardam o @ como nome, para aparecer no menu mesmo se forem desconectadas.
         if e_conta_adicionada(conta) and conta.first_name != f'@{dados["instagram_username"]}':
             conta.first_name = f'@{dados["instagram_username"]}'[:150]
@@ -281,10 +296,28 @@ def e_conta_adicionada(conta):
 
 
 def _conexao_do_mesmo_instagram(dados):
+    return InstagramConnection.objects.filter(_mesmo_instagram(dados)).first()
+
+
+def _conta_desconectada_da_pessoa(pessoa, dados):
+    anterior = (InstagramAnterior.objects
+                .filter(_mesmo_instagram(dados), conta__instagram_connection__isnull=True,
+                        conta__membros__usuario=pessoa, conta__membros__papel=Perfil.ADMIN)
+                .select_related('conta').order_by('-desconectado_em').first())
+    return anterior.conta if anterior else None
+
+
+def _conta_propria_sem_instagram(pessoa):
+    return (Perfil.objects.filter(usuario=pessoa, conta=pessoa, papel=Perfil.ADMIN).exists()
+            and not InstagramConnection.objects.filter(user=pessoa).exists()
+            and not InstagramAnterior.objects.filter(conta=pessoa).exists())
+
+
+def _mesmo_instagram(dados):
     filtro = Q(instagram_user_id=dados['instagram_user_id'])
     if dados['instagram_conta_id']:
         filtro |= Q(instagram_conta_id=dados['instagram_conta_id'])
-    return InstagramConnection.objects.filter(filtro).first()
+    return filtro
 
 
 def _criar_conta_para(pessoa, username):
@@ -306,7 +339,9 @@ def instagram_desconectar(request):
     if not request.perfil.e_admin:
         messages.error(request, 'Só o administrador da conta pode desconectar o Instagram.')
         return redirect('dashboard')
-    InstagramConnection.objects.filter(user=request.conta).delete()
+    conexao = InstagramConnection.objects.filter(user=request.conta).first()
+    if conexao:
+        conexao.desconectar()
     messages.info(request, 'Conta do Instagram desconectada.')
     return redirect('dashboard')
 
