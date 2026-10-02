@@ -1603,6 +1603,42 @@ class ComentariosItemTests(TestCase):
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class LoginSemMaiusculasTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        self.usuario = User.objects.get(username='mironlucas')
+        self.usuario.set_password('Senha#Certa2026')
+        self.usuario.save()
+
+    def _entrar(self, nome, senha='Senha#Certa2026'):
+        self.client.logout()
+        return self.client.post('/', {'username': nome, 'password': senha})
+
+    def test_usuario_entra_com_qualquer_combinacao_de_maiusculas(self):
+        for nome in ('mironlucas', 'Mironlucas', 'MIRONLUCAS', 'MironLucas', '  mironlucas '):
+            resp = self._entrar(nome)
+            self.assertRedirects(resp, '/dashboard/', fetch_redirect_response=False, msg_prefix=nome)
+            self.assertEqual(int(self.client.session['_auth_user_id']), self.usuario.id)
+
+    def test_senha_continua_exata_e_inativos_nao_entram(self):
+        self.assertEqual(self._entrar('MIRONLUCAS', 'senha#certa2026').status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+        self.usuario.is_active = False
+        self.usuario.save()
+        self.assertEqual(self._entrar('MironLucas').status_code, 200)
+        self.assertNotIn('_auth_user_id', self.client.session)
+
+    def test_dois_nomes_que_so_mudam_maiusculas_exigem_o_nome_exato(self):
+        from django.contrib.auth.models import User
+        outro = User.objects.create_user('MIRONLUCAS', password='Outra#Senha2026')
+        self._entrar('mironlucas')
+        self.assertEqual(int(self.client.session['_auth_user_id']), self.usuario.id)
+        self._entrar('MIRONLUCAS', 'Outra#Senha2026')
+        self.assertEqual(int(self.client.session['_auth_user_id']), outro.id)
+        self.assertEqual(self._entrar('MironLucas').status_code, 200)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class LandingTests(TestCase):
     def test_landing_abre_sem_login_com_whatsapp_e_entrar(self):
         resp = self.client.get('/plataforma/')

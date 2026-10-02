@@ -124,6 +124,9 @@ else:
 # Password validation
 # https://docs.djangoproject.com/en/4.0/ref/settings/#auth-password-validators
 
+# O nome de usuário no login não diferencia maiúsculas de minúsculas (a senha continua exata).
+AUTHENTICATION_BACKENDS = ['core.autenticacao.UsuarioSemMaiusculasBackend']
+
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
