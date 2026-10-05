@@ -1566,6 +1566,15 @@ class ComentariosItemTests(TestCase):
         self.assertEqual(self.client.post(self.url, {'texto': 'oi'}).status_code, 404)
         self.assertEqual(self.item.comentarios.count(), 1)
 
+    def test_comentarios_antigos_mostram_o_nome_novo_de_quem_escreveu(self):
+        self.client.post(self.url, {'texto': 'Subi a arte'})
+        self.admin.username = 'Nathalia'
+        self.admin.first_name = 'Nathalia'
+        self.admin.save()
+        self.client.force_login(self.cliente)
+        comentario = self.client.get(self.url).json()['comentarios'][0]
+        self.assertEqual((comentario['autor'], comentario['inicial']), ('Nathalia', 'N'))
+
     def test_nome_fica_no_comentario_se_o_usuario_for_removido(self):
         self.client.force_login(self.cliente)
         self.client.post(self.url, {'texto': 'Ficou ótimo'})

@@ -29,7 +29,7 @@ def comentarios_item(request, item_id):
         )
         return JsonResponse({'comentario': _json(comentario, request.user)}, status=201)
 
-    comentarios = item.comentarios.all()
+    comentarios = item.comentarios.select_related('autor')
     return JsonResponse({'comentarios': [_json(comentario, request.user) for comentario in comentarios]})
 
 
@@ -45,10 +45,13 @@ def excluir_comentario(request, comentario_id):
 
 def _json(comentario, pessoa):
     meu = comentario.autor_id is not None and comentario.autor_id == pessoa.id
+    # Mostra o nome atual de quem escreveu (se mudou o nome, muda nos comentários antigos também);
+    # o nome guardado só vale para quem já foi removido.
+    autor = _nome(comentario.autor) if comentario.autor else comentario.autor_nome
     return {
         'id': comentario.id,
-        'autor': comentario.autor_nome,
-        'inicial': comentario.autor_nome[:1].upper(),
+        'autor': autor,
+        'inicial': autor[:1].upper(),
         'texto': comentario.texto,
         'quando': _quando(comentario.criado_em),
         'meu': meu,
