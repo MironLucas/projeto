@@ -1,6 +1,7 @@
 import calendar
 import json
 from datetime import date, datetime
+from urllib.parse import urlencode
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -14,6 +15,7 @@ from django.views.decorators.http import require_POST
 
 from .arquivos import responder_arquivo_em_disco
 from .models import ItemAgenda, MidiaItemAgenda
+from .permissoes import abrir_conta
 from .quadro import CORES_LISTA, CORES_VALIDAS, TAMANHO_MAXIMO_LEGENDA, TIPOS_DE_MIDIA
 
 COR_PADRAO = CORES_LISTA[0][0]
@@ -125,6 +127,20 @@ def editar_item(request, item_id):
         _salvar_midias(item, novas)
         item.save()
     return _responder(request, item.data)
+
+
+@login_required
+def abrir_item(request, item_id):
+    """Link de um item (compartilhado ou do sininho): abre a conta dele e a programação com o card aberto."""
+    item = ItemAgenda.objects.filter(id=item_id).first()
+    if not item or not any(perfil.conta_id == item.usuario_id for perfil in request.perfis):
+        messages.error(request, 'Esse post não está em nenhuma conta que você acessa.')
+        return redirect('programacao')
+    abrir_conta(request, item.usuario_id)
+    destino = {'mes': f'{item.data:%Y-%m}', 'dia': f'{item.data:%Y-%m-%d}', 'abrir': item.id}
+    if request.GET.get('chat') == '1':
+        destino['chat'] = 1
+    return redirect(f"{reverse('programacao')}?{urlencode(destino)}")
 
 
 @login_required

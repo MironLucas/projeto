@@ -1612,6 +1612,108 @@ class ComentariosItemTests(TestCase):
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class NotificacoesELinkDoPostTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from .models import ItemAgenda, Perfil
+        self.admin = User.objects.get(username='mironlucas')
+        self.cliente = User.objects.create_user('cliente', password='x', first_name='Ana')
+        Perfil.objects.create(usuario=self.cliente, conta=self.admin, papel=Perfil.VISUALIZADOR)
+        self.item = ItemAgenda.objects.create(usuario=self.admin, data=date(2026, 10, 9), titulo='Reels bastidores')
+        self.comentarios = f'/programacao/itens/{self.item.id}/comentarios/'
+
+    def _comentar(self, quem, texto):
+        self.client.force_login(quem)
+        self.client.get('/dashboard/')
+        return self.client.post(self.comentarios, {'texto': texto})
+
+    def _total(self, quem):
+        self.client.force_login(quem)
+        return self.client.get('/notificacoes/').json()['total']
+
+    def test_comentario_de_outra_pessoa_aparece_no_sininho_ate_ser_lido(self):
+        self._comentar(self.cliente, 'Troca a música')
+        self._comentar(self.cliente, 'E o @ na legenda')
+        self.assertEqual(self._total(self.cliente), 0)  # os próprios comentários não notificam
+        self.assertEqual(self._total(self.admin), 2)
+
+        pagina = self.client.get('/dashboard/')
+        self.assertContains(pagina, 'id="sininho"')
+        self.assertContains(pagina, '<span class="nav-badge" id="sininhoTotal">2</span>', html=True)
+
+        lista = self.client.get('/notificacoes/', {'lista': '1'}).json()
+        self.assertEqual(len(lista['itens']), 1)
+        aviso = lista['itens'][0]
+        self.assertEqual((aviso['autor'], aviso['titulo'], aviso['texto'], aviso['novos']),
+                         ('Ana', 'Reels bastidores', 'E o @ na legenda', 2))
+        self.assertEqual(aviso['url'], f'/programacao/post/{self.item.id}/?chat=1')
+
+        # Carregar o chat fechado (celular) não lê; com o chat à vista, lê.
+        self.client.get(self.comentarios)
+        self.assertEqual(self._total(self.admin), 2)
+        self.client.get(self.comentarios, {'marcar': '1'})
+        self.assertEqual(self._total(self.admin), 0)
+        self.assertContains(self.client.get('/dashboard/'), '<span class="nav-badge" id="sininhoTotal" hidden>0</span>', html=True)
+
+        # Responder também conta como lido, e notifica quem estava na conversa.
+        self._comentar(self.cliente, 'Mais uma coisa')
+        self._comentar(self.admin, 'Feito!')
+        self.assertEqual(self._total(self.admin), 0)
+        self.assertEqual(self._total(self.cliente), 1)
+
+    def test_marcar_tudo_como_lido_vale_para_quem_so_visualiza(self):
+        self._comentar(self.admin, 'Subi a arte')
+        self.client.force_login(self.cliente)
+        self.client.get('/dashboard/')
+        self.assertEqual(self.client.post('/notificacoes/lidas/').status_code, 200)
+        self.assertEqual(self._total(self.cliente), 0)
+
+    def test_quem_nao_acessa_a_conta_nao_recebe_aviso(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        estranho = User.objects.create_user('estranho', password='x')
+        Perfil.objects.create(usuario=estranho, conta=estranho, papel=Perfil.ADMIN)
+        self._comentar(self.cliente, 'oi')
+        self.assertEqual(self._total(estranho), 0)
+
+    def test_link_do_post_abre_a_conta_certa_com_o_card(self):
+        from .models import ItemAgenda
+        self.client.force_login(self.admin)
+        self.client.get('/dashboard/')
+        outra = self._conta_adicionada()
+        item_outra = ItemAgenda.objects.create(usuario=outra, data=date(2026, 11, 3), titulo='Post da outra conta')
+        resp = self.client.get(f'/programacao/post/{item_outra.id}/', {'chat': '1'})
+        self.assertRedirects(resp, f'/programacao/?mes=2026-11&dia=2026-11-03&abrir={item_outra.id}&chat=1',
+                             fetch_redirect_response=False)
+        self.assertEqual(self.client.session['conta_atual'], outra.id)
+        pagina = self.client.get(resp['Location'])
+        self.assertContains(pagina, f'data-item="{item_outra.id}"')
+        self.assertContains(pagina, f'data-link="/programacao/post/{item_outra.id}/"')
+        self.assertContains(pagina, 'id="itemCompartilhar"')
+
+    def _conta_adicionada(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        conta = User.objects.create(username='conta-teste', first_name='@outra', is_active=False)
+        Perfil.objects.create(usuario=self.admin, conta=conta, papel=Perfil.ADMIN)
+        return conta
+
+    def test_link_de_post_sem_acesso_ou_sem_login(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        estranho = User.objects.create_user('estranho', password='x')
+        Perfil.objects.create(usuario=estranho, conta=estranho, papel=Perfil.ADMIN)
+        self.client.force_login(estranho)
+        resp = self.client.get(f'/programacao/post/{self.item.id}/', follow=True)
+        self.assertContains(resp, 'Esse post não está em nenhuma conta que você acessa.')
+        self.assertNotContains(resp, 'Reels bastidores')
+
+        self.client.logout()
+        resp = self.client.get(f'/programacao/post/{self.item.id}/')
+        self.assertRedirects(resp, f'/?next=/programacao/post/{self.item.id}/', fetch_redirect_response=False)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class LoginSemMaiusculasTests(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User

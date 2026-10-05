@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, comentarios, contas, meta, publico, quadro, usuarios, views
+from . import agenda, comentarios, contas, meta, notificacoes, publico, quadro, usuarios, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
@@ -14,6 +14,7 @@ urlpatterns = [
     path('programacao/', agenda.programacao, name='programacao'),
     path('programacao/itens/', agenda.adicionar_item, name='agenda_adicionar'),
     path('programacao/itens/<int:item_id>/editar/', agenda.editar_item, name='agenda_editar'),
+    path('programacao/post/<int:item_id>/', agenda.abrir_item, name='agenda_abrir_item'),
     path('programacao/midias/<int:midia_id>/', agenda.midia_item, name='agenda_midia'),
     path('programacao/itens/<int:item_id>/concluir/', agenda.alternar_item, name='agenda_alternar'),
     path('programacao/itens/<int:item_id>/excluir/', agenda.excluir_item, name='agenda_excluir'),
@@ -31,6 +32,9 @@ urlpatterns = [
     path('tarefas/cartoes/<int:cartao_id>/arquivo/', quadro.arquivo_cartao, name='quadro_arquivo_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/mover/', quadro.mover_cartao, name='quadro_mover_cartao'),
     path('tarefas/cartoes/<int:cartao_id>/excluir/', quadro.excluir_cartao, name='quadro_excluir_cartao'),
+
+    path('notificacoes/', notificacoes.notificacoes, name='notificacoes'),
+    path('notificacoes/lidas/', notificacoes.marcar_todas_lidas, name='notificacoes_lidas'),
 
     path('usuarios/', usuarios.usuarios, name='usuarios'),
     path('usuarios/<int:perfil_id>/editar/', usuarios.editar_usuario, name='usuarios_editar'),

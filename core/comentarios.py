@@ -2,13 +2,14 @@
 from datetime import timedelta
 
 from django.contrib.auth.decorators import login_required
+from django.db.models import Max
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_POST
 
-from .models import ComentarioItemAgenda, ItemAgenda
+from .models import ComentarioItemAgenda, ItemAgenda, LeituraComentarios
 
 TAMANHO_MAXIMO_COMENTARIO = 2000
 
@@ -27,9 +28,13 @@ def comentarios_item(request, item_id):
         comentario = ComentarioItemAgenda.objects.create(
             item=item, autor=request.user, autor_nome=_nome(request.user), texto=texto,
         )
+        marcar_lido(request.user, item)  # quem responde já viu a conversa até aqui
         return JsonResponse({'comentario': _json(comentario, request.user)}, status=201)
 
-    comentarios = item.comentarios.select_related('autor')
+    comentarios = list(item.comentarios.select_related('autor'))
+    # Só conta como lido quando o chat está à vista (no celular ele fica fechado até tocar no botão).
+    if request.GET.get('marcar') == '1':
+        marcar_lido(request.user, item, comentarios[-1].id if comentarios else 0)
     return JsonResponse({'comentarios': [_json(comentario, request.user) for comentario in comentarios]})
 
 
@@ -74,3 +79,13 @@ def _quando(momento):
 
 def _nome(pessoa):
     return (pessoa.get_full_name() or pessoa.username)[:150]
+
+
+def marcar_lido(pessoa, item, ate_id=None):
+    if ate_id is None:
+        ate_id = item.comentarios.aggregate(ultimo=Max('id'))['ultimo'] or 0
+    leitura, criada = LeituraComentarios.objects.get_or_create(
+        usuario=pessoa, item=item, defaults={'ultimo_comentario_id': ate_id},
+    )
+    if not criada and leitura.ultimo_comentario_id < ate_id:
+        LeituraComentarios.objects.filter(pk=leitura.pk).update(ultimo_comentario_id=ate_id)

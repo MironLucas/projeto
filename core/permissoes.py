@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import redirect
 from django.urls import Resolver404, resolve, reverse
+from django.utils.functional import SimpleLazyObject
 from django.utils.http import url_has_allowed_host_and_scheme
 
 from .models import InstagramConnection, Perfil
@@ -17,7 +18,7 @@ CHAVE_CONTA_ATUAL = 'conta_atual'
 # Trocar de conta e desconectar valem mesmo para quem só visualiza a conta aberta: a própria view
 # confere o acesso à conta de destino. Comentar nos itens da programação também: é como o cliente pede ajustes.
 LIBERADAS_PARA_QUEM_VISUALIZA = {'login', 'logout', 'usar_conta', 'desconectar_conta',
-                                 'agenda_comentarios', 'agenda_excluir_comentario'}
+                                 'agenda_comentarios', 'agenda_excluir_comentario', 'notificacoes_lidas'}
 
 
 class PerfilMiddleware:
@@ -90,10 +91,19 @@ def contexto_de_permissoes(request):
         'pode_editar': bool(perfil and perfil.pode_editar),
         'e_admin': bool(perfil and perfil.e_admin),
         'conta_atual_menu': _conta_para_o_menu(request, perfil) if perfil else None,
+        # Só consulta o banco se a página mostrar o sininho.
+        'notificacoes_total': SimpleLazyObject(lambda: _total_de_notificacoes(request)),
         # Contas desconectadas saem da lista; os dados delas ficam guardados para quando voltarem.
         'contas_da_pessoa': [_conta_para_o_menu(request, p) for p in getattr(request, 'perfis', [])
                              if p.conta_id in getattr(request, 'conexoes', {})],
     }
+
+
+def _total_de_notificacoes(request):
+    if not getattr(request, 'perfis', None):
+        return 0
+    from .notificacoes import total_nao_lidos  # notificacoes usa este módulo
+    return total_nao_lidos(request)
 
 
 def _conta_para_o_menu(request, perfil):

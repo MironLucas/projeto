@@ -111,6 +111,16 @@ class ComentarioItemAgenda(models.Model):
         return f'{self.autor_nome}: {self.texto[:40]}'
 
 
+class LeituraComentarios(models.Model):
+    """Até qual comentário de um item a pessoa já leu; o que vier depois aparece no sininho."""
+    usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='leituras_comentarios')
+    item = models.ForeignKey(ItemAgenda, on_delete=models.CASCADE, related_name='leituras')
+    ultimo_comentario_id = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['usuario', 'item'], name='uma_leitura_por_item')]
+
+
 class ListaTarefas(models.Model):
     usuario = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='listas_tarefas')
     titulo = models.CharField(max_length=80)

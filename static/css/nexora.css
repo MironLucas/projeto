@@ -5588,7 +5588,8 @@ html:has(dialog[open]) {
   min-width: 0;
 }
 
-#dialogItemTitulo:focus {
+#dialogItemTitulo:focus,
+#itemChatTitulo:focus {
   outline: none;
 }
 
@@ -5752,4 +5753,279 @@ html:has(dialog[open]) {
 @keyframes finalizado-selo {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* ---------- Sininho de notificações (menu lateral) ---------- */
+.nav-sininho {
+  width: 100%;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-sininho svg {
+  transform-origin: 50% 10%;
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #f5426f;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 0 3px rgba(245, 66, 111, 0.18);
+}
+
+.nav-badge[hidden] {
+  display: none;
+}
+
+/* Com novidade, o sino dá um pulinho de tempos em tempos para chamar atenção. */
+.nav-sininho.tem-novas {
+  color: var(--text);
+}
+
+.nav-sininho.tem-novas svg {
+  animation: sininho-balanco 4s ease-in-out infinite;
+}
+
+.nav-sininho.tem-novas .nav-badge {
+  animation: sininho-pulo 4s ease-in-out infinite;
+}
+
+.nav-sininho.acabou-de-chegar svg {
+  animation: sininho-balanco 1.2s ease-in-out 2, sininho-balanco 4s ease-in-out 2.4s infinite;
+}
+
+@keyframes sininho-balanco {
+  0%, 70%, 100% { transform: rotate(0); }
+  74% { transform: rotate(16deg); }
+  78% { transform: rotate(-14deg); }
+  82% { transform: rotate(10deg); }
+  86% { transform: rotate(-6deg); }
+  90% { transform: rotate(3deg); }
+}
+
+@keyframes sininho-pulo {
+  0%, 70%, 92%, 100% { transform: translateY(0) scale(1); }
+  76% { transform: translateY(-4px) scale(1.12); }
+  82% { transform: translateY(0) scale(0.96); }
+  86% { transform: translateY(-1px) scale(1.03); }
+}
+
+/* Menu recolhido: o número vira uma bolinha em cima do sino. */
+@media (min-width: 861px) {
+  .menu-recolhido .nav-item .nav-badge {
+    display: block;
+    position: absolute;
+    top: 4px;
+    right: 14px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    font-size: 10px;
+    line-height: 18px;
+  }
+
+  .menu-recolhido .nav-item .nav-badge[hidden] {
+    display: none;
+  }
+}
+
+/* Celular: o menu fica escondido, então o botão de abrir ganha uma bolinha quando há novidade. */
+.menu-btn {
+  position: relative;
+}
+
+.menu-btn-ponto {
+  display: none;
+}
+
+.menu-btn.tem-novas .menu-btn-ponto {
+  display: block;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #f5426f;
+  box-shadow: 0 0 0 2px var(--bg);
+  animation: sininho-pulo 4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-sininho.tem-novas svg,
+  .nav-sininho.tem-novas .nav-badge,
+  .nav-sininho.acabou-de-chegar svg,
+  .menu-btn.tem-novas .menu-btn-ponto {
+    animation: none;
+  }
+}
+
+/* ---------- Janela de notificações ---------- */
+.notificacoes {
+  width: min(440px, calc(100vw - 32px));
+  max-height: min(620px, calc(100vh - 48px));
+  max-height: min(620px, calc(100dvh - 48px));
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.notificacoes[open] {
+  display: flex;
+}
+
+.notificacoes-topo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 12px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.notificacoes-topo h2 {
+  margin: 0 auto 0 0;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.notificacoes-ler-todas {
+  border: none;
+  background: none;
+  padding: 6px 8px;
+  border-radius: 8px;
+  color: var(--cyan);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.notificacoes-ler-todas:hover {
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.notificacoes-lista {
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.notificacao {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.notificacao:hover,
+.notificacao:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.notificacao + .notificacao {
+  margin-top: 2px;
+}
+
+.notificacao .chat-avatar {
+  width: 34px;
+  height: 34px;
+  font-size: 13px;
+}
+
+.notificacao-corpo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notificacao-linha {
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--text-dim);
+}
+
+.notificacao-linha strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.notificacao-texto {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-dim);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+
+.notificacao-meta {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.notificacao-novos {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(245, 66, 111, 0.16);
+  color: #ff7a9a;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.notificacoes-vazio {
+  padding: 36px 20px 40px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.notificacoes-vazio svg {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 8px;
+}
+
+.notificacoes-vazio p {
+  margin: 0 0 2px;
+  color: var(--text-dim);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* ---------- Programação: compartilhar o post ---------- */
+.item-compartilhar .icone-copiado,
+.item-compartilhar.is-copiado .icone-compartilhar {
+  display: none;
+}
+
+.item-compartilhar.is-copiado .icone-copiado {
+  display: block;
+  color: #3ddc84;
+}
+
+.item-compartilhar[hidden] {
+  display: none;
 }

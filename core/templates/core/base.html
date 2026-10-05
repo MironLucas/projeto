@@ -41,6 +41,16 @@
       <nav class="sidebar-nav">
         <div class="nav-label">Menu</div>
 
+        <button type="button" class="nav-item nav-sininho{% if notificacoes_total %} tem-novas{% endif %}" id="sininho"
+                data-url="{% url 'notificacoes' %}" title="Notificações" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+          </svg>
+          <span>Notificações</span>
+          <span class="nav-badge" id="sininhoTotal"{% if not notificacoes_total %} hidden{% endif %}>{{ notificacoes_total }}</span>
+        </button>
+
         <a href="{% url 'dashboard' %}" class="nav-item {% if active_menu == 'dashboard' %}active{% endif %}" title="Dashboard">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="7" height="9" rx="1.5"></rect>
@@ -108,10 +118,11 @@
 
     <div class="main">
       <div class="topbar">
-        <button type="button" class="menu-btn" id="menuAbrir" aria-label="Abrir menu" aria-controls="menuLateral" aria-expanded="false">
+        <button type="button" class="menu-btn{% if notificacoes_total %} tem-novas{% endif %}" id="menuAbrir" aria-label="Abrir menu" aria-controls="menuLateral" aria-expanded="false">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M4 6h16M4 12h16M4 18h16"></path>
           </svg>
+          <span class="menu-btn-ponto" aria-hidden="true"></span>
         </button>
         <div class="topbar-title">
           <h1>{% block page_heading %}{% endblock %}</h1>
@@ -133,6 +144,17 @@
       </div>
     </div>
   </div>
+
+  <dialog class="modal notificacoes" id="dialogNotificacoes" aria-labelledby="notificacoesTitulo">
+    <header class="notificacoes-topo">
+      <h2 id="notificacoesTitulo">Notificações</h2>
+      <button type="button" class="notificacoes-ler-todas" id="notificacoesLerTodas" data-url="{% url 'notificacoes_lidas' %}" data-csrf="{{ csrf_token }}" hidden>Marcar tudo como lido</button>
+      <button type="button" class="icon-btn icon-btn--neutral js-fechar-notificacoes" aria-label="Fechar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg>
+      </button>
+    </header>
+    <div class="notificacoes-lista" id="notificacoesLista" aria-live="polite"></div>
+  </dialog>
 
   <script>
     (function () {
@@ -218,6 +240,129 @@
               location.reload();
             });
           });
+      });
+
+      // ---------- Sininho: comentários novos nos posts da programação ----------
+      var sininho = document.getElementById('sininho');
+      var sininhoTotal = document.getElementById('sininhoTotal');
+      var dialogoNotificacoes = document.getElementById('dialogNotificacoes');
+      var listaNotificacoes = document.getElementById('notificacoesLista');
+      var lerTodas = document.getElementById('notificacoesLerTodas');
+      var totalAtual = Number(sininhoTotal.textContent) || 0;
+
+      function mostrarTotal(total) {
+        var subiu = total > totalAtual;
+        totalAtual = total;
+        sininhoTotal.textContent = total > 99 ? '99+' : total;
+        sininhoTotal.hidden = !total;
+        sininho.classList.toggle('tem-novas', total > 0);
+        botaoAbrir.classList.toggle('tem-novas', total > 0);
+        sininho.title = total ? 'Notificações (' + total + ' nova' + (total === 1 ? '' : 's') + ')' : 'Notificações';
+        if (subiu) {
+          // Chegou coisa nova enquanto a página estava aberta: o sininho dá um pulinho extra.
+          sininho.classList.remove('acabou-de-chegar');
+          void sininho.offsetWidth;
+          sininho.classList.add('acabou-de-chegar');
+        }
+      }
+
+      function pedirNotificacoes(lista) {
+        return fetch(sininho.dataset.url + (lista ? '?lista=1' : ''), {
+          headers: { 'X-Requested-With': 'fetch' }, credentials: 'same-origin',
+        }).then(function (resposta) {
+          if (!resposta.ok) {
+            throw new Error('HTTP ' + resposta.status);
+          }
+          return resposta.json();
+        });
+      }
+
+      function atualizarNotificacoes() {
+        if (document.hidden) {
+          return;
+        }
+        pedirNotificacoes(false).then(function (json) { mostrarTotal(json.total); }).catch(function () {});
+      }
+      window.atualizarNotificacoes = atualizarNotificacoes;
+      setInterval(atualizarNotificacoes, 60000);
+      document.addEventListener('visibilitychange', atualizarNotificacoes);
+
+      function desenharNotificacoes(itens) {
+        listaNotificacoes.innerHTML = '';
+        lerTodas.hidden = !itens.length;
+        if (!itens.length) {
+          listaNotificacoes.innerHTML = '<div class="notificacoes-vazio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>' +
+            '<p>Tudo em dia por aqui ✨</p><span>Quando alguém comentar num post da programação, avisamos aqui.</span></div>';
+          return;
+        }
+        itens.forEach(function (aviso) {
+          var link = document.createElement('a');
+          link.className = 'notificacao';
+          link.href = aviso.url;
+          var avatar = document.createElement('span');
+          avatar.className = 'chat-avatar';
+          avatar.setAttribute('aria-hidden', 'true');
+          avatar.textContent = aviso.inicial;
+          var corpo = document.createElement('span');
+          corpo.className = 'notificacao-corpo';
+          var linha = document.createElement('span');
+          linha.className = 'notificacao-linha';
+          var autor = document.createElement('strong');
+          autor.textContent = aviso.autor;
+          var titulo = document.createElement('strong');
+          titulo.textContent = aviso.titulo;
+          linha.append(autor, document.createTextNode(' comentou em '), titulo);
+          var texto = document.createElement('span');
+          texto.className = 'notificacao-texto';
+          texto.textContent = aviso.texto;
+          var meta = document.createElement('span');
+          meta.className = 'notificacao-meta';
+          meta.textContent = aviso.quando + (aviso.conta ? ' · ' + aviso.conta : '');
+          corpo.append(linha, texto, meta);
+          link.append(avatar, corpo);
+          if (aviso.novos > 1) {
+            var novos = document.createElement('span');
+            novos.className = 'notificacao-novos';
+            novos.textContent = '+' + aviso.novos;
+            novos.title = aviso.novos + ' comentários novos';
+            link.appendChild(novos);
+          }
+          listaNotificacoes.appendChild(link);
+        });
+      }
+
+      sininho.addEventListener('click', function () {
+        fecharMenuLateral();
+        listaNotificacoes.innerHTML = '<div class="notificacoes-vazio"><p>Carregando…</p></div>';
+        lerTodas.hidden = true;
+        dialogoNotificacoes.showModal();
+        pedirNotificacoes(true).then(function (json) {
+          mostrarTotal(json.total);
+          desenharNotificacoes(json.itens || []);
+        }).catch(function () {
+          listaNotificacoes.innerHTML = '<div class="notificacoes-vazio"><p>Não foi possível carregar agora.</p><span>Confira a internet e tente de novo.</span></div>';
+        });
+      });
+
+      lerTodas.addEventListener('click', function () {
+        fetch(lerTodas.dataset.url, {
+          method: 'POST', credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'fetch', 'X-CSRFToken': lerTodas.dataset.csrf },
+        }).then(function (resposta) {
+          if (resposta.ok) {
+            mostrarTotal(0);
+            desenharNotificacoes([]);
+          }
+        });
+      });
+
+      dialogoNotificacoes.querySelector('.js-fechar-notificacoes').addEventListener('click', function () {
+        dialogoNotificacoes.close();
+      });
+      dialogoNotificacoes.addEventListener('click', function (evento) {
+        if (evento.target === dialogoNotificacoes) {
+          dialogoNotificacoes.close();
+        }
       });
 
       document.getElementById('menuRecolher').addEventListener('click', function () {
