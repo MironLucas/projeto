@@ -6029,3 +6029,49 @@ html:has(dialog[open]) {
 .item-compartilhar[hidden] {
   display: none;
 }
+
+/* ---------- Marca Hopkins: logo com o nome (fundo transparente) ---------- */
+.brand-logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+}
+
+.brand .brand-logo {
+  height: 54px;
+  margin-bottom: 2px;
+  filter: drop-shadow(0 8px 26px rgba(91, 76, 255, 0.35));
+}
+
+.legal-brand .brand-logo {
+  height: 30px;
+}
+
+.sidebar-brand {
+  min-height: 81px;
+}
+
+.sidebar-brand .brand-logo {
+  height: 32px;
+}
+
+/* Menu aberto mostra a logo com o nome; recolhido, só o "H". */
+.sidebar-brand .brand-mark {
+  display: none;
+}
+
+@media (min-width: 861px) {
+  .menu-recolhido .sidebar-brand .brand-mark {
+    display: block;
+  }
+
+  .menu-recolhido .sidebar-brand .brand-logo {
+    display: none;
+  }
+}
+
+.lp-marca img.brand-logo {
+  width: auto;
+  height: 30px;
+  border-radius: 0;
+}

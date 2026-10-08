@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instala o Nexora numa VPS Linux (rodar como root): Docker + Postgres + Caddy (HTTPS automático).
+# Instala o Hopkins numa VPS Linux (rodar como root): Docker + Postgres + Caddy (HTTPS automático).
 # Uso: bash instalar.sh
 set -euo pipefail
 
@@ -56,7 +56,7 @@ PRIMEIRA_INSTALACAO=0
 if [ ! -f .env ]; then
   PRIMEIRA_INSTALACAO=1
   echo "==> Configuração (fica salva em $PASTA/.env)"
-  read -rp "Domínio do Nexora (ex.: nexora.seudominio.com.br): " DOMINIO
+  read -rp "Domínio do Hopkins (ex.: hopkins.com.br): " DOMINIO
   read -rp "Instagram App ID: " INSTAGRAM_ID
   read -rsp "Instagram App Secret (não aparece enquanto digita): " INSTAGRAM_SECRET
   echo

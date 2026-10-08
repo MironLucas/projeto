@@ -1714,6 +1714,26 @@ class NotificacoesELinkDoPostTests(TestCase):
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
+class MarcaHopkinsTests(TestCase):
+    def test_telas_publicas_e_internas_usam_o_nome_e_a_logo_hopkins(self):
+        from django.contrib.auth.models import User
+        paginas = ['/', '/plataforma/', '/privacidade/', '/termos/', '/exclusao-de-dados/']
+        for url in paginas:
+            resp = self.client.get(url)
+            self.assertContains(resp, 'img/hopkins-marca.png', msg_prefix=url)
+            self.assertNotContains(resp, 'Nextsora', msg_prefix=url)
+            self.assertNotContains(resp, 'NEXTSORA', msg_prefix=url)
+        self.assertContains(self.client.get('/'), '<title>Hopkins · Acesso</title>', html=True)
+        self.assertContains(self.client.get('/privacidade/'), 'O Hopkins (<a href="https://testserver">testserver</a>)')
+
+        self.client.force_login(User.objects.get(username='mironlucas'))
+        for url in ('/dashboard/', '/programacao/', '/usuarios/'):
+            resp = self.client.get(url)
+            self.assertContains(resp, 'img/hopkins-marca.png', msg_prefix=url)
+            self.assertNotContains(resp, 'Nextsora', msg_prefix=url)
+
+
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class LoginSemMaiusculasTests(TestCase):
     def setUp(self):
         from django.contrib.auth.models import User

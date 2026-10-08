@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ titulo }} · Nextsora</title>
+  <title>{{ titulo }} · Hopkins</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
@@ -16,8 +16,7 @@
   <div class="legal-page">
     <header class="legal-top">
       <a href="{% url 'login' %}" class="legal-brand">
-        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="">
-        <span class="brand-name">NEXTSORA</span>
+        <img class="brand-logo" src="{% static 'img/hopkins-marca.png' %}" alt="Hopkins" width="658" height="160">
       </a>
       <nav class="legal-nav">
         <a href="{% url 'privacidade' %}" {% if request.resolver_match.url_name == 'privacidade' %}aria-current="page"{% endif %}>Privacidade</a>
@@ -33,7 +32,7 @@
     </main>
 
     <footer class="legal-footer">
-      Nextsora &copy; {% now "Y" %} · <a href="{% url 'login' %}">Acessar o Nextsora</a>
+      Hopkins &copy; {% now "Y" %} · <a href="{% url 'login' %}">Acessar o Hopkins</a>
     </footer>
   </div>
 </body>

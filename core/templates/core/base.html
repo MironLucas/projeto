@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nextsora · {% block page_title %}{% endblock %}</title>
+  <title>Hopkins · {% block page_title %}{% endblock %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
@@ -23,8 +23,9 @@
   <div class="app">
     <aside class="sidebar" id="menuLateral">
       <div class="sidebar-brand">
-        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="Nextsora">
-        <div class="brand-name">NEXTSORA</div>
+        {# Menu aberto: logo com o nome; menu recolhido: só o "H". #}
+        <img class="brand-mark" src="{% static 'img/logo.png' %}" alt="Hopkins">
+        <img class="brand-logo" src="{% static 'img/hopkins-marca.png' %}" alt="Hopkins" width="658" height="160">
         <button type="button" class="sidebar-close js-fechar-menu" aria-label="Fechar menu">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M18 6L6 18M6 6l12 12"></path>

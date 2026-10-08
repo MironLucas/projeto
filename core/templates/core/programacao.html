@@ -470,7 +470,7 @@
 
         botaoCompartilhar.addEventListener('click', function () {
           var titulo = document.getElementById('itemTitulo').value;
-          var texto = (titulo ? '*' + titulo + '*\n' : '') + 'Dá uma olhada neste post da programação no Nextsora:';
+          var texto = (titulo ? '*' + titulo + '*\n' : '') + 'Dá uma olhada neste post da programação no Hopkins:';
           if (navigator.share && telaDeCelular.matches) {
             navigator.share({ title: titulo || 'Post da programação', text: texto, url: linkDoPost }).catch(function () {});
             return;

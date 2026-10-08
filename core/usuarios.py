@@ -30,7 +30,7 @@ class NovoUsuarioForm(forms.Form):
     def clean_usuario(self):
         usuario = self.cleaned_data['usuario'].strip()
         User.username_validator(usuario)
-        # Quem já tem login no Nextsora é convidado para esta conta e continua com a senha que já usa.
+        # Quem já tem login no Hopkins é convidado para esta conta e continua com a senha que já usa.
         self.existente = User.objects.filter(username__iexact=usuario, is_active=True).first()
         if self.existente and Perfil.objects.filter(usuario=self.existente, conta=self.conta).exists():
             raise ValidationError('Essa pessoa já tem acesso a esta conta.')

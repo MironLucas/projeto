@@ -2,7 +2,7 @@
 
 {% block page_title %}Usuários{% endblock %}
 {% block page_heading %}Usuários{% endblock %}
-{% block page_subheading %}Quem acessa o Nextsora e o que cada pessoa pode fazer{% endblock %}
+{% block page_subheading %}Quem acessa o Hopkins e o que cada pessoa pode fazer{% endblock %}
 
 {% block content %}
   <div class="dash">
@@ -66,7 +66,7 @@
       <label class="field-label" for="id_senha">Senha</label>
       <input type="password" id="id_senha" name="senha" class="field" autocomplete="new-password">
       {% for erro in form.senha.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
-      <p class="field-hint">Mínimo de 8 caracteres, sem ser só números nem uma senha comum. Se a pessoa já tem login no Nextsora, deixe em branco: ela passa a ver esta conta com a senha que já usa.</p>
+      <p class="field-hint">Mínimo de 8 caracteres, sem ser só números nem uma senha comum. Se a pessoa já tem login no Hopkins, deixe em branco: ela passa a ver esta conta com a senha que já usa.</p>
 
       <span class="field-label">Acesso</span>
       <div class="role-options">
@@ -107,7 +107,7 @@
         <label class="field-label" for="editarSenha">Nova senha</label>
         <input type="password" id="editarSenha" name="senha" class="field" autocomplete="new-password" placeholder="Deixe em branco para manter a atual">
       </div>
-      <p class="field-hint" id="editarCompartilhado" hidden>Essa pessoa também acessa outras contas no Nextsora, então só ela altera o próprio nome e a senha. Aqui você muda o acesso dela a esta conta.</p>
+      <p class="field-hint" id="editarCompartilhado" hidden>Essa pessoa também acessa outras contas no Hopkins, então só ela altera o próprio nome e a senha. Aqui você muda o acesso dela a esta conta.</p>
 
       <span class="field-label">Acesso</span>
       <div class="role-options">

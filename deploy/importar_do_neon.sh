@@ -5,7 +5,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-read -rp "Isto APAGA os dados atuais do Nexora nesta VPS e copia os do Neon. Continuar? (digite sim) " CONFIRMA
+read -rp "Isto APAGA os dados atuais do Hopkins nesta VPS e copia os do Neon. Continuar? (digite sim) " CONFIRMA
 [ "$CONFIRMA" = "sim" ] || { echo "Cancelado."; exit 1; }
 read -rsp "Cole a DATABASE_URL do Neon (não aparece enquanto digita): " URL_NEON
 echo

@@ -52,7 +52,7 @@ def exclusao_de_dados(request):
 @csrf_exempt
 @require_POST
 def instagram_desautorizar(request):
-    """A pessoa removeu o Nextsora nas configurações do Instagram: apagamos o acesso guardado."""
+    """A pessoa removeu o Hopkins nas configurações do Instagram: apagamos o acesso guardado."""
     dados = _ler_signed_request(request.POST.get('signed_request', ''))
     if dados is None:
         return HttpResponseBadRequest('signed_request inválido')
