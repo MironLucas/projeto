@@ -7,3 +7,10 @@
 www.{$DOMINIO} {
 	redir https://{$DOMINIO}{uri} permanent
 }
+
+# Domínio antigo (DOMINIO_ANTIGO no .env): qualquer endereço dele vai para o mesmo caminho no domínio novo,
+# então links antigos e compartilhados continuam funcionando. Sem domínio antigo, o docker-compose usa um
+# endereço interno (antigo.localhost) que ninguém acessa.
+{$DOMINIO_ANTIGO}, www.{$DOMINIO_ANTIGO} {
+	redir https://{$DOMINIO}{uri} temporary
+}
