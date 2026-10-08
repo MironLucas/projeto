@@ -1,0 +1,14 @@
+{% extends 'core/_acesso.html' %}
+
+{% block titulo %}Senha criada{% endblock %}
+
+{% block conteudo %}
+      <div class="acesso-texto acesso-texto--centro">
+        <span class="acesso-icone acesso-icone--ok" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>
+        </span>
+        <h1>Senha criada!</h1>
+        <p>Pronto, sua senha nova já vale. Entre com ela no Hopkins.</p>
+      </div>
+      <a class="btn-primary acesso-botao" href="{% url 'login' %}">Entrar</a>
+{% endblock %}

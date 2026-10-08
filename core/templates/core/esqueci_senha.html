@@ -1,0 +1,30 @@
+{% extends 'core/_acesso.html' %}
+
+{% block titulo %}Esqueci minha senha{% endblock %}
+
+{% block conteudo %}
+      <div class="acesso-texto">
+        <h1>Esqueci minha senha</h1>
+        <p>Digite seu usuário ou e-mail. Se houver um e-mail cadastrado, mandamos um link para você criar uma senha nova.</p>
+      </div>
+
+      {% if form.errors %}<div class="form-errors">Digite seu usuário ou e-mail.</div>{% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+          <label for="id_email">Usuário ou e-mail</label>
+          <div class="input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+              <path d="M3 7l9 6 9-6"></path>
+            </svg>
+            <input type="text" name="email" id="id_email" placeholder="seu usuário ou e-mail" autocomplete="username"
+                   autocapitalize="none" autocorrect="off" spellcheck="false" autofocus required maxlength="254"
+                   value="{{ form.email.value|default:'' }}">
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Enviar link</button>
+      </form>
+      <a class="login-esqueci" href="{% url 'login' %}">← Voltar para o login</a>
+{% endblock %}

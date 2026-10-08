@@ -100,11 +100,13 @@
       </nav>
 
       <div class="sidebar-footer">
-        <div class="avatar">{{ request.user.username|slice:":1"|upper }}</div>
-        <div class="user-info">
-          <div class="user-name">{{ request.user.first_name|default:request.user.username }}</div>
-          <div class="user-role">{{ perfil_atual.get_papel_display }}</div>
-        </div>
+        <a href="{% url 'meu_perfil' %}" class="sidebar-perfil{% if active_menu == 'perfil' %} active{% endif %}" title="Meu perfil">
+          <div class="avatar">{{ request.user.username|slice:":1"|upper }}</div>
+          <div class="user-info">
+            <div class="user-name">{{ request.user.first_name|default:request.user.username }}</div>
+            <div class="user-role">{{ perfil_atual.get_papel_display }}{% if not request.user.email %} · <span class="user-sem-email">cadastre seu e-mail</span>{% endif %}</div>
+          </div>
+        </a>
         <a href="{% url 'logout' %}" class="logout-btn" title="Sair">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>

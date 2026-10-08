@@ -26,13 +26,13 @@
               {{ membro.usuario.first_name|default:membro.usuario.username }}
               {% if membro.usuario == request.user %}<span class="user-row-you">você</span>{% endif %}
             </span>
-            <span class="user-row-login">@{{ membro.usuario.username }}</span>
+            <span class="user-row-login">@{{ membro.usuario.username }}{% if membro.usuario.email %} · {{ membro.usuario.email }}{% endif %}</span>
           </div>
           <span class="role-badge role-badge--{{ membro.papel }}">{{ membro.get_papel_display }}</span>
           {% if not membro.e_admin %}
             <button type="button" class="icon-btn icon-btn--neutral js-editar-usuario" aria-label="Editar {{ membro.usuario.username }}"
                     data-editar="{% url 'usuarios_editar' membro.id %}" data-excluir="{% url 'usuarios_excluir' membro.id %}"
-                    data-usuario="{{ membro.usuario.username }}" data-nome="{{ membro.usuario.first_name }}" data-papel="{{ membro.papel }}"
+                    data-usuario="{{ membro.usuario.username }}" data-nome="{{ membro.usuario.first_name }}" data-email="{{ membro.usuario.email }}" data-papel="{{ membro.papel }}"
                     {% if membro.contas_da_pessoa > 1 %}data-compartilhado="1"{% endif %}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
             </button>
@@ -62,6 +62,11 @@
       <label class="field-label" for="id_usuario">Usuário (para entrar)</label>
       <input type="text" id="id_usuario" name="usuario" class="field" maxlength="150" value="{{ form.usuario.value|default:'' }}" autocomplete="off" required>
       {% for erro in form.usuario.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+
+      <label class="field-label" for="id_email">E-mail</label>
+      <input type="email" id="id_email" name="email" class="field" maxlength="254" value="{{ form.email.value|default:'' }}" placeholder="Opcional" autocomplete="off" autocapitalize="none">
+      {% for erro in form.email.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+      <p class="field-hint">Para a pessoa conseguir criar uma senha nova sozinha se esquecer.</p>
 
       <label class="field-label" for="id_senha">Senha</label>
       <input type="password" id="id_senha" name="senha" class="field" autocomplete="new-password">
@@ -104,10 +109,13 @@
         <label class="field-label" for="editarNome">Nome</label>
         <input type="text" id="editarNome" name="nome" class="field" maxlength="150">
 
+        <label class="field-label" for="editarEmail">E-mail</label>
+        <input type="email" id="editarEmail" name="email" class="field" maxlength="254" placeholder="Opcional" autocomplete="off" autocapitalize="none">
+
         <label class="field-label" for="editarSenha">Nova senha</label>
         <input type="password" id="editarSenha" name="senha" class="field" autocomplete="new-password" placeholder="Deixe em branco para manter a atual">
       </div>
-      <p class="field-hint" id="editarCompartilhado" hidden>Essa pessoa também acessa outras contas no Hopkins, então só ela altera o próprio nome e a senha. Aqui você muda o acesso dela a esta conta.</p>
+      <p class="field-hint" id="editarCompartilhado" hidden>Essa pessoa também acessa outras contas no Hopkins, então só ela altera o próprio nome, e-mail e senha (em Meu perfil). Aqui você muda o acesso dela a esta conta.</p>
 
       <span class="field-label">Acesso</span>
       <div class="role-options">
@@ -159,6 +167,7 @@
           excluir.formAction = dados.excluir;
           document.getElementById('tituloEditarUsuario').textContent = 'Editar @' + dados.usuario;
           document.getElementById('editarNome').value = dados.nome;
+          document.getElementById('editarEmail').value = dados.email || '';
           document.getElementById('editarDadosPessoais').hidden = !!dados.compartilhado;
           document.getElementById('editarCompartilhado').hidden = !dados.compartilhado;
           form.querySelectorAll('input[name=papel]').forEach(function (opcao) {

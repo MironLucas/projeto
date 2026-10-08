@@ -6075,3 +6075,163 @@ html:has(dialog[open]) {
   height: 30px;
   border-radius: 0;
 }
+
+/* ---------- Esqueci minha senha ---------- */
+.login-esqueci {
+  display: block;
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.login-esqueci:hover {
+  color: var(--cyan);
+}
+
+.acesso-texto {
+  margin-bottom: 20px;
+}
+
+.acesso-texto h1 {
+  margin: 0 0 8px;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.acesso-texto p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.acesso-texto p + p {
+  margin-top: 10px;
+}
+
+.acesso-texto--centro {
+  text-align: center;
+}
+
+.acesso-dica {
+  font-size: 12.5px !important;
+  color: var(--text-faint) !important;
+}
+
+.acesso-icone {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-soft);
+  border: 1px solid rgba(124, 92, 255, 0.35);
+  color: var(--cyan);
+}
+
+.acesso-icone svg {
+  width: 24px;
+  height: 24px;
+}
+
+.acesso-icone--ok {
+  background: rgba(61, 220, 132, 0.12);
+  border-color: rgba(61, 220, 132, 0.4);
+  color: #3ddc84;
+}
+
+a.acesso-botao {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+/* ---------- Meu perfil ---------- */
+.sidebar-perfil {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: -6px;
+  padding: 6px;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.sidebar-perfil:hover,
+.sidebar-perfil.active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.user-sem-email {
+  color: #f5b041;
+}
+
+@media (min-width: 861px) {
+  .menu-recolhido .sidebar-perfil {
+    flex: none;
+    margin: 0;
+  }
+}
+
+.perfil-pagina {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+.perfil-bloco {
+  background: var(--panel-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+
+.perfil-bloco header {
+  margin-bottom: 8px;
+}
+
+.perfil-bloco h2 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.perfil-bloco header p {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.perfil-bloco form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perfil-alerta {
+  margin: 4px 0 0;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 176, 65, 0.35);
+  background: rgba(245, 176, 65, 0.08);
+  color: #f5c46b;
+  font-size: 12.5px;
+}
+
+.perfil-acoes {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}

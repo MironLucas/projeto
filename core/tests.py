@@ -1713,6 +1713,112 @@ class NotificacoesELinkDoPostTests(TestCase):
         self.assertRedirects(resp, f'/?next=/programacao/post/{self.item.id}/', fetch_redirect_response=False)
 
 
+@override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',
+                   EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class EsqueciSenhaTests(TestCase):
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from django.core.cache import cache
+        cache.clear()
+        self.pessoa = User.objects.get(username='mironlucas')
+        self.pessoa.first_name = 'Nathalia'
+        self.pessoa.email = 'nathalia@exemplo.com'
+        self.pessoa.set_password('Senha#Antiga2026')
+        self.pessoa.save()
+
+    def _link_do_email(self):
+        import re
+        from django.core import mail
+        self.assertEqual(len(mail.outbox), 1)
+        return re.search(r'https?://testserver(/senha/nova/[^\s"<]+)', mail.outbox[0].body).group(1)
+
+    def test_login_tem_o_link_e_o_pedido_por_usuario_ou_email_manda_o_link(self):
+        from django.core import mail
+        self.assertContains(self.client.get('/'), 'href="/senha/esqueci/"')
+        for identificacao in ('MIRONLUCAS', 'Nathalia@Exemplo.com'):
+            mail.outbox = []
+            resp = self.client.post('/senha/esqueci/', {'email': identificacao})
+            self.assertRedirects(resp, '/senha/esqueci/enviado/')
+            self.assertEqual(mail.outbox[0].to, ['nathalia@exemplo.com'])
+            self.assertEqual(mail.outbox[0].subject, 'Criar nova senha no Hopkins')
+            self.assertIn('Olá, Nathalia!', mail.outbox[0].body)
+            self.assertIn('Criar nova senha', mail.outbox[0].alternatives[0][0])
+
+    def test_resposta_igual_para_quem_nao_existe_ou_nao_tem_email(self):
+        from django.contrib.auth.models import User
+        from django.core import mail
+        User.objects.create_user('semEmail', password='x')
+        for identificacao in ('ninguem', 'semEmail', 'outro@exemplo.com'):
+            resp = self.client.post('/senha/esqueci/', {'email': identificacao})
+            self.assertRedirects(resp, '/senha/esqueci/enviado/')
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_link_cria_a_senha_nova_uma_vez_so(self):
+        self.client.post('/senha/esqueci/', {'email': 'mironlucas'})
+        link = self._link_do_email()
+        pagina = self.client.get(link, follow=True)
+        self.assertContains(pagina, 'Criar nova senha')
+        url_do_formulario = pagina.redirect_chain[-1][0] if pagina.redirect_chain else link
+        fraca = self.client.post(url_do_formulario, {'new_password1': '12345678', 'new_password2': '12345678'})
+        self.assertEqual(fraca.status_code, 200)
+        resp = self.client.post(url_do_formulario, {'new_password1': 'Senha#Nova2026', 'new_password2': 'Senha#Nova2026'})
+        self.assertRedirects(resp, '/senha/nova/pronta/')
+        self.pessoa.refresh_from_db()
+        self.assertTrue(self.pessoa.check_password('Senha#Nova2026'))
+        self.assertContains(self.client.get(link, follow=True), 'Link expirado')
+
+    def test_limite_de_pedidos_seguidos(self):
+        from django.core import mail
+        for _ in range(7):
+            self.client.post('/senha/esqueci/', {'email': 'mironlucas'})
+        self.assertEqual(len(mail.outbox), 5)
+
+    def test_meu_perfil_salva_email_e_troca_a_senha(self):
+        from django.contrib.auth.models import User
+        User.objects.create_user('outra', password='x', email='ocupado@exemplo.com')
+        self.client.force_login(self.pessoa)
+        self.assertContains(self.client.get('/dashboard/'), 'href="/perfil/"')
+        resp = self.client.post('/perfil/', {'acao': 'dados', 'nome': 'Nathalia', 'email': 'ocupado@exemplo.com'})
+        self.assertContains(resp, 'Esse e-mail já está em outro usuário.')
+        self.client.post('/perfil/', {'acao': 'dados', 'nome': 'Nathalia S.', 'email': 'nova@exemplo.com'})
+        self.pessoa.refresh_from_db()
+        self.assertEqual((self.pessoa.first_name, self.pessoa.email), ('Nathalia S.', 'nova@exemplo.com'))
+
+        resp = self.client.post('/perfil/', {'acao': 'senha', 'old_password': 'errada', 'new_password1': 'Senha#Nova2026',
+                                             'new_password2': 'Senha#Nova2026'})
+        self.assertEqual(resp.status_code, 200)
+        self.client.post('/perfil/', {'acao': 'senha', 'old_password': 'Senha#Antiga2026', 'new_password1': 'Senha#Nova2026',
+                                      'new_password2': 'Senha#Nova2026'})
+        self.pessoa.refresh_from_db()
+        self.assertTrue(self.pessoa.check_password('Senha#Nova2026'))
+        self.assertEqual(self.client.get('/dashboard/').status_code, 200)  # continua logada
+
+    def test_quem_so_visualiza_tambem_edita_o_proprio_perfil(self):
+        from django.contrib.auth.models import User
+        from .models import Perfil
+        cliente = User.objects.create_user('cliente', password='x')
+        Perfil.objects.create(usuario=cliente, conta=self.pessoa, papel=Perfil.VISUALIZADOR)
+        self.client.force_login(cliente)
+        self.client.get('/dashboard/')
+        self.client.post('/perfil/', {'acao': 'dados', 'nome': 'Ana', 'email': 'ana@exemplo.com'})
+        cliente.refresh_from_db()
+        self.assertEqual(cliente.email, 'ana@exemplo.com')
+
+    def test_admin_cadastra_email_em_usuarios(self):
+        from django.contrib.auth.models import User
+        self.client.force_login(self.pessoa)
+        self.client.post('/usuarios/', {'nome': 'Bia', 'usuario': 'bia', 'email': 'bia@exemplo.com',
+                                        'senha': 'Senha#Forte2026', 'papel': 'editor'})
+        bia = User.objects.get(username='bia')
+        self.assertEqual(bia.email, 'bia@exemplo.com')
+        resp = self.client.post('/usuarios/', {'nome': 'Caio', 'usuario': 'caio', 'email': 'BIA@exemplo.com',
+                                               'senha': 'Senha#Forte2026', 'papel': 'editor'})
+        self.assertIn('Esse e-mail já está em outro usuário.', resp.context['form'].errors['email'])
+        self.client.post(f'/usuarios/{bia.perfis.get().id}/editar/', {'nome': 'Bia', 'email': 'bia2@exemplo.com', 'papel': 'editor'})
+        bia.refresh_from_db()
+        self.assertEqual(bia.email, 'bia2@exemplo.com')
+
+
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class MarcaHopkinsTests(TestCase):
     def test_telas_publicas_e_internas_usam_o_nome_e_a_logo_hopkins(self):

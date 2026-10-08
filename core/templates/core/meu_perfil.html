@@ -1,0 +1,53 @@
+{% extends 'core/base.html' %}
+
+{% block page_title %}Meu perfil{% endblock %}
+{% block page_heading %}Meu perfil{% endblock %}
+{% block page_subheading %}Seu nome, seu e-mail e sua senha de acesso{% endblock %}
+
+{% block content %}
+  <div class="perfil-pagina">
+    <section class="perfil-bloco">
+      <header>
+        <h2>Seus dados</h2>
+        <p>Usuário de acesso: <strong>{{ request.user.username }}</strong></p>
+      </header>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="dados">
+        <label class="field-label" for="perfilNome">Nome</label>
+        <input type="text" id="perfilNome" name="nome" class="field" maxlength="150" value="{{ dados.nome.value|default:'' }}" placeholder="Como você quer aparecer">
+
+        <label class="field-label" for="perfilEmail">E-mail</label>
+        <input type="email" id="perfilEmail" name="email" class="field" maxlength="254" value="{{ dados.email.value|default:'' }}"
+               placeholder="voce@exemplo.com" autocomplete="email" autocapitalize="none">
+        {% for erro in dados.email.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+        <p class="field-hint">É para esse e-mail que mandamos o link se você esquecer a senha.</p>
+        {% if not request.user.email %}
+          <p class="perfil-alerta">Cadastre um e-mail para conseguir recuperar sua senha sozinho.</p>
+        {% endif %}
+
+        <div class="perfil-acoes"><button type="submit" class="btn-primary btn-sm">Salvar dados</button></div>
+      </form>
+    </section>
+
+    <section class="perfil-bloco">
+      <header>
+        <h2>Trocar senha</h2>
+        <p>Ao trocar, você continua conectado aqui e sai dos outros aparelhos.</p>
+      </header>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="acao" value="senha">
+        <input type="text" name="username" value="{{ request.user.username }}" autocomplete="username" hidden>
+        {% for campo in senha %}
+          <label class="field-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+          <input type="password" id="{{ campo.id_for_label }}" name="{{ campo.html_name }}" class="field"
+                 autocomplete="{% if campo.name == 'old_password' %}current-password{% else %}new-password{% endif %}">
+          {% for erro in campo.errors %}<p class="field-error">{{ erro }}</p>{% endfor %}
+        {% endfor %}
+        <p class="field-hint">Mínimo de 8 caracteres, sem ser só números nem uma senha comum.</p>
+        <div class="perfil-acoes"><button type="submit" class="btn-primary btn-sm">Trocar senha</button></div>
+      </form>
+    </section>
+  </div>
+{% endblock %}

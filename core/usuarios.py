@@ -11,6 +11,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Perfil
 from .permissoes import somente_admin
+from .senha import email_em_uso
 
 User = get_user_model()
 PAPEIS_ATRIBUIVEIS = [(Perfil.EDITOR, 'Edição'), (Perfil.VISUALIZADOR, 'Visualização')]
@@ -18,6 +19,7 @@ PAPEIS_ATRIBUIVEIS = [(Perfil.EDITOR, 'Edição'), (Perfil.VISUALIZADOR, 'Visual
 
 class NovoUsuarioForm(forms.Form):
     nome = forms.CharField(label='Nome', max_length=150, required=False)
+    email = forms.EmailField(label='E-mail', required=False)
     usuario = forms.CharField(label='Usuário', max_length=150)
     senha = forms.CharField(label='Senha', widget=forms.PasswordInput, required=False)
     papel = forms.ChoiceField(label='Acesso', choices=PAPEIS_ATRIBUIVEIS, initial=Perfil.EDITOR)
@@ -37,6 +39,12 @@ class NovoUsuarioForm(forms.Form):
         if not self.existente and User.objects.filter(username__iexact=usuario).exists():
             raise ValidationError('Esse nome de usuário não está disponível.')
         return usuario
+
+    def clean_email(self):
+        email = self.cleaned_data['email'].strip()
+        if email and email_em_uso(email):
+            raise ValidationError('Esse e-mail já está em outro usuário.')
+        return email
 
     def clean(self):
         dados = super().clean()
@@ -65,7 +73,8 @@ def usuarios(request):
                                           'com a senha que já usa.')
             else:
                 with transaction.atomic():
-                    novo = User.objects.create_user(username=dados['usuario'], password=dados['senha'], first_name=dados['nome'])
+                    novo = User.objects.create_user(username=dados['usuario'], password=dados['senha'],
+                                                    first_name=dados['nome'], email=dados['email'])
                     Perfil.objects.create(usuario=novo, conta=request.conta, papel=dados['papel'])
                 messages.success(request, f'Usuário {novo.username} criado.')
             return redirect('usuarios')
@@ -97,13 +106,22 @@ def editar_usuario(request, perfil_id):
         return redirect('usuarios')
 
     usuario.first_name = request.POST.get('nome', '').strip()[:150]
+    email = request.POST.get('email', '').strip()
+    try:
+        if email:
+            forms.EmailField().clean(email)
+            if email_em_uso(email, exceto=usuario):
+                raise ValidationError('Esse e-mail já está em outro usuário.')
+        usuario.email = email
+    except ValidationError as erro:
+        messages.error(request, 'E-mail não alterado: ' + ' '.join(erro.messages))
     nova_senha = request.POST.get('senha', '')
     if nova_senha:
         try:
             validate_password(nova_senha, usuario)
         except ValidationError as erro:
             messages.error(request, 'Senha não alterada: ' + ' '.join(erro.messages))
-            usuario.save(update_fields=['first_name'])
+            usuario.save(update_fields=['first_name', 'email'])
             return redirect('usuarios')
         usuario.set_password(nova_senha)
     usuario.save()

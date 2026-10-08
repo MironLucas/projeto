@@ -1,24 +1,6 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hopkins · Acesso</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/nexora.css' %}">
-  <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
-  <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}">
-</head>
-<body>
-  <div class="login-page">
-    <div class="login-grid"></div>
-    <div class="login-card">
-      <div class="brand">
-        <img class="brand-logo" src="{% static 'img/hopkins-marca.png' %}" alt="Hopkins" width="658" height="160">
-      </div>
+{% extends 'core/_acesso.html' %}
 
+{% block conteudo %}
       {% if form.errors %}
         <div class="form-errors">Usuário ou senha inválidos. Tente novamente.</div>
       {% elif request.GET.expirou %}
@@ -50,14 +32,5 @@
         <input type="hidden" name="next" value="{{ next }}">
         <button type="submit" class="btn-primary">Entrar</button>
       </form>
-
-      <div class="login-footnote">Hopkins &copy; {% now "Y" %} · Acesso restrito</div>
-      <nav class="login-links">
-        <a href="{% url 'privacidade' %}">Privacidade</a>
-        <a href="{% url 'termos' %}">Termos de uso</a>
-        <a href="{% url 'exclusao_de_dados' %}">Exclusão de dados</a>
-      </nav>
-    </div>
-  </div>
-</body>
-</html>
+      <a class="login-esqueci" href="{% url 'esqueci_senha' %}">Esqueci minha senha</a>
+{% endblock %}

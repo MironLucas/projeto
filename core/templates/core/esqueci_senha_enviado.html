@@ -1,0 +1,15 @@
+{% extends 'core/_acesso.html' %}
+
+{% block titulo %}Confira seu e-mail{% endblock %}
+
+{% block conteudo %}
+      <div class="acesso-texto acesso-texto--centro">
+        <span class="acesso-icone" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 7l9 6 9-6"></path></svg>
+        </span>
+        <h1>Confira seu e-mail</h1>
+        <p>Se existir um usuário com esses dados e um e-mail cadastrado, enviamos agora um link para criar a senha nova. Ele vale por 1 hora.</p>
+        <p class="acesso-dica">Não chegou em alguns minutos? Olhe a caixa de spam. Se você não tem e-mail cadastrado, peça ao administrador da sua conta para trocar a senha.</p>
+      </div>
+      <a class="btn-primary acesso-botao" href="{% url 'login' %}">Voltar para o login</a>
+{% endblock %}

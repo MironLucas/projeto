@@ -1,11 +1,18 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import agenda, comentarios, contas, meta, notificacoes, publico, quadro, usuarios, views
+from . import agenda, comentarios, contas, meta, notificacoes, publico, quadro, senha, usuarios, views
 
 urlpatterns = [
     path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('senha/esqueci/', senha.EsqueciSenhaView.as_view(), name='esqueci_senha'),
+    path('senha/esqueci/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='core/esqueci_senha_enviado.html'),
+         name='esqueci_senha_enviado'),
+    path('senha/nova/<uidb64>/<token>/', senha.NovaSenhaView.as_view(), name='nova_senha'),
+    path('senha/nova/pronta/', auth_views.PasswordResetCompleteView.as_view(template_name='core/nova_senha_pronta.html'),
+         name='nova_senha_pronta'),
+    path('perfil/', senha.meu_perfil, name='meu_perfil'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('dashboard/dados/', views.dashboard_dados, name='dashboard_dados'),
     path('publico/', publico.publico, name='publico'),

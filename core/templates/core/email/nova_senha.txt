@@ -1,0 +1,12 @@
+{% autoescape off %}Olá, {{ user.first_name|default:user.username }}!
+
+Recebemos um pedido para criar uma nova senha para o usuário {{ user.username }} no Hopkins.
+
+Para criar a senha nova, abra este link:
+{{ protocol }}://{{ domain }}{% url 'nova_senha' uidb64=uid token=token %}
+
+O link vale por 1 hora e só pode ser usado uma vez.
+Se não foi você que pediu, é só ignorar este e-mail: sua senha continua a mesma.
+
+Hopkins
+{% endautoescape %}

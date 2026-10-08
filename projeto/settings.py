@@ -188,6 +188,22 @@ INSTAGRAM_REDIRECT_URI = os.environ.get('INSTAGRAM_REDIRECT_URI', '')
 # E-mail de contato mostrado na política de privacidade e nas páginas exigidas pela Meta.
 CONTATO_EMAIL = os.environ.get('CONTATO_EMAIL', '')
 
+# E-mail que envia o link de "Esqueci minha senha" (na Hostinger: smtp.hostinger.com, porta 465).
+# Sem EMAIL_HOST, os e-mails só aparecem no log (útil em desenvolvimento).
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', '465'))
+EMAIL_USE_SSL = EMAIL_PORT == 465
+EMAIL_USE_TLS = EMAIL_PORT == 587
+EMAIL_TIMEOUT = 20
+EMAIL_BACKEND = ('django.core.mail.backends.smtp.EmailBackend' if EMAIL_HOST
+                 else 'django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', f'Hopkins <{EMAIL_HOST_USER or "contato@hopkins.com.br"}>')
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+# O link de criar nova senha vale por 1 hora.
+PASSWORD_RESET_TIMEOUT = 60 * 60
+
 # Envia erros (com traceback) e avisos do app para a saída padrão, que aparece nos logs do Render.
 LOGGING = {
     'version': 1,
