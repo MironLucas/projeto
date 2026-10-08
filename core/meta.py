@@ -28,7 +28,7 @@ WHATSAPP_CONTATO = (
 
 
 def apresentacao(request):
-    """Landing page da empresa (por enquanto em /plataforma/; depois da análise da Meta vira a página inicial)."""
+    """Landing page da empresa: é a página inicial do site (a plataforma fica em /login)."""
     return render(request, 'core/landing.html', {'whatsapp': WHATSAPP_CONTATO})
 
 

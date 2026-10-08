@@ -1169,8 +1169,8 @@ class FalhaCsrfTests(TestCase):
         self.client = Client(enforce_csrf_checks=True)
 
     def test_login_com_pagina_desatualizada_volta_para_o_login(self):
-        resp = self.client.post('/', {'username': 'mironlucas', 'password': 'x', 'next': '/tarefas/'})
-        self.assertRedirects(resp, '/?expirou=1&next=/tarefas/', fetch_redirect_response=False)
+        resp = self.client.post('/login/', {'username': 'mironlucas', 'password': 'x', 'next': '/tarefas/'})
+        self.assertRedirects(resp, '/login/?expirou=1&next=/tarefas/', fetch_redirect_response=False)
         pagina = self.client.get(resp['Location'])
         self.assertContains(pagina, 'estava desatualizada')
         self.assertContains(pagina, 'placeholder="Digite seu usuário"')
@@ -1194,7 +1194,7 @@ class FalhaCsrfTests(TestCase):
     def test_quem_ja_entrou_nao_ve_o_login_de_novo(self):
         from django.contrib.auth.models import User
         self.client.force_login(User.objects.get(username='mironlucas'))
-        self.assertRedirects(self.client.get('/'), '/dashboard/', fetch_redirect_response=False)
+        self.assertRedirects(self.client.get('/login/'), '/dashboard/', fetch_redirect_response=False)
 
 
 def _signed_request(dados, segredo='segredo-do-app'):
@@ -1226,7 +1226,7 @@ class PaginasDaMetaTests(TestCase):
             resp = self.client.get(url)
             self.assertContains(resp, texto)
             self.assertContains(resp, 'mailto:contato@nextsora.tech')
-        login = self.client.get('/')
+        login = self.client.get('/login/')
         self.assertContains(login, 'href="/privacidade/"')
 
     def test_remover_o_app_apaga_o_acesso_mas_mantem_o_historico(self):
@@ -1710,7 +1710,7 @@ class NotificacoesELinkDoPostTests(TestCase):
 
         self.client.logout()
         resp = self.client.get(f'/programacao/post/{self.item.id}/')
-        self.assertRedirects(resp, f'/?next=/programacao/post/{self.item.id}/', fetch_redirect_response=False)
+        self.assertRedirects(resp, f'/login/?next=/programacao/post/{self.item.id}/', fetch_redirect_response=False)
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage',
@@ -1734,7 +1734,7 @@ class EsqueciSenhaTests(TestCase):
 
     def test_login_tem_o_link_e_o_pedido_por_usuario_ou_email_manda_o_link(self):
         from django.core import mail
-        self.assertContains(self.client.get('/'), 'href="/senha/esqueci/"')
+        self.assertContains(self.client.get('/login/'), 'href="/senha/esqueci/"')
         for identificacao in ('MIRONLUCAS', 'Nathalia@Exemplo.com'):
             mail.outbox = []
             resp = self.client.post('/senha/esqueci/', {'email': identificacao})
@@ -1823,13 +1823,13 @@ class EsqueciSenhaTests(TestCase):
 class MarcaHopkinsTests(TestCase):
     def test_telas_publicas_e_internas_usam_o_nome_e_a_logo_hopkins(self):
         from django.contrib.auth.models import User
-        paginas = ['/', '/plataforma/', '/privacidade/', '/termos/', '/exclusao-de-dados/']
+        paginas = ['/', '/login/', '/privacidade/', '/termos/', '/exclusao-de-dados/']
         for url in paginas:
             resp = self.client.get(url)
             self.assertContains(resp, 'img/hopkins-marca.png', msg_prefix=url)
             self.assertNotContains(resp, 'Nextsora', msg_prefix=url)
             self.assertNotContains(resp, 'NEXTSORA', msg_prefix=url)
-        self.assertContains(self.client.get('/'), '<title>Hopkins · Acesso</title>', html=True)
+        self.assertContains(self.client.get('/login/'), '<title>Hopkins · Acesso</title>', html=True)
         self.assertContains(self.client.get('/privacidade/'), 'O Hopkins (<a href="https://testserver">testserver</a>)')
 
         self.client.force_login(User.objects.get(username='mironlucas'))
@@ -1849,7 +1849,7 @@ class LoginSemMaiusculasTests(TestCase):
 
     def _entrar(self, nome, senha='Senha#Certa2026'):
         self.client.logout()
-        return self.client.post('/', {'username': nome, 'password': senha})
+        return self.client.post('/login/', {'username': nome, 'password': senha})
 
     def test_usuario_entra_com_qualquer_combinacao_de_maiusculas(self):
         for nome in ('mironlucas', 'Mironlucas', 'MIRONLUCAS', 'MironLucas', '  mironlucas '):
@@ -1878,14 +1878,24 @@ class LoginSemMaiusculasTests(TestCase):
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class LandingTests(TestCase):
     def test_landing_abre_sem_login_com_whatsapp_e_entrar(self):
-        resp = self.client.get('/plataforma/')
+        resp = self.client.get('/')
         self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Resultados do Instagram')
         whatsapp = 'https://wa.me/556293676291?text=Ol%C3%A1%2C%20gostaria%20de%20saber%20mais%20sobre%20a%20plataforma'
         self.assertContains(resp, f'href="{whatsapp}"', count=3)  # menu Contato, apresentação e botão flutuante
-        self.assertContains(resp, '<a href="/" class="lp-btn lp-btn--neon lp-btn--pequeno">', count=1)
+        self.assertContains(resp, '<a href="/login/" class="lp-btn lp-btn--neon lp-btn--pequeno">', count=1)
         self.assertContains(resp, 'Para quem vive de Rede social')
         self.assertNotContains(resp, 'Quer ver o Nextsora funcionando')
         self.assertContains(resp, 'href="/privacidade/"')
+
+    def test_endereco_antigo_da_landing_e_quem_ja_entrou(self):
+        from django.contrib.auth.models import User
+        self.assertRedirects(self.client.get('/plataforma/'), '/', status_code=301, fetch_redirect_response=False)
+        self.assertRedirects(self.client.get('/dashboard/'), '/login/?next=/dashboard/', fetch_redirect_response=False)
+        self.client.force_login(User.objects.get(username='mironlucas'))
+        resp = self.client.get('/')
+        self.assertContains(resp, 'Ir para o painel')
+        self.assertRedirects(self.client.get('/login/'), '/dashboard/', fetch_redirect_response=False)
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
@@ -1902,4 +1912,5 @@ class NovidadeTests(TestCase):
             self.assertContains(resp, 'img/novidade-programacao.webp')
         self.assertNotContains(self.client.get('/programacao/'), 'id="novidade"')
         self.client.logout()
-        self.assertNotContains(self.client.get('/'), 'id="novidade"')  # tela de login
+        self.assertNotContains(self.client.get('/login/'), 'id="novidade"')  # tela de login
+        self.assertNotContains(self.client.get('/'), 'id="novidade"')  # landing page

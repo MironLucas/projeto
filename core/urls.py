@@ -1,10 +1,13 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
+from django.views.generic import RedirectView
 
 from . import agenda, comentarios, contas, meta, notificacoes, publico, quadro, senha, usuarios, views
 
 urlpatterns = [
-    path('', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
+    # hopkins.com.br abre a landing page; a plataforma fica em /login.
+    path('', meta.apresentacao, name='apresentacao'),
+    path('login/', auth_views.LoginView.as_view(template_name='core/login.html', redirect_authenticated_user=True), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('senha/esqueci/', senha.EsqueciSenhaView.as_view(), name='esqueci_senha'),
     path('senha/esqueci/enviado/', auth_views.PasswordResetDoneView.as_view(template_name='core/esqueci_senha_enviado.html'),
@@ -55,8 +58,8 @@ urlpatterns = [
     path('contas/<int:conta_id>/usar/', contas.usar_conta, name='usar_conta'),
     path('contas/<int:conta_id>/desconectar/', contas.desconectar_conta, name='desconectar_conta'),
 
-    # Landing page da empresa.
-    path('plataforma/', meta.apresentacao, name='apresentacao'),
+    # Endereço antigo da landing page.
+    path('plataforma/', RedirectView.as_view(pattern_name='apresentacao', permanent=True)),
 
     # Públicas, exigidas pela Meta para a análise do app.
     path('privacidade/', meta.privacidade, name='privacidade'),
