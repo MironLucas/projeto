@@ -1,15 +1,23 @@
 {% load static %}
 {# Aviso de novidade: aparece uma vez por navegador. Para anunciar outra novidade (ou mostrar de novo), troque data-chave. #}
-<dialog class="modal novidade" id="novidade" data-chave="nextsora:novidade:programacao-2026-10-v2" aria-labelledby="novidadeTitulo">
+<dialog class="modal novidade" id="novidade" data-chave="hopkins:novidade:nova-marca-2026-10" aria-labelledby="novidadeTitulo">
   <div class="novidade-imagem">
-    <img src="{% static 'img/novidade-programacao.webp' %}" alt="Prévia da nova Programação: cards de posts na cor de cada um, com o botão Finalizado, ao lado do chat de comentários do post" width="1200" height="829">
+    <img src="{% static 'img/novidade-hopkins.webp' %}" alt="Nextsora agora é Hopkins: logo nova e o endereço hopkins.com.br" width="1200" height="829">
   </div>
   <div class="novidade-corpo">
     <span class="novidade-selo">✨ Novidade</span>
-    <h2 id="novidadeTitulo" tabindex="-1" autofocus>A Programação tá de cara nova (e agora tem chat 💬)</h2>
-    <p>Cada post ganhou a cor dele, abre com um clique em qualquer lugar e tem o botão Finalizado pra dar aquele check. E o melhor: agora rola um chat dentro de cada post pra galera pedir ajuste ali mesmo, sem se perder no WhatsApp.</p>
+    <h2 id="novidadeTitulo" tabindex="-1" autofocus>Estamos de cara nova: agora somos Hopkins 💜</h2>
+    <p>O Nextsora cresceu e ganhou um nome à altura. Mudaram o nome, a logo e o endereço, mas seus relatórios, a programação, as tarefas e as conversas continuam aqui, do jeito que você deixou.</p>
+    <ul class="novidade-lista">
+      <li><span aria-hidden="true">🔗</span><span>Novo endereço: <strong>hopkins.com.br/login</strong> (o antigo te traz pra cá)</span></li>
+      <li><span aria-hidden="true">🔑</span><span>Esqueceu a senha? Agora você cria outra pelo e-mail</span></li>
+    </ul>
     <div class="novidade-acoes">
-      <a href="{% url 'programacao' %}" class="btn-primary btn-sm novidade-ir">Bora conferir →</a>
+      {% if request.user.email %}
+        <button type="button" class="btn-primary btn-sm js-fechar-novidade">Bora pro Hopkins 🚀</button>
+      {% else %}
+        <a href="{% url 'meu_perfil' %}" class="btn-primary btn-sm novidade-ir">Cadastrar meu e-mail →</a>
+      {% endif %}
     </div>
   </div>
   <button type="button" class="novidade-fechar js-fechar-novidade" aria-label="Fechar novidade">
@@ -35,10 +43,12 @@
     if (jaViu()) {
       return;
     }
-    // Só fecha pelo X: clique fora e Esc não fecham. Fechar ou ir para a tela conta como visto.
+    // Fecha pelo X (ou pelo botão principal); clique fora e Esc não fecham. Fechar ou seguir o link conta como visto.
     novidade.addEventListener('close', marcarVisto);
-    novidade.querySelector('.novidade-ir').addEventListener('click', marcarVisto);
-    novidade.querySelector('.js-fechar-novidade').addEventListener('click', function () { novidade.close(); });
+    novidade.querySelectorAll('.novidade-ir').forEach(function (link) { link.addEventListener('click', marcarVisto); });
+    novidade.querySelectorAll('.js-fechar-novidade').forEach(function (botao) {
+      botao.addEventListener('click', function () { novidade.close(); });
+    });
     novidade.addEventListener('cancel', function (evento) { evento.preventDefault(); });
     novidade.addEventListener('keydown', function (evento) {
       if (evento.key === 'Escape') {

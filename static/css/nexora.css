@@ -6235,3 +6235,52 @@ a.acesso-botao {
   justify-content: flex-end;
   margin-top: 8px;
 }
+
+/* Lista curta de destaques dentro do aviso de novidade. */
+.novidade-lista {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.novidade-lista li {
+  display: flex;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+
+.novidade-lista strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.novidade-lista + .novidade-acoes {
+  margin-top: 16px;
+}
+
+/* Celular de tela baixa: imagem e destaques mais compactos para o aviso caber sem rolar. */
+@media (max-height: 760px) {
+  .novidade-imagem img {
+    height: min(20vh, 150px);
+    height: min(20dvh, 150px);
+  }
+
+  .novidade-lista {
+    margin-top: 10px;
+    gap: 6px;
+  }
+
+  .novidade-lista li {
+    padding: 7px 10px;
+    font-size: 12.5px;
+  }
+}

@@ -1836,7 +1836,9 @@ class MarcaHopkinsTests(TestCase):
         for url in ('/dashboard/', '/programacao/', '/usuarios/'):
             resp = self.client.get(url)
             self.assertContains(resp, 'img/hopkins-marca.png', msg_prefix=url)
-            self.assertNotContains(resp, 'Nextsora', msg_prefix=url)
+            # O nome antigo só aparece no aviso que conta a troca de nome.
+            fora_do_aviso = resp.content.decode().split('<dialog class="modal novidade"')[0]
+            self.assertNotIn('Nextsora', fora_do_aviso, url)
 
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
@@ -1900,17 +1902,25 @@ class LandingTests(TestCase):
 
 @override_settings(STATICFILES_STORAGE='django.contrib.staticfiles.storage.StaticFilesStorage')
 class NovidadeTests(TestCase):
-    def test_aviso_da_nova_programacao_aparece_fora_da_propria_tela(self):
+    def test_aviso_da_nova_marca_aparece_nas_telas_da_plataforma(self):
         from django.contrib.auth.models import User
-        self.client.force_login(User.objects.get(username='mironlucas'))
-        for pagina in ('/dashboard/', '/publico/', '/tarefas/'):
+        pessoa = User.objects.get(username='mironlucas')
+        self.client.force_login(pessoa)
+        for pagina in ('/dashboard/', '/publico/', '/programacao/', '/tarefas/'):
             resp = self.client.get(pagina)
-            self.assertContains(resp, 'data-chave="nextsora:novidade:programacao-2026-10-v2"')
-            self.assertNotContains(resp, 'Depois eu vejo')
-            self.assertContains(resp, 'A Programação tá de cara nova (e agora tem chat 💬)')
-            self.assertContains(resp, 'href="/programacao/" class="btn-primary btn-sm novidade-ir"')
-            self.assertContains(resp, 'img/novidade-programacao.webp')
-        self.assertNotContains(self.client.get('/programacao/'), 'id="novidade"')
+            self.assertContains(resp, 'data-chave="hopkins:novidade:nova-marca-2026-10"')
+            self.assertContains(resp, 'Estamos de cara nova: agora somos Hopkins 💜')
+            self.assertContains(resp, 'img/novidade-hopkins.webp')
+            # Sem e-mail cadastrado, o botão leva para cadastrar.
+            self.assertContains(resp, 'href="/perfil/" class="btn-primary btn-sm novidade-ir"')
+        self.assertNotContains(self.client.get('/perfil/'), 'id="novidade"')
+
+        pessoa.email = 'nathalia@exemplo.com'
+        pessoa.save()
+        resp = self.client.get('/dashboard/')
+        self.assertContains(resp, 'Bora pro Hopkins 🚀')
+        self.assertNotContains(resp, 'class="btn-primary btn-sm novidade-ir"')
+
         self.client.logout()
         self.assertNotContains(self.client.get('/login/'), 'id="novidade"')  # tela de login
         self.assertNotContains(self.client.get('/'), 'id="novidade"')  # landing page
