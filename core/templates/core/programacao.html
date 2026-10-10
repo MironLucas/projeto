@@ -127,6 +127,11 @@
           </div>
         </div>
         <input type="text" id="itemTitulo" name="titulo" class="field" maxlength="200" required{% if not pode_editar %} readonly{% endif %}>
+        {# Só no celular: o chat do post abre por este botão, à direita do título, numa tela por cima da janela. #}
+        <button type="button" class="chat-abrir" id="chatFlutuante" aria-label="Abrir comentários deste post" title="Comentários">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          <span class="chat-abrir-total" id="chatFlutuanteTotal" hidden></span>
+        </button>
       </div>
 
       <span class="field-label" id="itemFormatoRotulo">Formato</span>
@@ -235,11 +240,6 @@
     </section>
     </div>
 
-    {# Só no celular: o chat do post abre por este botão flutuante, por cima da janela. #}
-    <button type="button" class="chat-flutuante" id="chatFlutuante" aria-label="Abrir comentários deste post">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-      <span class="chat-flutuante-total" id="chatFlutuanteTotal" hidden></span>
-    </button>
   </dialog>
 
   <dialog class="lightbox" id="telaCheia" aria-label="Mídia em tela cheia">
@@ -837,7 +837,7 @@
           fecharChatNoCelular();
         });
 
-        // No celular o chat vira uma tela por cima da janela do post, aberta pelo botão flutuante.
+        // No celular o chat vira uma tela por cima da janela do post, aberta pelo botão ao lado do título.
         function abrirChatNoCelular() {
           dialogo.classList.add('chat-aberto');
           document.getElementById('chatSubtitulo').textContent = document.getElementById('itemTitulo').value || 'Ajustes e recados sobre este post';
