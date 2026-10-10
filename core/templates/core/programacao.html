@@ -134,15 +134,21 @@
         </button>
       </div>
 
-      <span class="field-label" id="itemFormatoRotulo">Formato</span>
-      <div class="formato-opcoes" role="radiogroup" aria-labelledby="itemFormatoRotulo">
-        {% for valor, nome in formatos %}
-          <label class="formato-opcao">
-            <input type="radio" name="formato" value="{{ valor }}" required{% if not pode_editar %} disabled{% endif %}>
-            <span>{% include 'core/_icone_formato.html' with formato=valor %}{{ nome }}</span>
-          </label>
-        {% endfor %}
+      <label class="field-label" for="itemFormato" id="itemFormatoRotulo">Formato</label>
+      <div class="formato-select sem-icone" id="itemFormatoCaixa">
+        <span class="formato-select-icone" id="itemFormatoIcone" aria-hidden="true"></span>
+        <select id="itemFormato" name="formato" class="field" required{% if not pode_editar %} disabled{% endif %}>
+          <option value="" disabled selected>{% if pode_editar %}Selecione o formato{% else %}Sem formato{% endif %}</option>
+          {% for valor, nome in formatos %}
+            <option value="{{ valor }}">{{ nome }}</option>
+          {% endfor %}
+        </select>
+        <svg class="formato-select-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
       </div>
+      {# Ícone de cada formato, mostrado dentro da caixa ao escolher. #}
+      <template id="iconesDeFormato">
+        {% for valor, nome in formatos %}<span data-formato="{{ valor }}">{% include 'core/_icone_formato.html' with formato=valor %}</span>{% endfor %}
+      </template>
 
       <div class="item-rotulo-linha" id="itemMidiasRotulo">
         <span class="field-label">Imagens e vídeos</span>
@@ -447,9 +453,19 @@
         setaCarrosselAnterior.addEventListener('click', function () { passarCarrossel(-1); });
         setaCarrosselProxima.addEventListener('click', function () { passarCarrossel(1); });
 
+        // ---------- Formato: caixa de seleção, com o ícone do formato escolhido ----------
+        var seletorFormato = document.getElementById('itemFormato');
+
+        function mostrarIconeDoFormato() {
+          var icone = document.getElementById('iconesDeFormato').content.querySelector('[data-formato="' + seletorFormato.value + '"]');
+          document.getElementById('itemFormatoIcone').innerHTML = icone ? icone.innerHTML : '';
+          document.getElementById('itemFormatoCaixa').classList.toggle('sem-icone', !icone);
+        }
+        seletorFormato.addEventListener('change', mostrarIconeDoFormato);
+
         // Formato é obrigatório: se faltar, além do aviso do navegador, explica na janela.
         if (podeEditar) {
-          form.querySelector('input[name=formato]').addEventListener('invalid', function () {
+          seletorFormato.addEventListener('invalid', function () {
             mostrarErro('Escolha o formato: Carrossel, Estático, Reels, Stories ou Outro.');
           });
           form.addEventListener('change', function (evento) {
@@ -512,9 +528,8 @@
           fecharPaleta();
           // A legenda abre recolhida; num item novo ela já vem aberta para escrever.
           alternarLegenda(!dados.editar && podeEditar);
-          form.querySelectorAll('input[name=formato]').forEach(function (opcao) {
-            opcao.checked = opcao.value === dados.formato;
-          });
+          seletorFormato.value = dados.formato || '';
+          mostrarIconeDoFormato();
           galeria.scrollLeft = 0;
           desenharGaleria();
           linkDoPost = dados.link ? location.origin + dados.link : '';

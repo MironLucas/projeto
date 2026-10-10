@@ -3807,58 +3807,6 @@ button.day-item-body {
 }
 
 /* ---------- Programação: formato do conteúdo e item finalizado ---------- */
-.formato-opcoes {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.formato-opcao {
-  position: relative;
-  cursor: pointer;
-}
-
-.formato-opcao input {
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.formato-opcao > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 11px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--text-dim);
-  font-size: 13px;
-  font-weight: 500;
-  transition: border-color 0.15s, background 0.15s, color 0.15s;
-}
-
-.formato-opcao:hover > span {
-  border-color: var(--text-faint);
-  color: var(--text);
-}
-
-.formato-opcao input:checked + span {
-  border-color: var(--violet);
-  background: var(--gradient-soft);
-  color: var(--text);
-  box-shadow: 0 0 0 1px var(--violet) inset;
-}
-
-.formato-opcao input:focus-visible + span {
-  outline: 2px solid var(--cyan);
-  outline-offset: 2px;
-}
-
 .formato-icone {
   width: 15px;
   height: 15px;
@@ -3933,27 +3881,16 @@ button.day-item-body {
   pointer-events: none;
 }
 
-/* Janela da programação: mais larga para os 5 formatos caberem numa linha. */
+/* Janela da programação: um pouco mais larga que as outras. */
 .modal--largo {
   width: min(600px, calc(100vw - 32px));
 }
 
 /* Quem só visualiza: janela aberta para ver, sem cara de clicável nos campos. */
-.formato-opcao:has(input:disabled),
 .swatch:has(input:disabled) {
   cursor: default;
 }
 
-.formato-opcao:has(input:disabled):hover > span {
-  border-color: var(--border);
-  color: var(--text-dim);
-}
-
-.formato-opcao input:disabled:checked + span {
-  color: var(--text);
-}
-
-.formato-opcao input:disabled:not(:checked) + span,
 .swatch input:disabled:not(:checked) + span {
   opacity: 0.45;
 }
@@ -6501,4 +6438,65 @@ a.acesso-botao {
   resize: none;
   overflow: hidden;
   line-height: 1.5;
+}
+
+/* ---------- Formato: caixa de seleção com o ícone do escolhido ---------- */
+.formato-select {
+  position: relative;
+}
+
+.formato-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-left: 40px;
+  padding-right: 38px;
+  cursor: pointer;
+}
+
+.formato-select.sem-icone select {
+  padding-left: 12px;
+}
+
+.formato-select select:invalid {
+  color: var(--text-faint);
+}
+
+.formato-select select option {
+  color: var(--text);
+  background: var(--panel-solid);
+}
+
+.formato-select select:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.formato-select-icone {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  display: flex;
+  transform: translateY(-50%);
+  color: var(--cyan);
+  pointer-events: none;
+}
+
+.formato-select-icone .formato-icone {
+  width: 18px;
+  height: 18px;
+}
+
+.formato-select-seta {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  transform: translateY(-50%);
+  color: var(--text-faint);
+  pointer-events: none;
+}
+
+.formato-select select:disabled ~ .formato-select-seta {
+  display: none;
 }

@@ -644,7 +644,8 @@ class AgendaTests(TestCase):
         pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'})
         self.assertContains(pagina, 'Stories</span>')
         self.assertContains(pagina, 'data-formato="stories"')
-        self.assertContains(pagina, '<input type="radio" name="formato" value="carrossel" required>', html=True)
+        self.assertContains(pagina, '<option value="carrossel">Carrossel</option>', html=True)
+        self.assertContains(pagina, '<option value="" disabled selected>Selecione o formato</option>', html=True)
 
         # Editar também exige formato; sem ele nada muda.
         self.client.post(f'/programacao/itens/{item.id}/editar/', {'titulo': 'Outro título'})
@@ -1123,7 +1124,7 @@ class UsuariosEPermissoesTests(TestCase):
         self.assertContains(pagina, 'class="day-item-body js-abrir-item" title="Ver detalhes"')
         self.assertContains(pagina, 'data-formato="reels"')
         self.assertContains(pagina, 'id="dialogItem"')
-        self.assertContains(pagina, '<input type="radio" name="formato" value="reels" required disabled>', html=True)
+        self.assertContains(pagina, '<select id="itemFormato" name="formato" class="field" required disabled>')
         self.assertContains(pagina, 'placeholder="Sem legenda" readonly')
         for so_de_quem_edita in ('data-editar=', 'id="novoItem"', 'id="itemSalvar"', 'id="itemExcluir"', 'id="itemAdicionarMidias"'):
             self.assertNotContains(pagina, so_de_quem_edita)
