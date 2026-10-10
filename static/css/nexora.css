@@ -6332,15 +6332,86 @@ a.acesso-botao {
   height: 26px;
 }
 
-/* Imagens do item maiores, abaixo do formato. */
+/* Imagens do item em carrossel: 3 por vez (2 e um pedaço no celular); o resto passa para o lado. */
+.galeria-carrossel {
+  position: relative;
+}
+
+.galeria-carrossel[hidden] {
+  display: none;
+}
+
 .modal--duplo .galeria-edicao {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.modal--duplo .galeria-edicao::-webkit-scrollbar {
+  display: none;
+}
+
+.modal--duplo .galeria-edicao > * {
+  flex: 0 0 calc((100% - 20px) / 3);
+  scroll-snap-align: start;
 }
 
 @media (max-width: 520px) {
-  .modal--duplo .galeria-edicao {
-    grid-template-columns: repeat(2, 1fr);
+  .modal--duplo .galeria-edicao > * {
+    flex-basis: 42%;
+  }
+}
+
+.carrossel-seta {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  margin-top: -17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(10, 12, 20, 0.78);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px -6px rgba(0, 0, 0, 0.7);
+  transition: background 0.15s, transform 0.15s;
+}
+
+.carrossel-seta:hover {
+  background: rgba(124, 92, 255, 0.85);
+}
+
+.carrossel-seta[hidden] {
+  display: none;
+}
+
+.carrossel-seta svg {
+  width: 16px;
+  height: 16px;
+}
+
+.carrossel-seta--anterior {
+  left: -10px;
+}
+
+.carrossel-seta--proxima {
+  right: -10px;
+}
+
+/* No celular arrasta-se com o dedo; as setas ficam só no computador. */
+@media (hover: none) {
+  .carrossel-seta {
+    display: none;
   }
 }
 

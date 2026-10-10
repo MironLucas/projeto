@@ -145,7 +145,16 @@
           <span class="field-hint" title="Imagens (JPG, PNG, GIF, WebP) até {{ limite_imagem_mb }} MB, ou vídeos (MP4, MOV, WebM) até {{ limite_video_mb }} MB">Até {{ midias_por_item }} · imagens {{ limite_imagem_mb }} MB · vídeos {{ limite_video_mb }} MB</span>
         {% endif %}
       </div>
-      <div class="galeria-edicao" id="itemGaleria"></div>
+      {# Carrossel: 3 por vez; com mais mídias, passa para o lado (setas no computador, arrastar no celular). #}
+      <div class="galeria-carrossel" id="itemCarrossel">
+        <button type="button" class="carrossel-seta carrossel-seta--anterior" id="carrosselAnterior" aria-label="Mídias anteriores" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+        <div class="galeria-edicao" id="itemGaleria"></div>
+        <button type="button" class="carrossel-seta carrossel-seta--proxima" id="carrosselProxima" aria-label="Próximas mídias" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg>
+        </button>
+      </div>
       {% if pode_editar %}
         <button type="button" class="galeria-add-tile" id="itemAdicionarMidias" aria-label="Adicionar imagens ou vídeos" title="Adicionar imagens ou vídeos">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
@@ -361,6 +370,7 @@
 
         // ---------- Galeria da janela: mídias já salvas + novas, cada uma com lixeira ----------
         function desenharGaleria() {
+          var posicaoDoCarrossel = galeria.scrollLeft;
           galeria.innerHTML = '';
           var visiveis = existentes.filter(function (m) { return removidas.indexOf(m.id) === -1; })
             .map(function (m) { return { url: m.url, video: m.video, remover: function () { removidas.push(m.id); } }; })
@@ -410,8 +420,33 @@
             galeria.appendChild(botaoAdicionar);
           }
           galeria.hidden = !galeria.children.length;
+          document.getElementById('itemCarrossel').hidden = galeria.hidden;
+          galeria.scrollLeft = posicaoDoCarrossel;  // apagar uma mídia não volta o carrossel para o começo
           document.getElementById('itemMidiasRotulo').hidden = !podeEditar && visiveis.length === 0;
+          requestAnimationFrame(atualizarSetasDoCarrossel);
         }
+
+        // ---------- Carrossel das mídias: setas aparecem quando há mais para ver daquele lado ----------
+        var setaCarrosselAnterior = document.getElementById('carrosselAnterior');
+        var setaCarrosselProxima = document.getElementById('carrosselProxima');
+
+        function atualizarSetasDoCarrossel() {
+          var sobra = galeria.scrollWidth - galeria.clientWidth;
+          setaCarrosselAnterior.hidden = galeria.scrollLeft <= 4;
+          setaCarrosselProxima.hidden = galeria.scrollLeft >= sobra - 4;
+          document.getElementById('itemCarrossel').classList.toggle('tem-mais', sobra > 4);
+        }
+
+        function passarCarrossel(sentido) {
+          var quadro = galeria.firstElementChild;
+          var passo = quadro ? quadro.getBoundingClientRect().width + 10 : galeria.clientWidth;
+          galeria.scrollBy({ left: sentido * passo * (window.matchMedia('(max-width: 520px)').matches ? 1 : 3), behavior: 'smooth' });
+        }
+
+        galeria.addEventListener('scroll', atualizarSetasDoCarrossel, { passive: true });
+        window.addEventListener('resize', atualizarSetasDoCarrossel);
+        setaCarrosselAnterior.addEventListener('click', function () { passarCarrossel(-1); });
+        setaCarrosselProxima.addEventListener('click', function () { passarCarrossel(1); });
 
         // Formato é obrigatório: se faltar, além do aviso do navegador, explica na janela.
         if (podeEditar) {
@@ -447,6 +482,8 @@
             campoMidias.value = '';
             mostrarErro(recusadas.filter(function (t, i) { return recusadas.indexOf(t) === i; }).join(' '));
             desenharGaleria();
+            // Mostra as que acabaram de entrar, no fim do carrossel.
+            galeria.scrollTo({ left: galeria.scrollWidth, behavior: 'smooth' });
           });
         }
 
@@ -479,6 +516,7 @@
           form.querySelectorAll('input[name=formato]').forEach(function (opcao) {
             opcao.checked = opcao.value === dados.formato;
           });
+          galeria.scrollLeft = 0;
           desenharGaleria();
           linkDoPost = dados.link ? location.origin + dados.link : '';
           botaoCompartilhar.hidden = !linkDoPost;
