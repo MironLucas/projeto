@@ -574,9 +574,18 @@
         var alternarLegendaBotao = document.getElementById('legendaAlternar');
         var copiarLegenda = document.getElementById('legendaCopiar');
 
+        // A legenda cresce até caber inteira: não tem rolagem própria, rola junto com a janela.
         function ajustarAlturaDaLegenda() {
+          if (blocoLegenda.classList.contains('is-fechada')) {
+            return;
+          }
+          // Quem rola é o formulário (computador) ou a janela inteira (celular): ao digitar, nenhum dos dois pula.
+          var rolagemForm = form.scrollTop;
+          var rolagemJanela = dialogo.scrollTop;
           campoLegenda.style.height = 'auto';
-          campoLegenda.style.height = Math.min(campoLegenda.scrollHeight + 2, window.innerHeight * 0.5) + 'px';
+          campoLegenda.style.height = (campoLegenda.scrollHeight + 2) + 'px';
+          form.scrollTop = rolagemForm;
+          dialogo.scrollTop = rolagemJanela;
         }
 
         // A legenda fechada não mostra o texto; o "Copiar" só fica ativo quando há legenda.
@@ -609,6 +618,7 @@
           ajustarAlturaDaLegenda();
           atualizarPrevia();
         });
+        window.addEventListener('resize', ajustarAlturaDaLegenda);
 
         copiarLegenda.addEventListener('click', function () {
           var texto = campoLegenda.value;

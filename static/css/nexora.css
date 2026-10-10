@@ -6498,6 +6498,7 @@ a.acesso-botao {
 
 .legenda-corpo .field {
   min-height: 96px;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   line-height: 1.5;
 }
