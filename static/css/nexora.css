@@ -5531,23 +5531,6 @@ html:has(dialog[open]) {
   color: var(--cyan);
 }
 
-.item-cor {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  margin-top: 6px;
-}
-
-.item-cor .field-label {
-  margin: 0;
-}
-
-.item-cor .swatch span {
-  width: 24px;
-  height: 24px;
-}
-
 .item-rodape {
   position: sticky;
   bottom: 0;
@@ -5649,8 +5632,8 @@ html:has(dialog[open]) {
     display: none;
   }
 
-  /* Espaço no fim do formulário para o botão flutuante não ficar em cima das cores. */
-  .modal--duplo.tem-chat .item-cor {
+  /* Espaço no fim do formulário para o botão flutuante não ficar em cima da legenda. */
+  .modal--duplo.tem-chat .legenda-bloco {
     margin-bottom: 64px;
   }
 
@@ -6283,4 +6266,216 @@ a.acesso-botao {
     padding: 7px 10px;
     font-size: 12.5px;
   }
+}
+
+/* ---------- Janela do item: cor ao lado do título ---------- */
+.item-titulo-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.item-cor-escolha {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.item-cor-botao {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.item-cor-botao:hover:not(:disabled),
+.item-cor-botao[aria-expanded="true"] {
+  border-color: var(--text-faint);
+}
+
+.item-cor-botao:disabled {
+  cursor: default;
+}
+
+.item-cor-ponto {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--violet);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.08);
+}
+
+.item-cor-paleta {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 5;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow);
+}
+
+.item-cor-paleta .swatches {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.item-cor-paleta .swatch span {
+  width: 26px;
+  height: 26px;
+}
+
+/* Imagens do item maiores, abaixo do formato. */
+.modal--duplo .galeria-edicao {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 520px) {
+  .modal--duplo .galeria-edicao {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ---------- Legenda recolhida, com prévia e botão de copiar ---------- */
+.legenda-bloco {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legenda-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 4px;
+}
+
+.legenda-alternar {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.legenda-alternar:hover {
+  color: var(--text);
+}
+
+.legenda-seta {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s;
+}
+
+.legenda-bloco:not(.is-fechada) .legenda-seta {
+  transform: rotate(90deg);
+}
+
+.legenda-copiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.legenda-copiar:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.legenda-copiar:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.legenda-copiar svg {
+  width: 14px;
+  height: 14px;
+}
+
+.legenda-copiar .icone-copiado,
+.legenda-copiar.is-copiado .icone-copiar {
+  display: none;
+}
+
+.legenda-copiar.is-copiado .icone-copiado {
+  display: block;
+}
+
+.legenda-copiar.is-copiado {
+  color: #3ddc84;
+  border-color: rgba(61, 220, 132, 0.45);
+}
+
+.legenda-bloco.is-fechada .legenda-topo {
+  border-bottom: 1px solid var(--border);
+}
+
+/* Margem (e não padding) para o recorte das 2 linhas não deixar aparecer um pedaço da terceira. */
+.legenda-previa {
+  width: calc(100% - 28px);
+  margin: 10px 14px 12px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.legenda-previa.is-vazia {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.legenda-bloco:not(.is-fechada) .legenda-previa,
+.legenda-bloco.is-fechada .legenda-corpo {
+  display: none;
+}
+
+.legenda-corpo {
+  padding: 0 8px 8px;
+}
+
+.legenda-corpo .field {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
 }

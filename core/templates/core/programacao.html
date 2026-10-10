@@ -45,6 +45,13 @@
     <aside class="day-panel" id="painel-dia" aria-label="Itens do dia">
       <h3 class="day-title">{{ titulo_selecionado }}</h3>
 
+      {% if pode_editar %}
+        <button type="button" class="board-add-btn day-add-btn" id="novoItem"
+                data-criar="{% url 'agenda_adicionar' %}" data-data="{{ selecionado|date:'Y-m-d' }}" data-cor="{{ cor_padrao }}">
+          + Adicionar item
+        </button>
+      {% endif %}
+
       {% if itens_selecionado %}
         <ul class="day-list">
           {% for item in itens_selecionado %}
@@ -85,12 +92,6 @@
         <p class="day-empty">Nada marcado para este dia.</p>
       {% endif %}
 
-      {% if pode_editar %}
-        <button type="button" class="board-add-btn day-add-btn" id="novoItem"
-                data-criar="{% url 'agenda_adicionar' %}" data-data="{{ selecionado|date:'Y-m-d' }}" data-cor="{{ cor_padrao }}">
-          + Adicionar item
-        </button>
-      {% endif %}
     </aside>
   </div>
 
@@ -114,7 +115,19 @@
       </header>
 
       <label class="field-label" for="itemTitulo">Título</label>
-      <input type="text" id="itemTitulo" name="titulo" class="field" maxlength="200" required{% if not pode_editar %} readonly{% endif %}>
+      <div class="item-titulo-linha">
+        {# Cor do card: uma bolinha ao lado do título; a paleta abre ao clicar. #}
+        <div class="item-cor-escolha">
+          <button type="button" class="item-cor-botao" id="itemCorBotao" aria-label="Cor do card" title="Cor do card"
+                  aria-haspopup="true" aria-expanded="false" aria-controls="itemCorPaleta"{% if not pode_editar %} disabled{% endif %}>
+            <span class="item-cor-ponto" id="itemCorPonto"></span>
+          </button>
+          <div class="item-cor-paleta" id="itemCorPaleta" hidden>
+            {% include 'core/_cores.html' with desativado=pode_editar|yesno:',1' %}
+          </div>
+        </div>
+        <input type="text" id="itemTitulo" name="titulo" class="field" maxlength="200" required{% if not pode_editar %} readonly{% endif %}>
+      </div>
 
       <span class="field-label" id="itemFormatoRotulo">Formato</span>
       <div class="formato-opcoes" role="radiogroup" aria-labelledby="itemFormatoRotulo">
@@ -125,13 +138,6 @@
           </label>
         {% endfor %}
       </div>
-
-      <label class="field-label" for="itemLegenda">Legenda</label>
-      {% if pode_editar %}
-        <textarea id="itemLegenda" name="legenda" class="field" rows="3" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Opcional"></textarea>
-      {% else %}
-        <textarea id="itemLegenda" name="legenda" class="field" rows="3" placeholder="Sem legenda" readonly></textarea>
-      {% endif %}
 
       <div class="item-rotulo-linha" id="itemMidiasRotulo">
         <span class="field-label">Imagens e vídeos</span>
@@ -148,9 +154,26 @@
         <input type="file" id="itemMidias" class="visualmente-oculto" accept="{{ tipos_de_midia }}" multiple tabindex="-1" aria-hidden="true">
       {% endif %}
 
-      <div class="item-cor">
-        <span class="field-label">Cor</span>
-        {% include 'core/_cores.html' with desativado=pode_editar|yesno:',1' %}
+      <div class="legenda-bloco is-fechada" id="legendaBloco">
+        <div class="legenda-topo">
+          <button type="button" class="legenda-alternar" id="legendaAlternar" aria-expanded="false" aria-controls="legendaCorpo">
+            <svg class="legenda-seta" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+            <span class="legenda-rotulo">Legenda</span>
+          </button>
+          <button type="button" class="legenda-copiar" id="legendaCopiar" title="Copiar a legenda">
+            <svg class="icone-copiar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"></rect><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"></path></svg>
+            <svg class="icone-copiado" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"></path></svg>
+            <span class="legenda-copiar-rotulo">Copiar</span>
+          </button>
+        </div>
+        <button type="button" class="legenda-previa" id="legendaPrevia" tabindex="-1" aria-hidden="true"></button>
+        <div class="legenda-corpo" id="legendaCorpo">
+          {% if pode_editar %}
+            <textarea id="itemLegenda" name="legenda" class="field" rows="4" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Escreva a legenda do post" aria-label="Legenda"></textarea>
+          {% else %}
+            <textarea id="itemLegenda" name="legenda" class="field" rows="4" placeholder="Sem legenda" readonly aria-label="Legenda"></textarea>
+          {% endif %}
+        </div>
       </div>
 
       {% if pode_editar %}
@@ -449,6 +472,10 @@
           form.querySelectorAll('input[name=cor]').forEach(function (opcao) {
             opcao.checked = opcao.value === dados.cor;
           });
+          mostrarCor();
+          fecharPaleta();
+          // A legenda abre recolhida; num item novo ela já vem aberta para escrever.
+          alternarLegenda(!dados.editar && podeEditar);
           form.querySelectorAll('input[name=formato]').forEach(function (opcao) {
             opcao.checked = opcao.value === dados.formato;
           });
@@ -463,6 +490,122 @@
             document.getElementById('itemTitulo').focus();
           }
         }
+
+        // ---------- Cor do card: bolinha ao lado do título, que abre a paleta ----------
+        var botaoCor = document.getElementById('itemCorBotao');
+        var pontoCor = document.getElementById('itemCorPonto');
+        var paletaDeCores = document.getElementById('itemCorPaleta');
+
+        function mostrarCor() {
+          var marcada = form.querySelector('input[name=cor]:checked');
+          pontoCor.style.background = marcada ? marcada.value : '';
+          botaoCor.title = 'Cor do card' + (marcada ? ': ' + marcada.closest('.swatch').title : '');
+        }
+
+        function fecharPaleta() {
+          paletaDeCores.hidden = true;
+          botaoCor.setAttribute('aria-expanded', 'false');
+        }
+
+        botaoCor.addEventListener('click', function () {
+          var abrir = paletaDeCores.hidden;
+          paletaDeCores.hidden = !abrir;
+          botaoCor.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+          if (abrir) {
+            var marcada = paletaDeCores.querySelector('input:checked') || paletaDeCores.querySelector('input');
+            marcada.focus();
+          }
+        });
+        // Trocar com as setas só muda a cor; clicar (inclusive na cor atual) escolhe e fecha a paleta.
+        paletaDeCores.addEventListener('change', mostrarCor);
+        paletaDeCores.addEventListener('click', function (evento) {
+          if (evento.target.matches('input[name=cor]')) {
+            mostrarCor();
+            fecharPaleta();
+            botaoCor.focus();
+          }
+        });
+        dialogo.addEventListener('click', function (evento) {
+          if (!paletaDeCores.hidden && !evento.target.closest('.item-cor-escolha')) {
+            fecharPaleta();
+          }
+        });
+
+        // ---------- Legenda: abre recolhida, com prévia, e tem botão de copiar ----------
+        var blocoLegenda = document.getElementById('legendaBloco');
+        var campoLegenda = document.getElementById('itemLegenda');
+        var previaLegenda = document.getElementById('legendaPrevia');
+        var alternarLegendaBotao = document.getElementById('legendaAlternar');
+        var copiarLegenda = document.getElementById('legendaCopiar');
+
+        function ajustarAlturaDaLegenda() {
+          campoLegenda.style.height = 'auto';
+          campoLegenda.style.height = Math.min(campoLegenda.scrollHeight + 2, window.innerHeight * 0.5) + 'px';
+        }
+
+        function atualizarPrevia() {
+          var texto = campoLegenda.value.trim();
+          // Prévia em texto corrido: as quebras de linha viram espaço para caber em duas linhas.
+          previaLegenda.textContent = texto.replace(/\s+/g, ' ') || (podeEditar ? 'Sem legenda ainda. Toque para escrever.' : 'Sem legenda');
+          previaLegenda.classList.toggle('is-vazia', !texto);
+          copiarLegenda.disabled = !texto;
+        }
+
+        function alternarLegenda(abrir) {
+          blocoLegenda.classList.toggle('is-fechada', !abrir);
+          alternarLegendaBotao.setAttribute('aria-expanded', abrir ? 'true' : 'false');
+          atualizarPrevia();
+          if (abrir) {
+            ajustarAlturaDaLegenda();
+          }
+        }
+
+        function abrirLegendaPeloUsuario() {
+          alternarLegenda(true);
+          blocoLegenda.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+
+        alternarLegendaBotao.addEventListener('click', function () {
+          if (blocoLegenda.classList.contains('is-fechada')) {
+            abrirLegendaPeloUsuario();
+          } else {
+            alternarLegenda(false);
+          }
+        });
+        previaLegenda.addEventListener('click', abrirLegendaPeloUsuario);
+        campoLegenda.addEventListener('input', function () {
+          ajustarAlturaDaLegenda();
+          atualizarPrevia();
+        });
+
+        copiarLegenda.addEventListener('click', function () {
+          var texto = campoLegenda.value;
+          if (!texto.trim()) {
+            return;
+          }
+          function confirmar() {
+            copiarLegenda.classList.add('is-copiado');
+            copiarLegenda.querySelector('.legenda-copiar-rotulo').textContent = 'Copiada!';
+            setTimeout(function () {
+              copiarLegenda.classList.remove('is-copiado');
+              copiarLegenda.querySelector('.legenda-copiar-rotulo').textContent = 'Copiar';
+            }, 2000);
+          }
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(texto).then(confirmar).catch(function () {});
+          } else {
+            // Sem a API de área de transferência (ex.: http), copia pelo campo.
+            var abertaAntes = !blocoLegenda.classList.contains('is-fechada');
+            alternarLegenda(true);
+            campoLegenda.select();
+            document.execCommand('copy');
+            campoLegenda.setSelectionRange(0, 0);
+            if (!abertaAntes) {
+              alternarLegenda(false);
+            }
+            confirmar();
+          }
+        });
 
         // ---------- Compartilhar o post: no celular abre o menu de compartilhar; no computador, o WhatsApp ----------
         var botaoCompartilhar = document.getElementById('itemCompartilhar');
@@ -878,6 +1021,9 @@
         dialogo.addEventListener('cancel', function (evento) {
           if (enviando) {
             evento.preventDefault();
+          } else if (!paletaDeCores.hidden) {
+            evento.preventDefault();
+            fecharPaleta();
           } else if (dialogo.classList.contains('chat-aberto')) {
             // Com o chat aberto no celular, voltar fecha só o chat.
             evento.preventDefault();

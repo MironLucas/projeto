@@ -1597,6 +1597,19 @@ class ComentariosItemTests(TestCase):
         self.assertNotContains(pagina, '/concluir/')
         self.assertContains(pagina, 'class="finalizar-btn is-ativo is-estatico"')
 
+    def test_janela_do_item_tem_cor_compacta_midias_antes_da_legenda_e_copiar(self):
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'}).content.decode()
+        # Adicionar item fica no topo, antes dos cards do dia.
+        self.assertLess(pagina.index('id="novoItem"'), pagina.index('class="day-list"'))
+        # Na janela: título (com a cor ao lado), formato, imagens e por último a legenda recolhível.
+        ordem = [pagina.index(trecho) for trecho in
+                 ('id="itemCorBotao"', 'id="itemTitulo"', 'id="itemFormatoRotulo"', 'id="itemGaleria"',
+                  'id="legendaBloco"', 'id="itemLegenda"')]
+        self.assertEqual(ordem, sorted(ordem))
+        self.assertIn('class="legenda-bloco is-fechada"', pagina)
+        self.assertIn('id="legendaCopiar"', pagina)
+        self.assertEqual(pagina.count('name="cor"'), 8)
+
     def test_janela_tem_os_comentarios_e_o_item_mostra_quantos(self):
         self.client.post(self.url, {'texto': 'um'})
         self.client.post(self.url, {'texto': 'dois'})
