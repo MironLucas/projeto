@@ -6507,36 +6507,6 @@ a.acesso-botao {
   border-color: rgba(61, 220, 132, 0.45);
 }
 
-.legenda-bloco.is-fechada .legenda-topo {
-  border-bottom: 1px solid var(--border);
-}
-
-/* Margem (e não padding) para o recorte das 2 linhas não deixar aparecer um pedaço da terceira. */
-.legenda-previa {
-  width: calc(100% - 28px);
-  margin: 10px 14px 12px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--text-dim);
-  font: inherit;
-  font-size: 13px;
-  line-height: 1.5;
-  text-align: left;
-  overflow-wrap: anywhere;
-  cursor: pointer;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.legenda-previa.is-vazia {
-  color: var(--text-faint);
-  font-style: italic;
-}
-
-.legenda-bloco:not(.is-fechada) .legenda-previa,
 .legenda-bloco.is-fechada .legenda-corpo {
   display: none;
 }

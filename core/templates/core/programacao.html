@@ -175,7 +175,6 @@
             <span class="legenda-copiar-rotulo">Copiar</span>
           </button>
         </div>
-        <button type="button" class="legenda-previa" id="legendaPrevia" tabindex="-1" aria-hidden="true"></button>
         <div class="legenda-corpo" id="legendaCorpo">
           {% if pode_editar %}
             <textarea id="itemLegenda" name="legenda" class="field" rows="4" maxlength="{{ tamanho_maximo_legenda }}" placeholder="Escreva a legenda do post" aria-label="Legenda"></textarea>
@@ -415,9 +414,9 @@
             }
             galeria.appendChild(bloco);
           });
-          // O "+" fica dentro da galeria, como mais um quadrinho, enquanto couber mídia no item.
+          // O "+" é o primeiro quadrinho do carrossel (à esquerda), enquanto couber mídia no item.
           if (botaoAdicionar && visiveis.length < MAXIMO) {
-            galeria.appendChild(botaoAdicionar);
+            galeria.prepend(botaoAdicionar);
           }
           galeria.hidden = !galeria.children.length;
           document.getElementById('itemCarrossel').hidden = galeria.hidden;
@@ -572,7 +571,6 @@
         // ---------- Legenda: abre recolhida, com prévia, e tem botão de copiar ----------
         var blocoLegenda = document.getElementById('legendaBloco');
         var campoLegenda = document.getElementById('itemLegenda');
-        var previaLegenda = document.getElementById('legendaPrevia');
         var alternarLegendaBotao = document.getElementById('legendaAlternar');
         var copiarLegenda = document.getElementById('legendaCopiar');
 
@@ -581,12 +579,9 @@
           campoLegenda.style.height = Math.min(campoLegenda.scrollHeight + 2, window.innerHeight * 0.5) + 'px';
         }
 
+        // A legenda fechada não mostra o texto; o "Copiar" só fica ativo quando há legenda.
         function atualizarPrevia() {
-          var texto = campoLegenda.value.trim();
-          // Prévia em texto corrido: as quebras de linha viram espaço para caber em duas linhas.
-          previaLegenda.textContent = texto.replace(/\s+/g, ' ') || (podeEditar ? 'Sem legenda ainda. Toque para escrever.' : 'Sem legenda');
-          previaLegenda.classList.toggle('is-vazia', !texto);
-          copiarLegenda.disabled = !texto;
+          copiarLegenda.disabled = !campoLegenda.value.trim();
         }
 
         function alternarLegenda(abrir) {
@@ -610,7 +605,6 @@
             alternarLegenda(false);
           }
         });
-        previaLegenda.addEventListener('click', abrirLegendaPeloUsuario);
         campoLegenda.addEventListener('input', function () {
           ajustarAlturaDaLegenda();
           atualizarPrevia();
