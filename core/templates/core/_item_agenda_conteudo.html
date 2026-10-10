@@ -1,7 +1,9 @@
 {% with midias=item.midias.all %}
   {% if midias %}
-    <span class="day-item-galeria{% if midias|length == 1 %} is-unica{% endif %}">
-      {% for midia in midias|slice:':4' %}
+    {# 1 mídia ocupa o card; 2 ficam lado a lado; 3 ou mais viram carrossel que passa para o lado. #}
+    <span class="day-item-galeria{% if midias|length == 1 %} is-unica{% elif midias|length > 2 %} is-carrossel{% endif %}">
+      <span class="day-item-faixa">
+      {% for midia in midias %}
         <span class="day-item-midia" data-url="{% url 'agenda_midia' midia.id %}" data-video="{{ midia.e_video|yesno:'1,' }}">
           {% if midia.e_video %}
             <video src="{% url 'agenda_midia' midia.id %}#t=0.1" preload="metadata" muted playsinline></video>
@@ -9,9 +11,15 @@
           {% else %}
             <img src="{% url 'agenda_midia' midia.id %}" alt="" loading="lazy">
           {% endif %}
-          {% if forloop.last and midias|length > 4 %}<span class="day-item-mais">+{{ midias|length|add:'-4' }}</span>{% endif %}
         </span>
       {% endfor %}
+      </span>
+      {% if midias|length > 2 %}
+        {# Setas só no computador (no celular passa com o dedo); clicar nelas não abre o card. #}
+        <span class="day-carrossel-seta day-carrossel-seta--anterior" aria-hidden="true" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></span>
+        <span class="day-carrossel-seta day-carrossel-seta--proxima" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></span>
+        <span class="day-carrossel-contador" aria-hidden="true">{{ midias|length }} mídias</span>
+      {% endif %}
     </span>
   {% endif %}
 {% endwith %}

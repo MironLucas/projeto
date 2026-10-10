@@ -542,6 +542,23 @@ class AgendaTests(TestCase):
         from django.core.files.uploadedfile import SimpleUploadedFile
         return SimpleUploadedFile(nome, dados, content_type=tipo)
 
+    def test_card_do_dia_mostra_midias_lado_a_lado_ou_em_carrossel(self):
+        def criar(titulo, quantas):
+            self.client.post('/programacao/itens/', {
+                'data': '2026-10-01', 'titulo': titulo, 'formato': 'carrossel',
+                'midias': [self._arquivo(f'{titulo}{n}.png', 'image/png') for n in range(quantas)],
+            })
+        criar('Um', 1)
+        criar('Dois', 2)
+        criar('Cinco', 5)
+        pagina = self.client.get('/programacao/', {'mes': '2026-10', 'dia': '2026-10-01'}).content.decode()
+        self.assertEqual(pagina.count('class="day-item-galeria is-unica"'), 1)
+        self.assertEqual(pagina.count('class="day-item-galeria"'), 1)  # duas: lado a lado
+        self.assertEqual(pagina.count('class="day-item-galeria is-carrossel"'), 1)
+        self.assertIn('5 mídias', pagina)
+        self.assertEqual(pagina.count('class="day-item-midia"'), 8)  # todas aparecem, sem "+N"
+        self.assertEqual(pagina.count('class="day-carrossel-seta day-carrossel-seta--proxima"'), 1)
+
     def test_item_com_legenda_e_varias_imagens_e_videos(self):
         from .models import ItemAgenda
         self.client.post('/programacao/itens/', {

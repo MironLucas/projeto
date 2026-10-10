@@ -1098,6 +1098,28 @@
         });
       }
 
+      // ---------- Carrossel das mídias nos cards do dia (3 ou mais): setas no computador, dedo no celular ----------
+      document.querySelectorAll('.day-item-galeria.is-carrossel').forEach(function (galeriaDoCard) {
+        var faixa = galeriaDoCard.querySelector('.day-item-faixa');
+        var anterior = galeriaDoCard.querySelector('.day-carrossel-seta--anterior');
+        var proxima = galeriaDoCard.querySelector('.day-carrossel-seta--proxima');
+        function atualizar() {
+          anterior.hidden = faixa.scrollLeft <= 4;
+          proxima.hidden = faixa.scrollLeft >= faixa.scrollWidth - faixa.clientWidth - 4;
+        }
+        function passar(evento, sentido) {
+          // A seta fica dentro do card, que abre a janela ao clicar: aqui só passa as mídias.
+          evento.preventDefault();
+          evento.stopPropagation();
+          var quadro = faixa.firstElementChild;
+          faixa.scrollBy({ left: sentido * (quadro.getBoundingClientRect().width + 4) * 2, behavior: 'smooth' });
+        }
+        anterior.addEventListener('click', function (evento) { passar(evento, -1); });
+        proxima.addEventListener('click', function (evento) { passar(evento, 1); });
+        faixa.addEventListener('scroll', atualizar, { passive: true });
+        atualizar();
+      });
+
       // Link do post (compartilhado ou do sininho): abre o card e, se pedido, o chat dele.
       var parametros = new URLSearchParams(location.search);
       if (dialogo && parametros.has('abrir')) {
